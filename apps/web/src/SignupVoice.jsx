@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, Square } from 'lucide-react';
 
-export function SignupVoice({ disabled, onBusy, onRecording, onError }) {
+export function SignupVoice({ disabled, onBusy, onRecording, onError, label = 'Fill by voice', processing = 'Filling details…' }) {
   const [phase, setPhase] = useState('idle');
   const current = useRef(null);
 
@@ -70,7 +70,7 @@ export function SignupVoice({ disabled, onBusy, onRecording, onError }) {
       setPhase('recording');
     } catch (error) {
       if (current.current === capture) {
-        onError(error.name === 'NotAllowedError' ? 'Allow microphone access to fill the form by voice.' : error.message);
+        onError(error.name === 'NotAllowedError' ? 'Allow microphone access, then try recording again.' : error.message);
       }
       finish();
     }
@@ -87,7 +87,7 @@ export function SignupVoice({ disabled, onBusy, onRecording, onError }) {
       }}
     >
       <span className="mic-disc" aria-hidden="true">{phase === 'recording' ? <Square size={16} /> : <Mic size={17} />}</span>
-      <span aria-live="polite">{{ idle: 'Fill by voice', opening: 'Opening microphone…', recording: 'Finish recording', reading: 'Filling details…' }[phase]}</span>
+      <span aria-live="polite">{{ idle: label, opening: 'Opening microphone…', recording: 'Finish recording', reading: processing }[phase]}</span>
     </button>
   );
 }

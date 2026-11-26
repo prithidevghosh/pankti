@@ -1,0 +1,204 @@
+.layout {
+  background: #f7f1e4;
+  color: #243a30;
+}
+.layout .sidebar {
+  background: #203d31;
+}
+.sidebar nav a[aria-current='page'] {
+  background: #f5ebd6;
+  color: #233e31;
+}
+.layout .ledger {
+  padding: clamp(18px, 4vw, 64px);
+  min-width: 0;
+}
+.layout .ledger-header {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: #eae0c9;
+  min-height: clamp(148px, 19vw, 220px);
+  padding: clamp(20px, 3.5vw, 52px);
+  border: 0;
+}
+.ledger-header > div:first-child {
+  width: 62%;
+  overflow-wrap: anywhere;
+}
+.layout .ledger-header h1 {
+  font:
+    400 clamp(3rem, 6vw, 6.4rem) / 0.96 'Pankti Wordmark',
+    Georgia,
+    serif;
+  letter-spacing: -0.045em;
+}
+.masthead-print {
+  position: absolute;
+  inset: 0 0 0 65%;
+  background: url('/counter-print.jpg') center 53% / cover;
+}
+.ledger[data-view='orders'] .masthead-print {
+  background-position: 50% 75%;
+}
+.ledger[data-view='menu'] .masthead-print {
+  background-position: 50% 30%;
+}
+.ledger-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin: 12px 0;
+}
+.work-sheet,
+.ledger .bills {
+  border-top: 1px solid #a89f89;
+  padding: 20px 0;
+}
+.work-sheet h2,
+.ledger .bills h2,
+.ledger .report-grid h2 {
+  font:
+    400 2rem/1.1 'Pankti Wordmark',
+    Georgia,
+    serif;
+  margin-bottom: 10px;
+}
+.work-sheet .signup-voice {
+  margin-top: 12px;
+}
+.work-sheet blockquote {
+  margin: 10px 0;
+  padding: 6px 12px;
+  border-left: 2px solid #b99637;
+}
+.work-lines {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+}
+.work-lines li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  border-bottom: 1px solid #d6cdb8;
+  padding: 12px 0;
+}
+.work-lines li > span:first-child {
+  flex: 1;
+  min-width: 90px;
+  overflow-wrap: anywhere;
+}
+.work-lines small,
+.qr-print small {
+  display: block;
+  color: #526055;
+}
+.work-sheet fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.work-sheet .menu-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  align-items: end;
+  gap: 8px;
+  margin: 12px 0;
+}
+.work-sheet label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+.work-lines form {
+  width: 100%;
+}
+.work-sheet input {
+  min-width: 0;
+  max-width: 100%;
+  padding: 9px;
+  border: 1px solid #b5b49f;
+  background: #fffcf5;
+  border-radius: 2px;
+}
+.work-sheet button:not(.signup-voice),
+.bill-dialog .action {
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid #969d87;
+  background: transparent;
+}
+.work-sheet .action,
+.bill-dialog .action {
+  background: #234638 !important;
+  color: white;
+  margin: 6px 6px 6px 0;
+}
+.file-field {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 14px;
+}
+.qr-print {
+  width: fit-content;
+  margin: 20px 0;
+  background: white;
+  padding: 14px;
+  text-align: center;
+}
+.qr-print img,
+.receipt-qr {
+  display: block;
+  width: 180px;
+  max-width: 100%;
+}
+.op-feedback {
+  margin: 10px 0;
+  color: #554121;
+}
+.layout [hidden] {
+  display: none;
+}
+@media (max-width: 680px) {
+  .layout .sidebar {
+    padding: 10px 18px;
+    align-items: center;
+  }
+  .layout .sidebar nav {
+    position: fixed;
+    z-index: 5;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    background: #203d31;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .layout .sidebar nav a {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    min-height: 57px;
+    padding: 4px 0;
+    font-size: 0.7rem;
+  }
+  .layout .ledger {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+  .work-sheet .menu-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .layout .ledger-header h1 {
+    font-size: clamp(2.8rem, 10vw, 4rem);
+  }
+  .ledger .metrics {
+    margin-top: 10px;
+  }
+}

@@ -1,16 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ArrowRight, ArrowUpRight, ChartNoAxesColumn, LogOut, ReceiptText, RefreshCw, Utensils } from 'lucide-react';
+import { Banknote, BookOpen, Truck, ArrowRight, ArrowUpRight, ChartNoAxesColumn, LogOut, ReceiptText, RefreshCw, Utensils } from 'lucide-react';
 import '@fontsource-variable/bricolage-grotesque';
 import './style.css';
 import { SignupVoice } from './SignupVoice.jsx';
 
-const money = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 2,
-});
-const asRupees = (paise) => money.format(paise / 100);
+import { request, asRupees } from './api.js';
+import { Orders, Vendors, Menu, Bank } from './Operations.jsx';
+import './dashboard.css';
+
 const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', dateStyle: 'short' });
 const time = new Intl.DateTimeFormat('en-IN', {
   timeZone: 'Asia/Kolkata',
@@ -18,23 +16,6 @@ const time = new Intl.DateTimeFormat('en-IN', {
   minute: '2-digit',
 });
 const today = () => day.format(new Date());
-
-async function request(path, { signal, body } = {}) {
-  const multipart = body instanceof FormData;
-  const response = await fetch('/api' + path, {
-    method: body ? 'POST' : 'GET',
-    headers: body && !multipart ? { 'Content-Type': 'application/json' } : undefined,
-    body: multipart ? body : body ? JSON.stringify(body) : undefined,
-    signal,
-  });
-  if (!response.headers.get('content-type')?.includes('application/json'))
-    throw new Error('The server is unavailable. Try again.');
-  const data = await response.json();
-  if (!response.ok) throw Object.assign(new Error(data.error || 'Could not complete the request.'), {
-    status: response.status,
-  });
-  return data;
-}
 
 function Wordmark() {
   return <span className="wordmark">Pankti</span>;
@@ -269,7 +250,23 @@ function HourlyChart({ values }) {
   );
 }
 
+const destinations = [
+  ['overview','Overview', ChartNoAxesColumn], ['orders','Orders', ReceiptText],
+  ['vendors','Vendors', Truck], ['menu','Menu', BookOpen], ['bank','Bank details', Banknote],
+];
+function currentView() {
+  const hash = window.location.hash.slice(1);
+  if (hash === 'bills') return 'orders';
+  return destinations.some(([id]) => id === hash) ? hash : 'overview';
+}
+
 function Ledger({ onSignOut, onSessionExpired }) {
+  const [view,setView] = useState(currentView);
+  useEffect(() => {
+    const navigate = () => {setView(currentView()); window.scrollTo(0,0);};
+    window.addEventListener('hashchange',navigate);
+    return () => window.removeEventListener('hashchange',navigate);
+  }, []);
   const [date, setDate] = useState(today);
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState({ loading: true });
@@ -280,11 +277,11 @@ function Ledger({ onSignOut, onSessionExpired }) {
   useEffect(() => {
     const controller = new AbortController();
     request('/workspace', { signal: controller.signal })
-      .then(async ({ restaurant }) => {
+      .then(async ({ restaurant, menu }) => {
         const analytics = restaurant
           ? await request('/analytics?date=' + date, { signal: controller.signal })
           : null;
-        if (!controller.signal.aborted) setState({ restaurant, analytics, date, revision });
+        if (!controller.signal.aborted) setState({ restaurant, menu, analytics, date, revision });
       })
       .catch((error) => {
         if (controller.signal.aborted) return;
@@ -295,13 +292,13 @@ function Ledger({ onSignOut, onSessionExpired }) {
   }, [onSessionExpired, date, revision]);
 
   function showBill(id) {
-    setOpenBill({});
+    setOpenBill({id});
     dialog.current?.showModal();
     request('/bills/' + id)
-      .then(({ bill }) => setOpenBill({ id, bill }))
+      .then(({ bill }) => setOpenBill(current => current?.id === id ? { id, bill } : current))
       .catch((error) => {
         if (error.status === 401) onSessionExpired();
-        else setOpenBill({ id, error: error.message });
+        else setOpenBill(current => current?.id === id ? { id, error:error.message } : current);
       });
   }
 
@@ -312,19 +309,15 @@ function Ledger({ onSignOut, onSessionExpired }) {
       <aside className="sidebar">
         <Wordmark />
         <nav aria-label="Ledger navigation">
-          <a href="#overview">
-            <ChartNoAxesColumn size={18} /> Overview
-          </a>
-          <a href="#bills">
-            <ReceiptText size={18} /> Bills
-          </a>
+          {destinations.map(([id,label,Icon]) => <a href={'#'+id} key={id} aria-current={id === view ? 'page' : undefined}>
+            <Icon size={19} aria-hidden="true" /><span>{label}</span></a>)}
         </nav>
         <button className="signout" onClick={() => void onSignOut().catch((error) => setSignOutError(error.message))}>
           <LogOut size={17} /> Sign out
         </button>
         {signOutError && <p role="alert">{signOutError}</p>}
       </aside>
-      <main className="ledger" id="overview">
+      <main className="ledger" data-view={view}>
         <header className="ledger-header">
           <div>
             {restaurant && (
@@ -332,10 +325,13 @@ function Ledger({ onSignOut, onSessionExpired }) {
                 {restaurant.name} <span>{restaurant.city}</span>
               </p>
             )}
-            <h1>Sales overview</h1>
+            <h1>{destinations.find(([id]) => id === view)[1]}</h1>
           </div>
+          <div className="masthead-print" aria-hidden="true" />
+        </header>
+        <div className="ledger-tools">
           <div className="ledger-controls">
-            <label className="date-field">
+            {(view === 'overview' || view === 'orders') && <label className="date-field">
               <input
                 aria-label="Business date"
                 type="date"
@@ -345,7 +341,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
                   if (event.target.value) setDate(event.target.value);
                 }}
               />
-            </label>
+            </label>}
             <button
               className="refresh"
               aria-label="Refresh ledger"
@@ -354,7 +350,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
               <RefreshCw size={17} />
             </button>
           </div>
-        </header>
+        </div>
         {loading && (
           <p className="notice" role="status">
             Loading the ledger…
@@ -375,9 +371,17 @@ function Ledger({ onSignOut, onSessionExpired }) {
             </p>
           </div>
         )}
+        {restaurant && <div hidden={view !== 'orders'}><Orders menu={state.menu || []} onBill={bill => {
+          setOpenBill({id:bill.id,bill}); dialog.current?.showModal(); setRevision(v => v+1);
+        }}/></div>}
+        {restaurant && <div hidden={view !== 'menu'}><Menu menu={state.menu || []}
+          onMenu={menu => setState(s => ({...s,menu}))}/></div>}
+        {restaurant && <div hidden={view !== 'vendors'}><Vendors revision={revision}/></div>}
+        {restaurant && <div hidden={view !== 'bank'}><Bank restaurant={restaurant}
+          onSave={restaurant => setState(s => ({...s,restaurant}))}/></div>}
         {!loading && analytics && (
           <>
-            <div className="metrics">
+            {view === 'overview' && <><div className="metrics">
               <div className="revenue">
                 <span>Paid sales</span>
                 <strong>{asRupees(analytics.revenue)}</strong>
@@ -398,7 +402,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
             <div className="report-grid">
               <section>
                 <h2>Sales by hour</h2>
-                <HourlyChart values={analytics.hourly} />
+                {analytics.paidCount ? <HourlyChart values={analytics.hourly} /> : <p className="subtle">Hourly sales appear when you record the first payment for this date.</p>}
               </section>
               <section>
                 <h2>Top dishes</h2>
@@ -419,7 +423,8 @@ function Ledger({ onSignOut, onSessionExpired }) {
                 )}
               </section>
             </div>
-            <section className="bills" id="bills">
+            </>}
+            {view === 'orders' && <section className="bills" id="bills">
               <h2>Bills</h2>
               {analytics.bills.length ? (
                 <div className="table-scroll">
@@ -457,7 +462,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
               ) : (
                 <p className="subtle">Bills created on this date appear here.</p>
               )}
-            </section>
+            </section>}
           </>
         )}
         <dialog
@@ -483,13 +488,25 @@ function Ledger({ onSignOut, onSessionExpired }) {
                     <span>
                       {line.quantity} × {line.name} {line.variant}
                     </span>
-                    <strong>{asRupees(line.price * line.quantity)}</strong>
+                    <strong>{asRupees(Math.round(line.price * line.quantity))}</strong>
                   </li>
                 ))}
               </ul>
               <p className="receipt-total">
                 Total <strong>{asRupees(openBill.bill.total)}</strong>
               </p>
+              {openBill.bill.paid ? <p>Payment recorded · {openBill.bill.method.toUpperCase()}</p> : <>
+                {restaurant?.qr && <img className="receipt-qr" src={restaurant.qr} alt="Scan to pay the store by UPI"/>}
+                <p>Record payment once received.</p>
+                {['cash','upi'].map(method => <button key={method} className="action" disabled={openBill.saving} onClick={async () => {
+                  const id = openBill.bill.id;
+                  setOpenBill(b => ({...b,saving:true,error:null}));
+                  try {
+                    const {bill} = await request('/bills/'+id+'/payment',{body:{method}});
+                    setOpenBill(b => b?.id === id ? {id,bill} : b); setRevision(v => v+1);
+                  } catch(e) {setOpenBill(b => b?.id === id ? {...b,error:e.message,saving:false} : b);}
+                }}>Received · {method.toUpperCase()}</button>)}
+              </>}
             </>
           ) : (
             openBill && !openBill.error && <p role="status">Loading bill…</p>
