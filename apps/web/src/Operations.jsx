@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ImagePlus } from 'lucide-react';
+import { ImagePlus, Pencil } from 'lucide-react';
 import { VendorEditor } from './VendorEditor.jsx';
 import { SignupVoice } from './SignupVoice.jsx';
 import { request, asRupees } from './api.js';
@@ -161,6 +161,35 @@ const kinds = {
 };
 export function Vendors({ revision }) {
   const [editing, setEditing] = useState(null);
+  const journal = useRef(null);
+  const entryList = useRef(null);
+  const opener = useRef(null);
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef(null);
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
+  function closeEditor() {
+    setClosing(true);
+    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 200;
+    closeTimer.current = setTimeout(() => {
+      setEditing(null);
+      setClosing(false);
+      requestAnimationFrame(() => opener.current?.focus({ preventScroll: true }));
+    }, duration);
+  }
+  useEffect(() => {
+    if (!editing || !journal.current) return;
+    const list = entryList.current;
+    const row = list.querySelector('[data-entry="' + editing + '"]');
+    if (row) list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top;
+    const bounds = journal.current.getBoundingClientRect();
+    const stacked = window.matchMedia('(max-width: 1100px)').matches;
+    if (bounds.top < 0 || bounds.top > (stacked ? 20 : window.innerHeight * 0.52)) {
+      journal.current.scrollIntoView({
+        block: 'start',
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      });
+    }
+  }, [editing]);
   const [voiceEdit, setVoiceEdit] = useState(null);
   const [ledger, setLedger] = useState({ balances: [], events: [] });
   const [draft, setDraft] = useState([]);
@@ -200,6 +229,7 @@ export function Vendors({ revision }) {
                 op.setMessage('Refresh the ledger before making this correction.');
                 return;
               }
+              opener.current = document.activeElement;
               setVoiceEdit(result.edit);
               setEditing(result.edit.id);
               op.setMessage('Review the selected entry correction.');
@@ -276,49 +306,59 @@ export function Vendors({ revision }) {
         </ul>
       </section>
       {ledger.events.length > 0 && (
-        <section className="work-sheet">
+        <section className="work-sheet vendor-journal" ref={journal}>
           <h2>Recent entries</h2>
-          <ul className="work-lines">
-            {ledger.events.map((e) => (
-              <li key={e.id}>
-                {editing === e.id ? (
-                  <VendorEditor
-                    suggested={voiceEdit?.id === e.id ? voiceEdit.details : null}
-                    event={e}
-                    ledger={ledger}
-                    onCancel={() => setEditing(null)}
-                    onSave={(next) => {
-                      setLedger(next);
-                      setEditing(null);
-                      op.setMessage('Correction saved.');
-                    }}
-                  />
-                ) : (
-                  <>
-                    <span>
-                      {e.vendor} · {kinds[e.kind]}
-                      <small>
-                        {new Date(e.created).toLocaleDateString('en-IN')} · {e.note}
-                      </small>
-                    </span>
-                    <strong>{asRupees(e.amount)}</strong>
+          <div className="journal-layout" data-open={Boolean(editing && !closing)}>
+            <ul ref={entryList} className="journal-list" aria-label="Recent vendor entries">
+              {ledger.events.map((e) => (
+                <li key={e.id} data-entry={e.id} data-selected={editing === e.id}>
+                  <div className="journal-item">
+                    <strong>{e.vendor}</strong>
+                    <small>
+                      {kinds[e.kind]} · {new Date(e.created).toLocaleDateString('en-IN')}
+                    </small>
+                    {e.note && <p>{e.note}</p>}
+                  </div>
+                  <div className="journal-value">
+                    <strong>{e.kind === 'order' && !e.amount ? 'Price pending' : asRupees(e.amount)}</strong>
                     {['payment', 'purchase'].includes(e.kind) && (
                       <small>{e.paid === 0 ? 'Unpaid' : e.paid >= e.amount ? 'Paid' : 'Part paid'}</small>
                     )}
-                    <button
-                      disabled={!!editing || op.busy || speechBusy}
-                      onClick={() => {
-                        setVoiceEdit(null);
-                        setEditing(e.linkedPurchase || e.id);
-                      }}
-                    >
-                      {e.linkedPurchase ? 'Edit linked purchase' : 'Edit'}
-                    </button>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
+                  </div>
+                  <button
+                    className="journal-edit"
+                    disabled={!!editing || op.busy || speechBusy}
+                    aria-label={(e.linkedPurchase ? 'Edit linked purchase' : 'Edit') + ' · ' + e.vendor}
+                    aria-controls="correction-sheet"
+                    onClick={(ev) => {
+                      opener.current = ev.currentTarget;
+                      setVoiceEdit(null);
+                      setEditing(e.linkedPurchase || e.id);
+                    }}
+                  >
+                    <Pencil size={15} aria-hidden="true" />
+                    <span>Edit</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className="editor-slot" id="correction-sheet" inert={closing || !editing ? true : undefined}>
+              {editing && ledger.events.some((e) => e.id === editing) && (
+                <VendorEditor
+                  key={editing}
+                  suggested={voiceEdit?.id === editing ? voiceEdit.details : null}
+                  event={ledger.events.find((e) => e.id === editing)}
+                  ledger={ledger}
+                  onCancel={closeEditor}
+                  onSave={(next) => {
+                    setLedger(next);
+                    closeEditor();
+                    op.setMessage('Correction saved.');
+                  }}
+                />
+              )}
+            </div>
+          </div>
         </section>
       )}
     </>

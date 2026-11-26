@@ -6,12 +6,14 @@ export function VendorEditor({ event, ledger, onSave, onCancel, suggested }) {
   const initial = suggested || event;
   const editor = useRef(null);
   useEffect(() => {
-    editor.current?.scrollIntoView({ block: 'center' });
+    editor.current?.focus({ preventScroll: true });
   }, []);
   const [version] = useState(ledger.revision);
   const [vendor, setVendor] = useState(initial.vendor);
   const [note, setNote] = useState(initial.note);
-  const [amount, setAmount] = useState(String(initial.amount / 100));
+  const [amount, setAmount] = useState(
+    event.kind === 'order' && !initial.amount ? '' : String(initial.amount / 100),
+  );
   const hasPayment = Number(amount || 0) > 0;
   const [paid, setPaid] = useState(String(initial.paid / 100));
   const [status, setStatus] = useState(paymentState(initial.amount, initial.paid));
@@ -63,7 +65,7 @@ export function VendorEditor({ event, ledger, onSave, onCancel, suggested }) {
     }
     setVendor(result.vendor);
     setNote(result.note);
-    setAmount(String(result.amount / 100));
+    setAmount(event.kind === 'order' && !result.amount ? '' : String(result.amount / 100));
     setPaid(String(result.paid / 100));
     setStatus(paymentState(result.amount, result.paid));
     setPreview(null);
@@ -76,83 +78,106 @@ export function VendorEditor({ event, ledger, onSave, onCancel, suggested }) {
     ? ledger.balances.filter((v) => !preview.balances.some((next) => next.vendor === v.vendor))
     : [];
   return (
-    <form ref={editor} className="vendor-editor" onSubmit={submit}>
-      <h3>Edit vendor entry</h3>
-      <SignupVoice
-        label="Speak correction"
-        processing="Reading correction…"
-        disabled={busy}
-        onBusy={setRecording}
-        onRecording={correct}
-        onError={setMessage}
-      />
-      <fieldset disabled={recording || busy} onChange={() => setPreview(null)}>
-        <label>
-          Vendor name
-          <input required maxLength={96} value={vendor} onChange={(e) => setVendor(e.target.value)} />
-        </label>
-        <label>
-          Amount (₹)
-          <input
-            required
-            type="number"
-            min={['order', 'balance'].includes(event.kind) ? 0 : 0.01}
-            step=".01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </label>
-        {hasPayment && (
-          <label>
-            Payment status
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              {['Unpaid', 'Part paid', 'Paid'].map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
+    <form
+      className="vendor-editor"
+      aria-labelledby="correction-title"
+      onSubmit={submit}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && !busy && !recording) {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
+    >
+      <header className="correction-header">
+        <div>
+          <p>Edit vendor entry</p>
+          <h3 id="correction-title" tabIndex={-1} ref={editor}>
+            {event.vendor}
+          </h3>
+        </div>
+        <span>{new Date(event.created).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+      </header>
+      <div className="correction-body">
+        <SignupVoice
+          label="Speak correction"
+          processing="Reading correction…"
+          disabled={busy}
+          onBusy={setRecording}
+          onRecording={correct}
+          onError={setMessage}
+        />
+        <fieldset disabled={recording || busy} onChange={() => setPreview(null)}>
+          <label className="full-line">
+            Vendor name
+            <input required maxLength={96} value={vendor} onChange={(e) => setVendor(e.target.value)} />
           </label>
-        )}
-        {hasPayment && status === 'Part paid' && (
           <label>
-            Paid amount (₹)
+            Amount (₹)
             <input
-              required
+              required={event.kind !== 'order'}
+              placeholder={event.kind === 'order' ? 'Price pending' : undefined}
               type="number"
-              min=".01"
+              min={['order', 'balance'].includes(event.kind) ? 0 : 0.01}
               step=".01"
-              value={paid}
-              onChange={(e) => setPaid(e.target.value)}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
             />
           </label>
+          {hasPayment && (
+            <label>
+              Payment status
+              <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                {['Unpaid', 'Part paid', 'Paid'].map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          {hasPayment && status === 'Part paid' && (
+            <label>
+              Paid amount (₹)
+              <input
+                required
+                type="number"
+                min=".01"
+                step=".01"
+                value={paid}
+                onChange={(e) => setPaid(e.target.value)}
+              />
+            </label>
+          )}
+          <label className="full-line">
+            Entry note
+            <textarea rows={2} maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} />
+          </label>
+        </fieldset>
+        {preview && (
+          <div className="correction-preview" role="status">
+            <strong>Balance after correction</strong>
+            {changedBalances.map((v) => (
+              <p key={v.vendor}>
+                {v.vendor} · {asRupees(Math.abs(v.due))} {v.due < 0 ? 'advance' : 'due'}
+              </p>
+            ))}
+            {removed.map((v) => (
+              <p key={v.vendor}>
+                {v.vendor} · {asRupees(0)} due
+              </p>
+            ))}
+            {!removed.length && !changedBalances.length && <p>The outstanding balance stays the same.</p>}
+          </div>
         )}
-        <label>
-          Entry note
-          <input maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} />
-        </label>
-      </fieldset>
-      {preview && (
-        <div role="status">
-          <strong>Balance after correction</strong>
-          {changedBalances.map((v) => (
-            <p key={v.vendor}>
-              {v.vendor} · {asRupees(Math.abs(v.due))} {v.due < 0 ? 'advance' : 'due'}
-            </p>
-          ))}
-          {removed.map((v) => (
-            <p key={v.vendor}>
-              {v.vendor} · {asRupees(0)} due
-            </p>
-          ))}
-          {!removed.length && !changedBalances.length && <p>The outstanding balance stays the same.</p>}
-        </div>
-      )}
-      {message && <p role="status">{message}</p>}
-      <button className="action" disabled={recording || busy}>
-        {preview ? 'Save correction' : 'Preview correction'}
-      </button>
-      <button type="button" disabled={recording || busy} onClick={onCancel}>
-        Cancel
-      </button>
+        {message && <p role="status">{message}</p>}
+      </div>
+      <footer className="correction-actions">
+        <button className="action" disabled={recording || busy}>
+          {preview ? 'Save correction' : 'Preview correction'}
+        </button>
+        <button type="button" disabled={recording || busy} onClick={onCancel}>
+          Cancel
+        </button>
+      </footer>
     </form>
   );
 }

@@ -545,7 +545,61 @@
 }
 
 .station-print { display:block; width:100%; height:clamp(80px, 10vw, 134px); object-fit:cover; margin-bottom:16px; }
-.vendor-editor {background:#f4eade;padding:16px;}
-.vendor-editor h3 {margin:0;font:1.6rem 'Pankti Wordmark',Georgia,serif;}
-.vendor-editor fieldset {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:10px;margin:12px 0;}
-.vendor-editor select {min-height:40px;background:#fffcf6;font:inherit;}
+/* The journal and correction sheet have separate space. A long note can wrap
+   without changing which entry owns the edit control. */
+.vendor-journal { min-width:0; scroll-margin-top:12px; }
+.journal-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,0fr); align-items:start;
+  transition:grid-template-columns 220ms ease-out, gap 220ms ease-out; gap:0; }
+.journal-layout[data-open="true"] { grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:clamp(12px,2vw,30px); }
+.journal-list { list-style:none; padding:0; margin:0; max-height:34rem; overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
+.journal-list li { display:grid;grid-template-columns:minmax(0,1fr) auto auto; align-items:start; gap:10px;
+  padding:15px 8px; border-bottom:1px solid #d6cdb8; border-left:3px solid transparent; }
+.journal-list li[data-selected="true"] { border-left-color:#65414b; background:#eee3d6; }
+.journal-item {overflow-wrap:anywhere;}
+.journal-item strong {font-size:1rem;}
+.journal-list small {display:block;color:#546058;font-size:.78rem; margin-top:3px;}
+.journal-item p {font-size:.85rem;line-height:1.45;margin:5px 0 0;}
+.journal-value {text-align:right;font-variant-numeric:tabular-nums;}
+.work-sheet .journal-edit {display:flex;gap:6px;align-items:center;min-height:44px;min-width:44px;justify-content:center;
+  padding:4px 8px;border:0;color:#344c40;}
+.editor-slot {min-width:0;overflow:hidden;}
+.vendor-editor {background:#fffbf2;color:#293b30;border:1px solid #cec2ad;border-radius:3px;
+  overflow:hidden;animation:sheet-arrive 220ms ease-out both;}
+.journal-layout[data-open="false"] .vendor-editor {animation:sheet-leave 180ms ease-in both;}
+.correction-header {display:flex;align-items:start;justify-content:space-between;gap:12px;
+  padding:18px 20px;background:#593845;color:#fff8ed;border-bottom:3px solid #bb9065;}
+.correction-header p,.correction-header span {font-size:.8rem;color:#f1dfd8;}
+.correction-header span {white-space:nowrap;}
+.correction-header h3 {overflow-wrap:anywhere;margin:5px 0 0;font:400 clamp(1.6rem,2.5vw,2.4rem)/1.2 'Pankti Wordmark',Georgia,serif;}
+.correction-body {padding:0 20px 16px;}
+.vendor-editor .signup-voice {margin:14px 0 16px; background:transparent; color:#563544; border:1px solid #bda9a6;
+  padding:5px 12px 5px 5px;min-height:44px;}
+.vendor-editor .signup-voice .mic-disc {background:#ecded6;}
+.vendor-editor fieldset {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+.vendor-editor label {color:#495548;font-weight:560;gap:6px;}
+.vendor-editor .full-line {grid-column:1/-1;}
+.vendor-editor :is(input,select,textarea) {width:100%;min-width:0;box-sizing:border-box;min-height:44px;
+  background:#fffdf7;color:#20392f;font:400 1rem/1.45 system-ui,sans-serif;border:1px solid #b9b4a4;border-radius:3px;padding:8px 10px;}
+.vendor-editor textarea {resize:vertical;}
+.correction-preview {margin-top:14px;padding:12px;border-left:3px solid #5b7965;background:#eaf0e5;}
+.correction-actions {display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 20px;background:#f4edde;border-top:1px solid #d7cdbb;}
+.work-sheet .correction-actions button {min-height:44px;margin:0;}
+.work-sheet .correction-actions button[type="button"] {border:0;text-decoration:underline;text-underline-offset:4px;}
+@keyframes sheet-arrive {from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes sheet-leave {from{opacity:1}to{opacity:0;transform:translateY(5px)}}
+@media(max-width:1100px) {
+  .journal-layout,.journal-layout[data-open="true"] {display:flex;flex-direction:column;align-items:stretch;gap:0;}
+  .journal-list {max-height:26rem;}
+  .journal-layout[data-open="true"] .journal-list {max-height:clamp(9rem,24svh,15rem);}
+  .journal-layout[data-open="true"] .editor-slot {margin-top:12px;}
+  .editor-slot {width:100%;max-width:42rem;}
+}
+@media(max-width:420px) {
+  .journal-edit span {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);}
+  .journal-list li {gap:5px;padding:12px 3px;}
+  .correction-header,.correction-actions {padding:13px;}
+  .correction-body {padding:0 13px 14px;}
+}
+@media(prefers-reduced-motion:reduce) {
+  .journal-layout,.vendor-editor,.journal-layout[data-open="false"] .vendor-editor {transition:none;animation:none;}
+}
