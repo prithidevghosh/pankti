@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
+import { databaseName } from './db/mongo.mjs';
 import { openStore } from './store.mjs';
 import { indiaPhone } from './phone-auth.mjs';
 
@@ -10,25 +11,35 @@ if (!file) {
 }
 
 const exportSchema = z.object({
-  users: z.array(z.object({
-    localId: z.string().min(1).max(128),
-    phoneNumber: z.string().optional(),
-    disabled: z.boolean().default(false),
-  })),
+  users: z.array(
+    z.object({
+      localId: z.string().min(1).max(128),
+      phoneNumber: z.string().optional(),
+      disabled: z.boolean().default(false),
+    }),
+  ),
 });
 
 try {
   const { users } = exportSchema.parse(JSON.parse(readFileSync(file, 'utf8')));
-  const accounts = users.filter(({ phoneNumber }) => indiaPhone.test(phoneNumber || ''))
+  const accounts = users
+    .filter(({ phoneNumber }) => indiaPhone.test(phoneNumber || ''))
     .map(({ localId, phoneNumber, disabled }) => ({ uid: localId, phone: phoneNumber, disabled }));
-  const store = openStore(process.env.DATABASE_PATH || '.data/pankti.sqlite');
+  const store = await openStore(databaseName(false));
   try {
-    console.log('Imported %d phone account mappings. %d export records were outside the supported +91 mobile format.',
-      store.importPhoneAccounts(accounts), users.length - accounts.length);
+    console.log(
+      'Imported %d phone account mappings. %d export records were outside the supported +91 mobile format.',
+      await store.importPhoneAccounts(accounts),
+      users.length - accounts.length,
+    );
   } finally {
-    store.close();
+    await store.close();
   }
 } catch (error) {
-  console.error(error instanceof z.ZodError ? 'The file does not match the Firebase Auth JSON export format.' : error.message);
+  console.error(
+    error instanceof z.ZodError
+      ? 'The file does not match the Firebase Auth JSON export format.'
+      : error.message,
+  );
   process.exitCode = 1;
 }

@@ -1,20 +1,16 @@
 import { createHash } from 'node:crypto';
-import { httpError } from './providers.mjs';
+import { httpError } from './errors.mjs';
 
 const keyFor = (name) => name.trim().normalize('NFKC').toLowerCase().replace(/\s+/g, ' ');
 
 // Keep the original event immutable. A correction supersedes its working values.
 // Pair a purchase and partial payment only when the original voice note identifies
 // exactly one of each for that supplier. Standalone payments remain on account.
-export function vendorLedger(db, restaurant, correction) {
-  const original = db.prepare('SELECT * FROM vendor_events WHERE restaurant=? ORDER BY id').all(restaurant);
-  const edits = db
-    .prepare('SELECT id,event,details FROM vendor_edits WHERE restaurant=? ORDER BY id')
-    .all(restaurant);
+export function vendorLedger(original, edits, correction) {
   const revision = createHash('sha256')
     .update(JSON.stringify([original.at(-1)?.id, edits.at(-1)?.id]))
     .digest('hex');
-  const latest = new Map(edits.map((e) => [e.event, JSON.parse(e.details)]));
+  const latest = new Map(edits.map((e) => [e.event, e.details]));
   if (correction) {
     if (revision !== correction.revision)
       throw httpError(409, 'The vendor ledger changed. Refresh and reopen the entry.');

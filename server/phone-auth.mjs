@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { httpError, shortText } from './providers.mjs';
+import { httpError } from './errors.mjs';
+import { shortText } from './schemas.mjs';
 import { sessionAge } from './phone-store.mjs';
 
 const cookie = 'pankti_session';
@@ -14,8 +15,12 @@ const cookieSettings = (req) => ({
 export function requestToken(req) {
   const authorization = req.get('authorization');
   if (authorization) return authorization.match(/^Bearer (\S+)$/i)?.[1];
-  return req.get('cookie')?.split(';').map((part) => part.trim())
-    .find((part) => part.startsWith(cookie + '='))?.slice(cookie.length + 1);
+  return req
+    .get('cookie')
+    ?.split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(cookie + '='))
+    ?.slice(cookie.length + 1);
 }
 
 export function twilioVerify(env = process.env, fetchApi = fetch) {
@@ -82,7 +87,10 @@ function respondWithSession(req, res, token, client) {
 
 export function registerPhoneAuth(app, store, { otp, requireLegacyImport, localPhoneOnly }) {
   app.use('/api/auth', (req, _res, next) => {
-    if (req.method === 'POST' && (!req.is('application/json') || req.get('sec-fetch-site') === 'cross-site')) {
+    if (
+      req.method === 'POST' &&
+      (!req.is('application/json') || req.get('sec-fetch-site') === 'cross-site')
+    ) {
       throw httpError(403, 'Sign-in request is not permitted.');
     }
     if (req.path === '/send' || req.path === '/verify') {
@@ -94,45 +102,45 @@ export function registerPhoneAuth(app, store, { otp, requireLegacyImport, localP
   if (localPhoneOnly) {
     const loginBody = phoneBody.extend({ client: clientType });
     const signupBody = loginBody.extend({ name: shortText, businessName: shortText });
-    app.post('/api/auth/signup', (req, res) => {
+    app.post('/api/auth/signup', async (req, res) => {
       const details = signupBody.parse(req.body);
-      respondWithSession(req, res, store.registerLocalPhone(details), details.client);
+      respondWithSession(req, res, await store.registerLocalPhone(details), details.client);
     });
-    app.post('/api/auth/login', (req, res) => {
+    app.post('/api/auth/login', async (req, res) => {
       const { phone, client } = loginBody.parse(req.body);
-      respondWithSession(req, res, store.signInLocalPhone(phone), client);
+      respondWithSession(req, res, await store.signInLocalPhone(phone), client);
     });
   }
 
   app.post('/api/auth/send', async (req, res) => {
     const { phone } = phoneBody.parse(req.body);
-    const challenge = store.reservePhoneChallenge(phone, req.ip, requireLegacyImport);
+    const challenge = await store.reservePhoneChallenge(phone, req.ip, requireLegacyImport);
     const sid = await otp.send(phone);
-    store.savePhoneChallenge(challenge, sid);
+    await store.savePhoneChallenge(challenge, sid);
     res.json({ challenge });
   });
   app.post('/api/auth/verify', async (req, res) => {
     const { challenge, code, client } = checkBody.parse(req.body);
-    const { phone, sid } = store.claimPhoneChallenge(challenge);
+    const { phone, sid } = await store.claimPhoneChallenge(challenge);
     let approved;
     try {
       approved = await otp.check(sid, phone, code);
     } finally {
-      if (!approved) store.releasePhoneChallenge(challenge);
+      if (!approved) await store.releasePhoneChallenge(challenge);
     }
     if (!approved) throw httpError(400, 'The code did not match. Check your SMS and try again.');
-    const token = store.completePhoneChallenge(challenge, phone);
+    const token = await store.completePhoneChallenge(challenge, phone);
     if (!token) throw httpError(403, 'This account is disabled.');
     respondWithSession(req, res, token, client);
   });
-  app.get('/api/auth/session', (req, res) => {
+  app.get('/api/auth/session', async (req, res) => {
     res.json({
-      authenticated: Boolean(store.phoneSessionOwner(requestToken(req))),
+      authenticated: Boolean(await store.phoneSessionOwner(requestToken(req))),
       mode: localPhoneOnly ? 'phone-only' : 'otp',
     });
   });
-  app.post('/api/auth/logout', (req, res) => {
-    store.revokePhoneSession(requestToken(req));
+  app.post('/api/auth/logout', async (req, res) => {
+    await store.revokePhoneSession(requestToken(req));
     res.clearCookie(cookie, cookieSettings(req));
     res.json({ authenticated: false });
   });

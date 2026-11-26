@@ -1,127 +1,151 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { httpError } from './providers.mjs';
-
-const minute = 60_000;
-export const sessionAge = 30 * 24 * 60 * minute;
-const hashToken = (token) => createHash('sha256').update(token).digest('hex');
+import { randomUUID, createHash, randomBytes } from 'node:crypto';
+import { httpError } from './errors.mjs';
+import { increment } from './db/mongo.mjs';
+export const sessionAge = 30 * 86400000;
+const hash = (token) => createHash('sha256').update(token).digest('hex');
 
 export function openPhoneStore(db, transaction) {
-  function assertImportComplete(requireLegacyImport) {
-    const imported = db.prepare("SELECT 1 FROM phone_auth_config WHERE key = 'firebase-imported'").get();
-    const unmapped = db.prepare(`
-      SELECT 1 FROM restaurants WHERE NOT EXISTS (
-        SELECT 1 FROM phone_accounts WHERE uid = restaurants.owner
-      ) LIMIT 1
-    `).get();
-    if (unmapped || (requireLegacyImport && !imported)) {
+  const accounts = db.collection('phone_accounts'),
+    profiles = db.collection('local_signup_profiles');
+  const sessions = db.collection('phone_sessions'),
+    challenges = db.collection('phone_challenges');
+  const restaurants = db.collection('restaurants'),
+    config = db.collection('phone_auth_config');
+  async function assertImported(session, required) {
+    const missing = await restaurants
+      .aggregate(
+        [
+          { $lookup: { from: 'phone_accounts', localField: 'owner', foreignField: 'uid', as: 'account' } },
+          { $match: { 'account.0': { $exists: false } } },
+          { $limit: 1 },
+          { $project: { _id: 1 } },
+        ],
+        { session },
+      )
+      .next();
+    if (missing || (required && !(await config.findOne({ _id: 'firebase-imported' }, { session }))))
       throw httpError(503, 'Sign-in will be available after the existing accounts are migrated.');
-    }
   }
-
-  function issueSession(uid) {
+  async function issue(uid, session) {
     const token = randomBytes(32).toString('base64url');
-    db.prepare('DELETE FROM phone_sessions WHERE expires <= ?').run(Date.now());
-    db.prepare('INSERT INTO phone_sessions(token_hash, uid, expires) VALUES (?, ?, ?)')
-      .run(hashToken(token), uid, Date.now() + sessionAge);
+    await sessions.insertOne(
+      { _id: hash(token), uid, expiresAt: new Date(Date.now() + sessionAge) },
+      { session },
+    );
     return token;
   }
-
   return {
-    registerLocalPhone({ phone, name, businessName }) {
-      return transaction(() => {
-        const uid = randomUUID();
-        const account = db.prepare('INSERT OR IGNORE INTO phone_accounts(phone, uid) VALUES (?, ?)')
-          .run(phone, uid);
-        if (!account.changes) throw httpError(409, 'That number already has an account. Sign in with it.');
-        db.prepare('INSERT INTO local_signup_profiles(uid, name) VALUES (?, ?)').run(uid, name);
-        db.prepare('INSERT INTO restaurants(id, owner, name, city) VALUES (?, ?, ?, ?)')
-          .run(randomUUID(), uid, businessName, '');
-        return issueSession(uid);
-      });
+    async registerLocalPhone({ phone, name, businessName }) {
+      try {
+        return await transaction(async (session) => {
+          const uid = randomUUID();
+          await accounts.insertOne({ _id: phone, uid, disabled: false }, { session });
+          await profiles.insertOne({ _id: uid, name }, { session });
+          await restaurants.insertOne(
+            { _id: randomUUID(), owner: uid, name: businessName, city: '', qr: null, payee: null },
+            { session },
+          );
+          return issue(uid, session);
+        });
+      } catch (error) {
+        if (error.code === 11000)
+          throw httpError(409, 'That number already has an account. Sign in with it.');
+        throw error;
+      }
     },
     signInLocalPhone(phone) {
-      return transaction(() => {
-        const account = db.prepare(`
-          SELECT accounts.uid FROM phone_accounts accounts JOIN local_signup_profiles profiles USING (uid)
-          WHERE accounts.phone = ? AND accounts.disabled = 0
-        `).get(phone);
-        if (!account) throw httpError(404, 'No account found for that number. Create an account first.');
-        return issueSession(account.uid);
+      return transaction(async (session) => {
+        const account = await accounts.findOne({ _id: phone, disabled: false }, { session });
+        if (!account || !(await profiles.findOne({ _id: account.uid }, { session })))
+          throw httpError(404, 'No account found for that number. Create an account first.');
+        return issue(account.uid, session);
       });
     },
-    importPhoneAccounts(accounts) {
-      return transaction(() => {
-        const byPhone = db.prepare('SELECT uid FROM phone_accounts WHERE phone = ?');
-        const byUid = db.prepare('SELECT phone FROM phone_accounts WHERE uid = ?');
-        const insert = db.prepare(`
-          INSERT INTO phone_accounts(phone, uid, disabled) VALUES (?, ?, ?)
-          ON CONFLICT(phone) DO UPDATE SET disabled = excluded.disabled
-        `);
-        for (const { phone, uid, disabled } of accounts) {
-          const existingUser = byPhone.get(phone);
-          const existingPhone = byUid.get(uid);
-          if ((existingUser && existingUser.uid !== uid) || (existingPhone && existingPhone.phone !== phone)) {
-            throw new Error('An exported account conflicts with an existing phone or owner ID. Import rolled back.');
-          }
-          insert.run(phone, uid, Number(disabled));
+    importPhoneAccounts(rows) {
+      return transaction(async (session) => {
+        for (const { phone, uid, disabled } of rows) {
+          const match = await accounts.findOne({ $or: [{ _id: phone }, { uid }] }, { session });
+          if (match && (match._id !== phone || match.uid !== uid))
+            throw Error('An exported account conflicts with an existing phone or owner ID.');
+          await accounts.updateOne({ _id: phone, uid }, { $set: { disabled } }, { upsert: true, session });
         }
-        assertImportComplete(false);
-        db.prepare("INSERT OR IGNORE INTO phone_auth_config VALUES ('firebase-imported')").run();
-        return accounts.length;
+        await assertImported(session, false);
+        await config.updateOne(
+          { _id: 'firebase-imported' },
+          { $setOnInsert: { _id: 'firebase-imported' } },
+          { upsert: true, session },
+        );
+        return rows.length;
       });
     },
-    reservePhoneChallenge(phone, ip, requireLegacyImport) {
-      return transaction(() => {
-        assertImportComplete(requireLegacyImport);
-        const now = Date.now();
-        db.prepare('DELETE FROM phone_challenges WHERE created < ?').run(now - 60 * minute);
-        const { count, latest } = db.prepare(`
-          SELECT COUNT(*) AS count, MAX(created) AS latest FROM phone_challenges WHERE phone = ?
-        `).get(phone);
-        const ipCount = db.prepare('SELECT COUNT(*) AS count FROM phone_challenges WHERE ip = ?').get(ip).count;
-        if ((latest && now - latest < 30_000) || count >= 5 || ipCount >= 25) {
+    reservePhoneChallenge(phone, ip, required) {
+      return transaction(async (session) => {
+        // Serialize reservations so concurrent requests cannot bypass either limit.
+        await increment(db, session, 'otp-reservations');
+        await assertImported(session, required);
+        const now = Date.now(),
+          created = { $gte: now - 3600000 };
+        if (
+          (await challenges.findOne({ phone, created: { $gt: now - 30000 } }, { session })) ||
+          (await challenges.countDocuments({ phone, created }, { session })) >= 5 ||
+          (await challenges.countDocuments({ ip, created }, { session })) >= 25
+        )
           throw httpError(429, 'Too many code requests. Wait before trying again.');
-        }
         const id = randomUUID();
-        db.prepare('INSERT INTO phone_challenges(id, phone, ip, created) VALUES (?, ?, ?, ?)')
-          .run(id, phone, ip, now);
+        await challenges.insertOne(
+          {
+            _id: id,
+            phone,
+            ip,
+            created: now,
+            expiresAt: new Date(now + 3600000),
+            checking: false,
+            sid: null,
+            attempts: 0,
+          },
+          { session },
+        );
         return id;
       });
     },
-    savePhoneChallenge(id, sid) {
-      db.prepare('UPDATE phone_challenges SET sid = ? WHERE id = ?').run(sid, id);
+    savePhoneChallenge: (_id, sid) => challenges.updateOne({ _id }, { $set: { sid } }),
+    async claimPhoneChallenge(_id) {
+      const row = await challenges.findOneAndUpdate(
+        {
+          _id,
+          sid: { $ne: null },
+          checking: false,
+          attempts: { $lt: 5 },
+          created: { $gte: Date.now() - 600000 },
+        },
+        { $set: { checking: true }, $inc: { attempts: 1 } },
+      );
+      if (!row) throw httpError(409, 'This code is unavailable or expired. Start over to request a new one.');
+      return row;
     },
-    claimPhoneChallenge(id) {
-      const challenge = db.prepare(`
-        UPDATE phone_challenges SET checking = 1, attempts = attempts + 1
-        WHERE id = ? AND sid IS NOT NULL AND checking = 0 AND attempts < 5 AND created >= ?
-        RETURNING phone, sid
-      `).get(id, Date.now() - 10 * minute);
-      if (!challenge) throw httpError(409, 'This code is unavailable or expired. Start over to request a new one.');
-      return challenge;
-    },
-    releasePhoneChallenge(id) {
-      db.prepare('UPDATE phone_challenges SET checking = 0 WHERE id = ?').run(id);
-    },
-    completePhoneChallenge(id, phone) {
-      return transaction(() => {
-        // Keep the row for send limits and make the verification challenge single-use.
-        db.prepare('UPDATE phone_challenges SET sid = NULL WHERE id = ?').run(id);
-        db.prepare('INSERT OR IGNORE INTO phone_accounts(phone, uid) VALUES (?, ?)').run(phone, randomUUID());
-        const account = db.prepare('SELECT uid, disabled FROM phone_accounts WHERE phone = ?').get(phone);
-        if (account.disabled) return null;
-        return issueSession(account.uid);
+    releasePhoneChallenge: (_id) => challenges.updateOne({ _id }, { $set: { checking: false } }),
+    completePhoneChallenge(_id, phone) {
+      return transaction(async (session) => {
+        const used = await challenges.updateOne(
+          { _id, phone, checking: true, sid: { $ne: null } },
+          { $set: { sid: null } },
+          { session },
+        );
+        if (!used.modifiedCount)
+          throw httpError(409, 'This code is unavailable or expired. Start over to request a new one.');
+        const account = await accounts.findOneAndUpdate(
+          { _id: phone },
+          { $setOnInsert: { uid: randomUUID(), disabled: false } },
+          { upsert: true, session, returnDocument: 'after' },
+        );
+        return account.disabled ? null : issue(account.uid, session);
       });
     },
-    phoneSessionOwner(token) {
+    async phoneSessionOwner(token) {
       if (!/^[A-Za-z0-9_-]{43}$/.test(token || '')) return null;
-      return db.prepare(`
-        SELECT sessions.uid FROM phone_sessions sessions JOIN phone_accounts accounts USING (uid)
-        WHERE sessions.token_hash = ? AND sessions.expires > ? AND accounts.disabled = 0
-      `).get(hashToken(token), Date.now())?.uid ?? null;
+      const active = await sessions.findOne({ _id: hash(token), expiresAt: { $gt: new Date() } });
+      return active && (await accounts.findOne({ uid: active.uid, disabled: false })) ? active.uid : null;
     },
-    revokePhoneSession(token) {
-      if (token) db.prepare('DELETE FROM phone_sessions WHERE token_hash = ?').run(hashToken(token));
-    },
+    revokePhoneSession: (token) => token && sessions.deleteOne({ _id: hash(token) }),
   };
 }

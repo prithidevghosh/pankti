@@ -1,34 +1,19 @@
+import { registerBillsRoutes } from './routes/bills.mjs';
+import { registerVendorsRoutes } from './routes/vendors.mjs';
+import { interpretRecording } from './services/voice.mjs';
 import express from 'express';
 import multer from 'multer';
 import { z, ZodError } from 'zod';
 import { openStore } from './store.mjs';
 import { indiaPhone, registerPhoneAuth, requestToken } from './phone-auth.mjs';
-import {
-  scanMenu,
-  transcribe,
-  interpret,
-  decodeQr,
-  renderQr,
-  httpError,
-  restaurantSchema,
-  shortText,
-  entrySchema,
-  basketSchema,
-} from './providers.mjs';
+import { scanMenu, transcribe, interpret, decodeQr, renderQr } from './providers.mjs';
+import { httpError } from './errors.mjs';
+import { restaurantSchema, shortText, entrySchema } from './schemas.mjs';
 
-const businessDate = () =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', dateStyle: 'short' }).format(new Date());
-const daySchema = z.iso.date();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024, files: 1, fields: 2, fieldSize: 24576 },
 });
-const vendorEntries = z.array(z.object({
-  vendor: shortText, kind: z.enum(['order', 'purchase', 'payment', 'balance']),
-  note: z.string().trim().max(300), amount: z.number().int().min(0).max(1000000000),
-}).refine(entry => entry.amount > 0 || ['order', 'balance'].includes(entry.kind))).max(30);
-const vendorCorrection = z.object({vendor:shortText,note:z.string().trim().max(300),
-  amount:z.number().int().nonnegative().max(1000000000),paid:z.number().int().nonnegative().max(1000000000)});
 const workspace = async (restaurant) =>
   restaurant
     ? {
@@ -40,8 +25,17 @@ const workspace = async (restaurant) =>
       }
     : null;
 
-export function createApp({ verify, database, otp, requireLegacyImport = false, localPhoneOnly = false, speech = transcribe, understand = interpret, scan = scanMenu }) {
-  const store = openStore(database);
+export async function createApp({
+  verify,
+  database,
+  otp,
+  requireLegacyImport = false,
+  localPhoneOnly = false,
+  speech = transcribe,
+  understand = interpret,
+  scan = scanMenu,
+}) {
+  const store = await openStore(database);
   const app = express();
   app.disable('x-powered-by');
   app.use('/api', express.json({ limit: '256kb' }), (_req, res, next) => {
@@ -75,9 +69,9 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
   app.use('/api', async (req, _res, next) => {
     const token = requestToken(req);
     if (!token) throw httpError(401, 'Sign in to continue.');
-    req.uid = verify ? await verify(token) : store.phoneSessionOwner(token);
+    req.uid = verify ? await verify(token) : await store.phoneSessionOwner(token);
     if (!req.uid) throw httpError(401, 'Your session expired. Sign in again.');
-    req.restaurant = store.restaurantFor(req.uid);
+    req.restaurant = await store.restaurantFor(req.uid);
     next();
   });
   const requireRestaurant = (req) => {
@@ -88,50 +82,31 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
     const id = req.restaurant?.id;
     res.json({
       restaurant: await workspace(req.restaurant),
-      menu: id ? store.menuFor(id) : [],
-      pendingBill: id ? store.pendingBill(id) : null,
+      menu: id ? await store.menuFor(id) : [],
+      pendingBill: id ? await store.pendingBill(id) : null,
     });
   });
   app.post('/api/workspace', async (req, res) => {
     const { name, city } = restaurantSchema.parse(req.body);
-    res.json({ restaurant: await workspace(store.createRestaurant(req.uid, name, city)) });
+    res.json({ restaurant: await workspace(await store.createRestaurant(req.uid, name, city)) });
   });
-  app.post('/api/menu', (req, res) => {
+  app.post('/api/menu', async (req, res) => {
     const restaurant = requireRestaurant(req);
     const entries = z.array(entrySchema).min(1).max(500).parse(req.body);
-    res.json({ menu: store.saveMenu(restaurant.id, entries) });
+    res.json({ menu: await store.saveMenu(restaurant.id, entries) });
   });
   app.post('/api/menu/scan', upload.single('photo'), async (req, res) => {
     requireRestaurant(req);
     if (!req.file?.size) throw httpError(400, 'Choose a menu photo.');
     res.json({ entries: await scan(req.file.buffer) });
   });
-  app.put('/api/menu/:id', (req, res) => {
+  app.put('/api/menu/:id', async (req, res) => {
     const restaurant = requireRestaurant(req);
-    if (!store.editMenu(restaurant.id, req.params.id, entrySchema.parse(req.body))) throw httpError(404, 'Menu item not found.');
-    res.json({ menu: store.menuFor(restaurant.id) });
+    if (!(await store.editMenu(restaurant.id, req.params.id, entrySchema.parse(req.body))))
+      throw httpError(404, 'Menu item not found.');
+    res.json({ menu: await store.menuFor(restaurant.id) });
   });
-  app.get('/api/vendors', (req, res) => res.json(store.vendors(requireRestaurant(req).id)));
-  app.post('/api/vendors', (req, res) => {
-    const restaurant = requireRestaurant(req);
-    const { request, entries } = z.object({ request: z.uuid(), entries: vendorEntries.min(1) }).parse(req.body);
-    store.postVendor(restaurant.id, request, entries);
-    res.json(store.vendors(restaurant.id));
-  });
-  for (const [path,commit] of [['/api/vendors/:id/preview',false],['/api/vendors/:id',true]]) {
-    app[commit ? 'put' : 'post'](path,(req,res) => {
-      const restaurant = requireRestaurant(req);
-      const id = z.coerce.number().int().positive().parse(req.params.id);
-      const {revision,details} = z.object({revision:z.string().length(64),details:vendorCorrection}).parse(req.body);
-      const event = store.vendors(restaurant.id).events.find(row => row.id === id);
-      if (!event) throw httpError(404,'Vendor entry not found.');
-      if (event.linkedPurchase) throw httpError(409,'Edit the linked purchase to correct this payment.');
-      if (details.paid > details.amount
-        || (['purchase','payment'].includes(event.kind) && details.amount === 0))
-        throw httpError(400,'Check the entry amount and the amount paid.');
-      res.json(store.correctVendor(restaurant.id,{id,revision,details},commit));
-    });
-  }
+  registerVendorsRoutes(app, { store, requireRestaurant });
   app.post('/api/voice/:task', upload.single('audio'), async (req, res) => {
     const task = z.enum(['onboarding', 'menu', 'order', 'vendor', 'vendorEdit']).parse(req.params.task);
     if (!req.file?.size) throw httpError(400, 'Record a voice note first.');
@@ -143,59 +118,16 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
     } catch {
       throw httpError(400, 'Invalid voice context.');
     }
-    const context = {};
-    if (['order','vendor'].includes(task) && supplied.clarificationReply) {
-      context.clarificationReply = z.object({ previous: z.string().max(3000), question: z.string().max(600) }).parse(supplied.clarificationReply);
-    }
-    let keyterms = [];
-    if (task !== 'onboarding') {
-      const restaurant = requireRestaurant(req);
-      if (task === 'menu') {
-        context.previous = z
-          .array(entrySchema)
-          .max(80)
-          .parse(supplied.previous ?? []);
-      } else if (task === 'vendorEdit') {
-        const event = store.vendors(restaurant.id).events.find(e => e.id === supplied.id);
-        if (!event) throw httpError(404,'Choose a saved vendor entry first.');
-        context.entry = {...vendorCorrection.parse(supplied.draft),kind:event.kind};
-      } else if (task === 'vendor') {
-        const ledger = store.vendors(restaurant.id);
-        context.vendors = ledger.balances;
-        context.recentEntries = ledger.events.filter(e => !e.linkedPurchase).slice(0,50);
-        context.revision = ledger.revision;
-        keyterms = context.vendors.map(row => row.vendor);
-      } else {
-        context.menu = store.menuFor(restaurant.id).map(({ id, name, variant }) => ({ id, name, variant }));
-        context.basket = basketSchema.parse(supplied.basket ?? []);
-        keyterms = [...new Set(context.menu.map((item) => item.name))];
-      }
-    } else {
-      context.previous = z
-        .object({ name: z.string().max(96).nullable(), city: z.string().max(96).nullable() })
-        .optional()
-        .parse(supplied.previous);
-    }
-    const transcript = await speech(req.file, keyterms);
-    const result = await understand(task, transcript, context);
-    if (task === 'vendor') {
-      result.entries = vendorEntries.parse(result.entries);
-      if (result.editId != null) {
-        const entry = context.recentEntries.find(row => row.id === result.editId);
-        if (!entry) throw httpError(422,'Select the vendor entry and use Speak correction.');
-        const change = await understand('vendorEdit',transcript,{entry, clarificationReply:context.clarificationReply});
-        result.entries = [];
-        result.question = change.question;
-        if (!change.question) result.edit = {id:entry.id,revision:context.revision,details:vendorCorrection.parse(change)};
-      }
-    }
-    if (
-      task === 'order' &&
-      result.lines.some((line) => !context.menu.some((item) => item.id === line.item))
-    ) {
-      throw httpError(422, 'One of those items could not be matched to the menu. Try the full dish name.');
-    }
-    res.json({ transcript, result });
+    const restaurant = task === 'onboarding' ? null : requireRestaurant(req);
+    res.json(
+      await interpretRecording(
+        { store, speech, understand },
+        task,
+        req.file,
+        z.record(z.string(), z.unknown()).parse(supplied),
+        restaurant,
+      ),
+    );
   });
   app.post('/api/qr/preview', upload.single('photo'), async (req, res) => {
     requireRestaurant(req);
@@ -208,39 +140,10 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
     const photoUri = z.string().max(2048).parse(req.body?.uri);
     const png = await renderQr(photoUri);
     const { uri, payee } = await decodeQr(Buffer.from(png.split(',')[1], 'base64'));
-    store.saveQr(restaurant.id, uri, payee);
-    res.json({ restaurant: await workspace(store.restaurantFor(req.uid)) });
+    await store.saveQr(restaurant.id, uri, payee);
+    res.json({ restaurant: await workspace(await store.restaurantFor(req.uid)) });
   });
-  app.post('/api/bills', (req, res) => {
-    const restaurant = requireRestaurant(req);
-    const { request, basket, prices } = z.object({
-      request: z.uuid(), basket: basketSchema,
-      prices: z.record(z.uuid(), z.number().int().positive()).optional(),
-    }).parse(req.body);
-    if (!basket.length) throw httpError(422, 'Add an item before making a bill.');
-    const bill = store.createBill(restaurant.id, request, basket, prices);
-    if (!bill) throw httpError(422, 'One or more items are unavailable.');
-    res.status(201).json({ bill });
-  });
-  app.get('/api/bills/:id', (req, res) => {
-    const bill = store.billFor(requireRestaurant(req).id, req.params.id);
-    if (!bill) throw httpError(404, 'Bill not found.');
-    res.json({ bill });
-  });
-  app.post('/api/bills/:id/payment', (req, res) => {
-    const restaurant = requireRestaurant(req);
-    const method = z.enum(['cash', 'upi']).parse(req.body?.method);
-    const bill = store.markPaid(restaurant.id, req.params.id, method);
-    if (!bill) throw httpError(404, 'Bill not found.');
-    if (bill.method !== method)
-      throw httpError(409, 'A different payment method is already recorded for this bill.');
-    res.json({ bill });
-  });
-  app.get('/api/analytics', (req, res) => {
-    const restaurant = requireRestaurant(req);
-    const date = daySchema.parse(req.query.date ?? businessDate());
-    res.json(store.analytics(restaurant.id, date));
-  });
+  registerBillsRoutes(app, { store, requireRestaurant });
   app.use('/api', (_req, res) => res.status(404).json({ error: 'This route is unavailable.' }));
   app.use((error, _req, res, _next) => {
     if (error instanceof ZodError)

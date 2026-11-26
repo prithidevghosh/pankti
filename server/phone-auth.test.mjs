@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { DatabaseSync } from 'node:sqlite';
+import { testDatabase } from './test-database.mjs';
 import { createApp } from './app.mjs';
 import { openStore } from './store.mjs';
 import { twilioVerify } from './phone-auth.mjs';
@@ -14,41 +14,49 @@ import { twilioVerify } from './phone-auth.mjs';
 test('Firebase import keeps existing owner data available through web and Android Twilio sessions', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'pankti-auth-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const database = join(directory, 'data.sqlite');
+  const { name: database, db } = await testDatabase(t);
   const phone = '+919876543210';
   const owner = 'firebase-existing-owner';
-  const store = openStore(database);
-  const restaurant = store.createRestaurant(owner, 'Original Counter', 'Kolkata');
-  const [item] = store.saveMenu(restaurant.id, [{ name: 'Tea', variant: '', category: 'Drinks', price: 1500 }]);
-  const bill = store.createBill(restaurant.id, randomUUID(), [{ item: item.id, quantity: 2 }]);
-  store.markPaid(restaurant.id, bill.id, 'cash');
-  store.close();
+  const store = await openStore(database);
+  const restaurant = await store.createRestaurant(owner, 'Original Counter', 'Kolkata');
+  const [item] = await store.saveMenu(restaurant.id, [
+    { name: 'Tea', variant: '', category: 'Drinks', price: 1500 },
+  ]);
+  const bill = await store.createBill(restaurant.id, randomUUID(), [{ item: item.id, quantity: 2 }]);
+  await store.markPaid(restaurant.id, bill.id, 'cash');
+  await store.close();
 
   const service = 'VA' + '1'.repeat(32);
   const key = 'SK' + '2'.repeat(32);
   const sid = 'VE' + '3'.repeat(32);
   let sends = 0;
-  const otp = twilioVerify({
-    TWILIO_VERIFY_SERVICE_SID: service,
-    TWILIO_API_KEY_SID: key,
-    TWILIO_API_KEY_SECRET: 'test-secret',
-  }, async (url, request) => {
-    assert.ok(url.startsWith('https://verify.twilio.com/v2/Services/' + service));
-    assert.equal(request.headers.Authorization, 'Basic ' + Buffer.from(key + ':test-secret').toString('base64'));
-    if (url.endsWith('/Verifications')) {
-      assert.deepEqual(Object.fromEntries(request.body), { To: phone, Channel: 'sms' });
-      sends++;
-      return Response.json({ status: 'pending', sid, to: phone });
-    }
-    assert.ok(url.endsWith('/VerificationCheck'));
-    assert.equal(request.body.get('To'), phone);
-    return Response.json({
-      status: request.body.get('Code') === '123456' ? 'approved' : 'pending',
-      sid,
-      to: phone,
-    });
-  });
-  const app = createApp({ database, otp, requireLegacyImport: true });
+  const otp = twilioVerify(
+    {
+      TWILIO_VERIFY_SERVICE_SID: service,
+      TWILIO_API_KEY_SID: key,
+      TWILIO_API_KEY_SECRET: 'test-secret',
+    },
+    async (url, request) => {
+      assert.ok(url.startsWith('https://verify.twilio.com/v2/Services/' + service));
+      assert.equal(
+        request.headers.Authorization,
+        'Basic ' + Buffer.from(key + ':test-secret').toString('base64'),
+      );
+      if (url.endsWith('/Verifications')) {
+        assert.deepEqual(Object.fromEntries(request.body), { To: phone, Channel: 'sms' });
+        sends++;
+        return Response.json({ status: 'pending', sid, to: phone });
+      }
+      assert.ok(url.endsWith('/VerificationCheck'));
+      assert.equal(request.body.get('To'), phone);
+      return Response.json({
+        status: request.body.get('Code') === '123456' ? 'approved' : 'pending',
+        sid,
+        to: phone,
+      });
+    },
+  );
+  const app = await createApp({ database, otp, requireLegacyImport: true });
   const server = app.app.listen(0, '127.0.0.1');
   await new Promise((resolve, reject) => server.once('listening', resolve).once('error', reject));
   try {
@@ -70,15 +78,19 @@ test('Firebase import keeps existing owner data available through web and Androi
     await call('/auth/send', { body: { phone }, status: 503 });
     assert.equal(sends, 0);
     const file = join(directory, 'users.json');
-    const importAccounts = (users) => writeFile(file, JSON.stringify({ users })).then(() =>
-      promisify(execFile)(process.execPath, ['server/import-firebase-accounts.mjs', file], {
-        env: { ...process.env, DATABASE_PATH: database },
-      }));
+    const importAccounts = (users) =>
+      writeFile(file, JSON.stringify({ users })).then(() =>
+        promisify(execFile)(process.execPath, ['server/import-firebase-accounts.mjs', file], {
+          env: { ...process.env, MONGODB_DATABASE: database },
+        }),
+      );
     await assert.rejects(importAccounts([]), /existing accounts are migrated/);
     await importAccounts([{ localId: owner, phoneNumber: phone }]);
     await assert.rejects(importAccounts([{ localId: 'different-owner', phoneNumber: phone }]), /conflicts/);
 
-    const { result: { challenge } } = await call('/auth/send', { body: { phone } });
+    const {
+      result: { challenge },
+    } = await call('/auth/send', { body: { phone } });
     await call('/auth/send', { body: { phone }, status: 429 });
     await call('/auth/verify', { body: { challenge, code: '000000', client: 'web' }, status: 400 });
     const web = await call('/auth/verify', { body: { challenge, code: '123456', client: 'web' } });
@@ -92,11 +104,11 @@ test('Firebase import keeps existing owner data available through web and Androi
     assert.equal(workspace.result.menu[0].id, item.id);
     assert.equal((await call('/bills/' + bill.id, { cookie })).result.bill.method, 'cash');
 
-    const db = new DatabaseSync(database);
-    db.prepare('UPDATE phone_challenges SET created = created - 31000').run();
-    db.close();
+    await db.collection('phone_challenges').updateMany({}, { $inc: { created: -31000 } });
     const android = await call('/auth/send', { body: { phone } });
-    const { result: { token } } = await call('/auth/verify', {
+    const {
+      result: { token },
+    } = await call('/auth/verify', {
       body: { challenge: android.result.challenge, code: '123456', client: 'android' },
     });
     assert.equal((await call('/workspace', { token })).result.restaurant.id, restaurant.id);
@@ -107,22 +119,22 @@ test('Firebase import keeps existing owner data available through web and Androi
     await call('/workspace', { token, status: 401 });
   } finally {
     await new Promise((resolve) => server.close(resolve));
-    app.close();
+    await app.close();
   }
 });
 
 test('local phone signup shares a workspace across clients without exposing verified accounts', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'pankti-local-auth-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const database = join(directory, 'data.sqlite');
+  const { name: database, db } = await testDatabase(t);
   const phone = '+919000000001';
   const verifiedPhone = '+919000000002';
-  const store = openStore(database);
-  store.importPhoneAccounts([{ phone: verifiedPhone, uid: 'verified-owner', disabled: false }]);
-  store.createRestaurant('verified-owner', 'Existing Counter', 'Mumbai');
-  store.close();
+  const store = await openStore(database);
+  await store.importPhoneAccounts([{ phone: verifiedPhone, uid: 'verified-owner', disabled: false }]);
+  await store.createRestaurant('verified-owner', 'Existing Counter', 'Mumbai');
+  await store.close();
 
-  const application = createApp({
+  const application = await createApp({
     database,
     localPhoneOnly: true,
     speech: async (recording) => {
@@ -139,11 +151,12 @@ test('local phone signup shares a workspace across clients without exposing veri
   await new Promise((resolve, reject) => server.once('listening', resolve).once('error', reject));
   try {
     const origin = 'http://127.0.0.1:' + server.address().port + '/api';
-    const post = (path, body) => fetch(origin + path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const post = (path, body) =>
+      fetch(origin + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
     assert.equal((await post('/auth/login', { phone, client: 'android' })).status, 404);
     assert.equal((await post('/auth/login', { phone: verifiedPhone, client: 'web' })).status, 404);
     assert.equal((await post('/auth/send', { phone })).status, 404);
@@ -164,15 +177,20 @@ test('local phone signup shares a workspace across clients without exposing veri
     const login = await post('/auth/login', { phone, client: 'android' });
     assert.equal(login.status, 200);
     const { token } = await login.json();
-    const mobile = await fetch(origin + '/workspace', { headers: { Authorization: 'Bearer ' + token } })
-      .then((res) => res.json());
+    const mobile = await fetch(origin + '/workspace', { headers: { Authorization: 'Bearer ' + token } }).then(
+      (res) => res.json(),
+    );
     assert.equal(mobile.restaurant.id, web.restaurant.id);
-    assert.equal((await post('/auth/signup', { ...draft, businessName: 'Renamed', client: 'android' })).status, 409);
-    const db = new DatabaseSync(database, { readOnly: true });
-    assert.equal(db.prepare('SELECT name FROM local_signup_profiles').get().name, draft.name);
-    db.close();
+    assert.equal(
+      (await post('/auth/signup', { ...draft, businessName: 'Renamed', client: 'android' })).status,
+      409,
+    );
+    assert.equal(
+      (await db.collection('local_signup_profiles').findOne({ name: draft.name })).name,
+      draft.name,
+    );
   } finally {
     await new Promise((resolve) => server.close(resolve));
-    application.close();
+    await application.close();
   }
 });

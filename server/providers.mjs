@@ -3,24 +3,8 @@ import sharp from 'sharp';
 import jsQR from 'jsqr';
 import QRCode from 'qrcode';
 
-export const shortText = z.string().trim().min(1).max(96);
-export const restaurantSchema = z.object({ name: shortText, city: shortText }).strict();
-export const entrySchema = z
-  .object({
-    name: shortText,
-    variant: z.string().trim().max(64),
-    category: shortText,
-    price: z.number().int().min(1).max(10000000),
-  })
-  .strict();
-export const lineSchema = z.object({ item: z.uuid(), quantity: z.number().multipleOf(0.25).min(0.25).max(99) }).strict();
-export const basketSchema = z
-  .array(lineSchema)
-  .max(60)
-  .refine(
-    (lines) => new Set(lines.map((line) => line.item)).size === lines.length,
-    'Each item can appear once.',
-  );
+import { httpError } from './errors.mjs';
+import { entrySchema, basketSchema } from './schemas.mjs';
 const shape = (properties) => ({
   type: 'object',
   additionalProperties: false,
@@ -81,10 +65,6 @@ For each requested dish:
 Set readyToBill only on an explicit request to issue the bill. Never emit a price.`,
   },
 };
-export function httpError(status, message) {
-  return Object.assign(new Error(message), { status });
-}
-
 export async function transcribe(file, keyterms = []) {
   const key = process.env.SARVAM_API_KEY;
   if (!key) throw httpError(503, 'Speech is unavailable. Set SARVAM_API_KEY on the server.');
