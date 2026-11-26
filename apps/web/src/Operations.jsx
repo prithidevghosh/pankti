@@ -111,7 +111,8 @@ export function Orders({ menu, onBill }) {
             disabled={op.busy || speechBusy || Boolean(question)}
             onClick={() =>
               op.run(async () => {
-                const { bill } = await request('/bills', { body: { request: key.current, basket } });
+                const prices = Object.fromEntries(rows.map(row => [row.item, row.price]));
+                const { bill } = await request('/bills', { body: { request: key.current, basket, prices } });
                 update([]);
                 setHeard('');
                 setQuestion('');

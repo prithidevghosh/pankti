@@ -125,6 +125,7 @@ test('editing an imported menu keeps its ID and fractional bills retain their or
   const {bill} = await call('/bills',{method:'POST',status:201,body:{request:randomUUID(),basket:[{item,quantity:.5}]}});
   assert.equal(bill.total,15001);
   const updated = await call('/menu/'+item,{method:'PUT',body:{...samosa,name:'Renamed samosa',price:28000}});
+  await call('/bills', {method:'POST',status:409,body:{request:randomUUID(),basket:[{item,quantity:1}],prices:{[item]:30001}}});
   assert.equal(updated.menu.length,1);
   assert.equal(updated.menu[0].id,item);
   assert.equal((await call('/bills/'+bill.id)).bill.lines[0].price,30001);

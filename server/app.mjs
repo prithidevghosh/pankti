@@ -180,9 +180,12 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
   });
   app.post('/api/bills', (req, res) => {
     const restaurant = requireRestaurant(req);
-    const { request, basket } = z.object({ request: z.uuid(), basket: basketSchema }).parse(req.body);
+    const { request, basket, prices } = z.object({
+      request: z.uuid(), basket: basketSchema,
+      prices: z.record(z.uuid(), z.number().int().positive()).optional(),
+    }).parse(req.body);
     if (!basket.length) throw httpError(422, 'Add an item before making a bill.');
-    const bill = store.createBill(restaurant.id, request, basket);
+    const bill = store.createBill(restaurant.id, request, basket, prices);
     if (!bill) throw httpError(422, 'One or more items are unavailable.');
     res.status(201).json({ bill });
   });

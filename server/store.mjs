@@ -140,7 +140,7 @@ export function openStore(path) {
         });
       });
     },
-    createBill(restaurant, request, basket) {
+    createBill(restaurant, request, basket, prices) {
       return transaction(() => {
         const existing = db
           .prepare('SELECT id FROM bills WHERE restaurant = ? AND request = ?')
@@ -149,6 +149,8 @@ export function openStore(path) {
         const menu = new Map(menuFor(restaurant).map((item) => [item.id, item]));
         const details = basket.map(({ item, quantity }) => ({ ...menu.get(item), quantity, item }));
         if (details.some((line) => !line.id)) return null;
+        if (prices && details.some(line => prices[line.item] !== line.price))
+          throw Object.assign(new Error('A menu price changed. Refresh the ledger and review the bill total.'), { status: 409 });
         const number = db
           .prepare('SELECT coalesce(max(number), 0) + 1 AS next FROM bills WHERE restaurant = ?')
           .get(restaurant).next;
