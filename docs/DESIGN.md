@@ -66,3 +66,7 @@ The built-in ImageGen prompts for the supplier and menu prints are below.
 **Folded Menu**
 
 > Landscape original artist's book cover, flat scanned fine art for an Indian restaurant's editable menu. An open folded sheet seen from above, two broad asymmetric cobalt blue paper planes, interrupted by a narrow saffron spine and one off-white folded corner. Loose spare cut-paper stencil print on indigo cotton rag, rough hand-inked margins, subtle screenprint misregistration. Compose the fold horizontally through the center, legible both as a wide crop and thumbnail. Full bleed single composition. No food, no text, no lettering, no logos, no frames, no mockup, no gradient.
+
+## Android counter
+
+Design for one-handed service. On signup, keep the account switch at the top, the fields editable after dictation and the form scrollable with the keyboard open. Give the menu its blue folded-paper cover and the order its white running ticket. Place recording and confirmation above the bottom navigation so long menus and orders can scroll independently. Use text and an icon for each recording state. Display the final receipt number, payment state and rupee total separately from the actions that record payment. A cashier must be able to take the next order with one tap after settlement.
