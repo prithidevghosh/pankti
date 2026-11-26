@@ -36,3 +36,9 @@ Prompt used with built-in ImageGen:
 Treat visual design as a product requirement. Compose the form and Counter rhythm as two facing pages. Match the paper tone, use Instrument Serif for the large invitation, and let field labels and values share a ruled baseline. Reserve ochre for the submit arrow and microphone. Keep the account switch visible before the fields, give every field a persistent label, and check both forms at a narrow phone width and a short laptop height. Give recording, errors and keyboard focus the same attention as the resting state.
 
 The direct action language in [Cooper Hewitt’s membership page](https://www.cooperhewitt.org/membership/) and the restrained type and rules in its [design journal](https://www.cooperhewitt.org/wp-content/uploads/2017/08/16_S_DesignJournal_051016_Final-small.pdf) informed this direction.
+
+### Phone layout review
+
+At 390 × 844, signup left 309 px below Create account while the artwork occupied just 59 px. At 430 × 932, the gap grew to 393 px. In 568 × 320 landscape, the sign-in button fell below the screen. Our first review only checked whether signup overflowed.
+
+Review the composition of both screens in portrait and landscape. Keep the fields together and the primary action a comfortable thumb's reach from the bottom. Give spare portrait height to the print. Let the document scroll naturally for larger text, feedback or the on-screen keyboard. Check where the button actually lands and inspect screenshots alongside the overflow measurements.
