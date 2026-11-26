@@ -56,3 +56,13 @@ Built-in ImageGen prompt:
 Keep the overview as a daily statement. Put paid sales with the date and the closing-time print. At the counter, place the recording control beside a running paper ticket, with the payable total beside the issue action. For vendors, bind the balance list to a print of market scales and keep the running journal below it. Treat Menu as a book, with a cobalt scanner cover and a cream price list. Set the actual payment code on a free-standing white merchant placard. On phones bring the controls and document into one reading column and keep the five destinations within reach.
 
 Use ink green #203d31, stock #f7f1e4, ticket white #fffcf6, cobalt #182e72 and claret #643d48. Instrument Serif carries titles and totals. System sans carries editable details. Align names left and amounts right. Keep the quiet zone around each payment code clear. Use the two new built-in ImageGen prints once each.
+
+The built-in ImageGen prompts for the supplier and menu prints are below.
+
+**Market Balance**
+
+> Original square relief print, flat scanned fine art for Pankti's supplier ledger. A market weighing scale distilled into one oblique balance beam, two pale suspended pans at different heights and offset narrow weights. Soot-black and burnt umber on a field of dusty apricot paper, one restrained plum impression. Spare, off-centre, hand-cut linoleum, dry ink skips and paper tooth. Visually striking single image, bold silhouette legible very small. Full bleed. No words, letters, numbers, frame, UI, photorealism or shadows.
+
+**Folded Menu**
+
+> Landscape original artist's book cover, flat scanned fine art for an Indian restaurant's editable menu. An open folded sheet seen from above, two broad asymmetric cobalt blue paper planes, interrupted by a narrow saffron spine and one off-white folded corner. Loose spare cut-paper stencil print on indigo cotton rag, rough hand-inked margins, subtle screenprint misregistration. Compose the fold horizontally through the center, legible both as a wide crop and thumbnail. Full bleed single composition. No food, no text, no lettering, no logos, no frames, no mockup, no gradient.

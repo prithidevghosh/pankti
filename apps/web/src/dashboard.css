@@ -43,14 +43,18 @@
   object-fit: cover;
   object-position: 55% 52%;
 }
-.ledger[data-view='overview'] .ledger-header > div:first-child { width: 52%; }
+.ledger[data-view='overview'] .ledger-header > div:first-child {
+  width: 52%;
+}
 .ledger:not([data-view='overview']) .ledger-header {
   min-height: auto;
   background: transparent;
   padding: 16px 0 24px;
   border-bottom: 3px double #a69b80;
 }
-.ledger:not([data-view='overview']) .ledger-header > div:first-child { width: 100%; }
+.ledger:not([data-view='overview']) .ledger-header > div:first-child {
+  width: 100%;
+}
 .ledger-tools {
   display: flex;
   justify-content: flex-end;
@@ -234,4 +238,308 @@
   gap: 12px;
   min-height: 44px;
   text-underline-offset: 4px;
+}
+
+/* Daily statement */
+.ledger[data-view='overview'] .ledger-header {
+  background: #203d31;
+  color: #fff7e9;
+}
+.ledger[data-view='overview'] .restaurant-name span {
+  color: #e1e5d8;
+}
+.ledger[data-view='overview'] .ledger-header h1 {
+  font-size: clamp(2rem, 3vw, 3.5rem);
+}
+.daily-sales {
+  margin-top: 18px;
+  display: grid;
+  gap: 3px;
+}
+.daily-sales span {
+  font-size: 0.85rem;
+  color: #dbe2cd;
+}
+.daily-sales strong,
+.balance-cover strong {
+  font:
+    400 clamp(2.25rem, 5.5vw, 5.8rem) / 1 'Pankti Wordmark',
+    Georgia,
+    serif;
+  overflow-wrap: anywhere;
+}
+.ledger .metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.ledger .metrics > div:nth-child(n + 3) {
+  border-top: 0;
+}
+.ledger .metrics > div + div {
+  border-left: 1px solid #d6cdb8;
+}
+/* Working ticket */
+.order-desk,
+.bank-desk,
+.vendor-spread,
+.menu-spread {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(16px, 3vw, 48px);
+}
+.order-desk {
+  background: #e3e5d6;
+  padding: clamp(16px, 3vw, 42px);
+  border: 0;
+  margin: 0 0 24px;
+}
+.record-side {
+  padding: 6px 0;
+}
+.work-sheet .signup-voice {
+  background: #244735;
+  color: #fffaf0;
+  min-height: 50px;
+  padding: 6px 20px 6px 8px;
+  border-radius: 30px;
+}
+.work-sheet .signup-voice .mic-disc {
+  color: #24392a;
+}
+.order-ticket {
+  background: #fffcf6;
+  padding: 20px 22px 26px;
+  border-top: 4px solid #957847;
+  box-shadow: 0 3px 0 #cac6b3;
+}
+.order-ticket h3 {
+  font:
+    400 1.7rem/1.1 'Pankti Wordmark',
+    Georgia,
+    serif;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #aea28b;
+}
+.ticket-empty {
+  color: #5e6457;
+  padding: 18px 0;
+}
+.order-ticket .work-lines strong,
+.price-list strong,
+.vendor-book .work-lines strong {
+  font-variant-numeric: tabular-nums;
+}
+/* Supplier book */
+.vendor-spread {
+  align-items: stretch;
+}
+.vendor-spread > :last-child:nth-child(3) {
+  grid-column: 1/-1;
+}
+.vendor-book {
+  border: 0;
+  background: #f1e4d8;
+  padding: 0 0 12px;
+}
+.vendor-book > p,
+.vendor-book > ul {
+  margin: 14px 20px;
+}
+.balance-cover {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38%;
+  background: #593845;
+  color: #fff7eb;
+}
+.balance-cover div {
+  padding: 18px;
+}
+.balance-cover p {
+  font-size: 0.8rem;
+  margin: 12px 0 4px;
+}
+.balance-cover strong {
+  font-size: clamp(1.85rem, 3vw, 3.25rem);
+}
+.balance-cover img {
+  width: 100%;
+  height: 100%;
+  min-height: 132px;
+  object-fit: cover;
+}
+/* Scan cover and facing price list */
+.menu-spread {
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.25fr);
+  gap: 20px;
+}
+.menu-spread:has(.menu-scan form) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.menu-scan {
+  background: #e7eaf2;
+  border: 0;
+  padding: 0 20px 22px;
+  overflow: hidden;
+}
+.menu-cover {
+  display: block;
+  width: calc(100% + 40px);
+  height: clamp(90px, 10vw, 145px);
+  object-fit: cover;
+  object-position: 50% 64%;
+  margin: 0 -20px 18px;
+}
+.price-list {
+  border-left: 5px solid #263b72;
+  padding: 18px clamp(14px, 2vw, 30px);
+  background: #fffaf0;
+  border-top: 0;
+}
+.menu-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 2px solid #243a30;
+}
+.menu-title span {
+  font-size: 0.85rem;
+}
+.price-list .work-lines li {
+  border-bottom: 1px dotted #afa489;
+}
+.file-field input[type='file'] {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.83rem;
+}
+.file-field input::file-selector-button {
+  background: #fffaf0;
+  color: #23392e;
+  border: 1px solid #777f70;
+  padding: 10px 12px;
+  margin-right: 8px;
+  cursor: pointer;
+}
+/* Merchant placard */
+.bank-desk {
+  padding: 24px 0;
+}
+.placard-mount {
+  background: #d8e0d7;
+  padding: 24px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 12px;
+  min-height: 180px;
+}
+.placard-empty {
+  max-width: 22ch;
+  text-align: center;
+  color: #435649;
+}
+.placard-mount .qr-print {
+  margin: 0;
+  width: min(100%, 260px);
+  padding: 0 0 18px;
+  box-shadow: 0 4px 0 #bac4b7;
+}
+.placard-name {
+  padding: 14px 8px;
+  background: #264a3e;
+  color: white;
+  font-size: 1.2rem;
+  overflow-wrap: anywhere;
+}
+.placard-mount img {
+  width: 76%;
+  margin: 12px auto;
+}
+.qr-print figcaption {
+  padding: 0 10px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 980px) {
+  .order-desk,
+  .vendor-spread,
+  .menu-spread,
+  .bank-desk {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vendor-spread > :last-child:nth-child(3) {
+    grid-column: auto;
+  }
+  .balance-cover img {
+    max-height: 155px;
+  }
+}
+@media (max-width: 680px) {
+  .daily-sales strong {
+    font-size: clamp(1.7rem, 7.4vw, 2.8rem);
+  }
+  .daily-sales {
+    margin-top: 12px;
+  }
+  .ledger .metrics > div {
+    padding: 12px 7px;
+  }
+  .ledger .metrics span {
+    font-size: 0.76rem;
+  }
+  .ledger .metrics strong {
+    font-size: clamp(1rem, 4.4vw, 1.6rem);
+  }
+  .order-desk {
+    gap: 18px;
+  }
+  .menu-cover {
+    height: 86px;
+  }
+}
+.ledger:not([data-view='overview']) .page-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-bottom: 2px solid #9a947f;
+  margin-bottom: 20px;
+}
+.ledger:not([data-view='overview']) .ledger-header {
+  border: 0;
+  min-width: 0;
+  padding-bottom: 12px;
+}
+.work-sheet .file-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid currentColor;
+  background: #fffcf6;
+  font-weight: 600;
+  cursor: pointer;
+}
+.menu-scan .file-field {
+  color: #1c306b;
+}
+.work-sheet .file-field input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.file-field:focus-within {
+  outline: 2px solid #98631d;
+  outline-offset: 3px;
+}
+.file-field:has(input:disabled) {
+  opacity: 0.55;
 }

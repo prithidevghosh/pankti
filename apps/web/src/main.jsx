@@ -318,7 +318,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
         {signOutError && <p role="alert">{signOutError}</p>}
       </aside>
       <main className="ledger" data-view={view}>
-        <header className="ledger-header">
+        <div className="page-heading"><header className="ledger-header">
           <div>
             {restaurant && (
               <p className="restaurant-name">
@@ -326,6 +326,9 @@ function Ledger({ onSignOut, onSessionExpired }) {
               </p>
             )}
             <h1>{destinations.find(([id]) => id === view)[1]}</h1>
+            {view === 'overview' && !loading && analytics && <div className="daily-sales">
+              <span>Paid sales</span><strong>{asRupees(analytics.revenue)}</strong>
+            </div>}
           </div>
           {view === 'overview' && <img className="masthead-print" src="/closing-the-counter.webp"
             alt="Closing the Counter, an abstract print of stacked order slips in vermilion, green and carbon ink" />}
@@ -352,6 +355,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
             </button>
           </div>
         </div>
+        </div>
         {loading && (
           <p className="notice" role="status">
             Loading the ledger…
@@ -375,18 +379,14 @@ function Ledger({ onSignOut, onSessionExpired }) {
         {restaurant && <div hidden={view !== 'orders'}><Orders menu={state.menu || []} onBill={bill => {
           setOpenBill({id:bill.id,bill}); dialog.current?.showModal(); setRevision(v => v+1);
         }}/></div>}
-        {restaurant && <div hidden={view !== 'menu'}><Menu menu={state.menu || []}
+        {restaurant && <div className="menu-spread" hidden={view !== 'menu'}><Menu menu={state.menu || []}
           onMenu={menu => setState(s => ({...s,menu}))}/></div>}
-        {restaurant && <div hidden={view !== 'vendors'}><Vendors revision={revision}/></div>}
+        {restaurant && <div className="vendor-spread" hidden={view !== 'vendors'}><Vendors revision={revision}/></div>}
         {restaurant && <div hidden={view !== 'bank'}><Bank restaurant={restaurant}
           onSave={restaurant => setState(s => ({...s,restaurant}))}/></div>}
         {!loading && analytics && (
           <>
             {view === 'overview' && <><div className="metrics">
-              <div className="revenue">
-                <span>Paid sales</span>
-                <strong>{asRupees(analytics.revenue)}</strong>
-              </div>
               <div>
                 <span>Bills created</span>
                 <strong>{analytics.orders}</strong>

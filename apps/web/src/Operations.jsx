@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { ImagePlus } from 'lucide-react';
 import { SignupVoice } from './SignupVoice.jsx';
 import { request, asRupees } from './api.js';
 
@@ -64,80 +65,88 @@ export function Orders({ menu, onBill }) {
     setBasket(lines);
   }
   return (
-    <section className="work-sheet">
-      <h2>Take an order</h2>
-      <p className="subtle">
-        {menu.length
-          ? 'Speak the order. Review the items before issuing the bill.'
-          : 'Add your dishes and prices in Menu to start billing.'}
-      </p>
-      <Voice
-        task="order"
-        label="Speak order"
-        disabled={op.busy || !menu.length}
-        context={{ basket, clarificationReply: question ? { previous: heard, question } : undefined }}
-        onBusy={setSpeechBusy}
-        onError={op.setMessage}
-        onResult={({ transcript, result }) => {
-          setHeard(transcript);
-          setQuestion(result.question || '');
-          update(result.lines);
-        }}
-      />
-      {heard && <blockquote>{heard}</blockquote>}
-      {question && <p role="status">{question}</p>}
-      {rows.length > 0 && (
-        <>
-          <ul className="work-lines">
-            {rows.map((line) => (
-              <li key={line.item}>
-                <span>
-                  {line.quantity} × {line.name} {line.variant}
-                </span>
-                <strong>{asRupees(Math.round(line.price * line.quantity))}</strong>
-                <button
-                  type="button"
-                  disabled={speechBusy || op.busy}
-                  aria-label={'Remove ' + line.name}
-                  onClick={() => update(basket.filter((x) => x.item !== line.item))}
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button
-            className="action"
-            disabled={op.busy || speechBusy || Boolean(question)}
-            onClick={() =>
-              op.run(async () => {
-                const prices = Object.fromEntries(rows.map((row) => [row.item, row.price]));
-                const { bill } = await request('/bills', { body: { request: key.current, basket, prices } });
-                update([]);
-                setHeard('');
-                setQuestion('');
-                onBill(bill);
-              })
-            }
-          >
-            Create bill · {asRupees(rows.reduce((sum, r) => sum + Math.round(r.quantity * r.price), 0))}
-          </button>
-        </>
-      )}
-      {(heard || basket.length > 0) && (
-        <button
-          className="plain"
-          disabled={op.busy || speechBusy}
-          onClick={() => {
-            update([]);
-            setQuestion('');
-            setHeard('');
+    <section className="work-sheet order-desk">
+      <div className="record-side">
+        <h2>Take an order</h2>
+        <p className="subtle">
+          {menu.length
+            ? 'Speak the order. Review the items before issuing the bill.'
+            : 'Add your dishes and prices in Menu to start billing.'}
+        </p>
+        <Voice
+          task="order"
+          label="Speak order"
+          disabled={op.busy || !menu.length}
+          context={{ basket, clarificationReply: question ? { previous: heard, question } : undefined }}
+          onBusy={setSpeechBusy}
+          onError={op.setMessage}
+          onResult={({ transcript, result }) => {
+            setHeard(transcript);
+            setQuestion(result.question || '');
+            update(result.lines);
           }}
-        >
-          Clear draft
-        </button>
-      )}
-      <Feedback message={op.message} />
+        />
+        {heard && <blockquote>{heard}</blockquote>}
+        {question && <p role="status">{question}</p>}
+        <Feedback message={op.message} />
+      </div>
+      <section className="order-ticket">
+        <h3>Current ticket</h3>
+        {!rows.length && <p className="ticket-empty">Items appear here as you speak.</p>}
+        {rows.length > 0 && (
+          <>
+            <ul className="work-lines">
+              {rows.map((line) => (
+                <li key={line.item}>
+                  <span>
+                    {line.quantity} × {line.name} {line.variant}
+                  </span>
+                  <strong>{asRupees(Math.round(line.price * line.quantity))}</strong>
+                  <button
+                    type="button"
+                    disabled={speechBusy || op.busy}
+                    aria-label={'Remove ' + line.name}
+                    onClick={() => update(basket.filter((x) => x.item !== line.item))}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button
+              className="action"
+              disabled={op.busy || speechBusy || Boolean(question)}
+              onClick={() =>
+                op.run(async () => {
+                  const prices = Object.fromEntries(rows.map((row) => [row.item, row.price]));
+                  const { bill } = await request('/bills', {
+                    body: { request: key.current, basket, prices },
+                  });
+                  update([]);
+                  setHeard('');
+                  setQuestion('');
+                  onBill(bill);
+                })
+              }
+            >
+              Create bill · {asRupees(rows.reduce((sum, r) => sum + Math.round(r.quantity * r.price), 0))}
+            </button>
+          </>
+        )}
+        {(heard || basket.length > 0) && (
+          <button
+            className="plain"
+            disabled={op.busy || speechBusy}
+            onClick={() => {
+              update([]);
+              setQuestion('');
+              setHeard('');
+            }}
+          >
+            Clear draft
+          </button>
+        )}
+      </section>
     </section>
   );
 }
@@ -167,7 +176,7 @@ export function Vendors({ revision }) {
   }, [revision]);
   return (
     <>
-      <section className="work-sheet">
+      <section className="work-sheet vendor-write">
         <h2>Record a vendor entry</h2>
         <p className="subtle">Say who supplied the goods, what you bought and how much you paid.</p>
         <Voice
@@ -227,8 +236,15 @@ export function Vendors({ revision }) {
         )}
         <Feedback message={op.message} />
       </section>
-      <section className="work-sheet">
-        <h2>Vendor balances</h2>
+      <section className="work-sheet vendor-book">
+        <div className="balance-cover">
+          <div>
+            <h2>Vendor balances</h2>
+            <p>Outstanding dues</p>
+            <strong>{asRupees(ledger.balances.reduce((sum, v) => sum + Math.max(0, v.due), 0))}</strong>
+          </div>
+          <img src="/market-balance.webp" alt="" loading="lazy" />
+        </div>
         {!ledger.balances.length && (
           <p className="subtle">Your first confirmed entry opens a vendor account.</p>
         )}
@@ -311,14 +327,16 @@ export function Menu({ menu, onMenu }) {
   const op = useOperation();
   return (
     <>
-      <section className="work-sheet">
+      <section className="work-sheet menu-scan">
+        <img className="menu-cover" src="/folded-menu.webp" alt="" loading="lazy" />
         <h2>Read a printed menu</h2>
         <p className="subtle">
           Choose a photo for each page. Check the dishes, portions and prices before adding them.
         </p>
         <label className="file-field">
-          Menu photos
+          <ImagePlus size={18} aria-hidden="true" /> Choose menu photos
           <input
+            aria-label="Menu photos"
             type="file"
             accept="image/*"
             multiple
@@ -383,8 +401,13 @@ export function Menu({ menu, onMenu }) {
         )}
         <Feedback message={op.message} />
       </section>
-      <section className="work-sheet">
-        <h2>Your menu</h2>
+      <section className="work-sheet price-list">
+        <div className="menu-title">
+          <h2>Your menu</h2>
+          <span>
+            {menu.length} {menu.length === 1 ? 'item' : 'items'}
+          </span>
+        </div>
         {!menu.length && <p className="subtle">Upload a menu photo to add your first dishes.</p>}
         <ul className="work-lines">
           {menu.map((item) => (
@@ -433,56 +456,64 @@ export function Bank({ restaurant, onSave }) {
   const [preview, setPreview] = useState(null);
   const op = useOperation();
   return (
-    <section className="work-sheet">
-      <h2>Store payment QR</h2>
-      <p className="subtle">
-        Upload the QR card from your counter. Check the recipient before adding it to bills.
-      </p>
-      <label className="file-field">
-        QR photo
-        <input
-          type="file"
-          accept="image/*"
-          disabled={op.busy}
-          onChange={(e) => {
-            const file = e.target.files[0];
-            e.target.value = '';
-            if (!file) return;
-            setPreview(null);
-            op.run(async () => {
-              const form = new FormData();
-              form.append('photo', file);
-              setPreview(await request('/qr/preview', { body: form }));
-            });
-          }}
-        />
-      </label>
-      {(preview || restaurant.qr) && (
-        <figure className="qr-print">
-          <img src={preview?.image || restaurant.qr} alt="Store UPI payment QR" />
-          <figcaption>
-            {preview?.payee || restaurant.payee || 'Store UPI QR'}
-            <small>{preview?.address}</small>
-          </figcaption>
-        </figure>
-      )}
-      {preview && (
-        <button
-          className="action"
-          disabled={op.busy}
-          onClick={() =>
-            op.run(async () => {
-              const data = await request('/qr', { method: 'PUT', body: { uri: preview.uri } });
-              onSave(data.restaurant);
+    <section className="work-sheet bank-desk">
+      <div>
+        <h2>Store payment QR</h2>
+        <p className="subtle">
+          Upload the QR card from your counter. Check the recipient before adding it to bills.
+        </p>
+        <label className="file-field">
+          <ImagePlus size={18} aria-hidden="true" /> Choose QR photo
+          <input
+            aria-label="QR photo"
+            type="file"
+            accept="image/*"
+            disabled={op.busy}
+            onChange={(e) => {
+              const file = e.target.files[0];
+              e.target.value = '';
+              if (!file) return;
               setPreview(null);
-              op.setMessage('Payment QR saved.');
-            })
-          }
-        >
-          Use this QR on bills
-        </button>
-      )}
-      <Feedback message={op.message} />
+              op.run(async () => {
+                const form = new FormData();
+                form.append('photo', file);
+                setPreview(await request('/qr/preview', { body: form }));
+              });
+            }}
+          />
+        </label>
+        <Feedback message={op.message} />
+      </div>
+      <div className="placard-mount">
+        {preview || restaurant.qr ? (
+          <figure className="qr-print">
+            <div className="placard-name">{restaurant.name}</div>
+            <img src={preview?.image || restaurant.qr} alt="Store UPI payment QR" />
+            <figcaption>
+              {preview?.payee || restaurant.payee || 'Store UPI QR'}
+              <small>{preview?.address}</small>
+            </figcaption>
+          </figure>
+        ) : (
+          <p className="placard-empty">Your store’s payment code will appear here after upload.</p>
+        )}
+        {preview && (
+          <button
+            className="action"
+            disabled={op.busy}
+            onClick={() =>
+              op.run(async () => {
+                const data = await request('/qr', { method: 'PUT', body: { uri: preview.uri } });
+                onSave(data.restaurant);
+                setPreview(null);
+                op.setMessage('Payment QR saved.');
+              })
+            }
+          >
+            Use this QR on bills
+          </button>
+        )}
+      </div>
     </section>
   );
 }
