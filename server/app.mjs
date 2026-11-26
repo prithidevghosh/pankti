@@ -4,6 +4,7 @@ import { z, ZodError } from 'zod';
 import { openStore } from './store.mjs';
 import { indiaPhone, registerPhoneAuth, requestToken } from './phone-auth.mjs';
 import {
+  scanMenu,
   transcribe,
   interpret,
   decodeQr,
@@ -22,6 +23,10 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024, files: 1, fields: 2, fieldSize: 24576 },
 });
+const vendorEntries = z.array(z.object({
+  vendor: shortText, kind: z.enum(['order', 'purchase', 'payment', 'balance']),
+  note: z.string().trim().max(300), amount: z.number().int().min(0).max(1000000000),
+}).refine(entry => entry.amount > 0 || ['order', 'balance'].includes(entry.kind))).max(30);
 const workspace = async (restaurant) =>
   restaurant
     ? {
@@ -33,7 +38,7 @@ const workspace = async (restaurant) =>
       }
     : null;
 
-export function createApp({ verify, database, otp, requireLegacyImport = false, localPhoneOnly = false, speech = transcribe, understand = interpret }) {
+export function createApp({ verify, database, otp, requireLegacyImport = false, localPhoneOnly = false, speech = transcribe, understand = interpret, scan = scanMenu }) {
   const store = openStore(database);
   const app = express();
   app.disable('x-powered-by');
@@ -94,8 +99,25 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
     const entries = z.array(entrySchema).min(1).max(80).parse(req.body);
     res.json({ menu: store.saveMenu(restaurant.id, entries) });
   });
+  app.post('/api/menu/scan', upload.single('photo'), async (req, res) => {
+    requireRestaurant(req);
+    if (!req.file?.size) throw httpError(400, 'Choose a menu photo.');
+    res.json({ entries: await scan(req.file.buffer) });
+  });
+  app.put('/api/menu/:id', (req, res) => {
+    const restaurant = requireRestaurant(req);
+    if (!store.editMenu(restaurant.id, req.params.id, entrySchema.parse(req.body))) throw httpError(404, 'Menu item not found.');
+    res.json({ menu: store.menuFor(restaurant.id) });
+  });
+  app.get('/api/vendors', (req, res) => res.json(store.vendors(requireRestaurant(req).id)));
+  app.post('/api/vendors', (req, res) => {
+    const restaurant = requireRestaurant(req);
+    const { request, entries } = z.object({ request: z.uuid(), entries: vendorEntries.min(1) }).parse(req.body);
+    store.postVendor(restaurant.id, request, entries);
+    res.json(store.vendors(restaurant.id));
+  });
   app.post('/api/voice/:task', upload.single('audio'), async (req, res) => {
-    const task = z.enum(['onboarding', 'menu', 'order']).parse(req.params.task);
+    const task = z.enum(['onboarding', 'menu', 'order', 'vendor']).parse(req.params.task);
     if (!req.file?.size) throw httpError(400, 'Record a voice note first.');
     if (!/^(audio\/|video\/mp4$)/.test(req.file.mimetype))
       throw httpError(400, 'This recording format is unavailable.');
@@ -114,6 +136,9 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
           .array(entrySchema)
           .max(80)
           .parse(supplied.previous ?? []);
+      } else if (task === 'vendor') {
+        context.vendors = store.vendors(restaurant.id).balances;
+        keyterms = context.vendors.map(row => row.vendor);
       } else {
         context.menu = store.menuFor(restaurant.id).map(({ id, name, variant }) => ({ id, name, variant }));
         context.basket = basketSchema.parse(supplied.basket ?? []);
@@ -127,6 +152,7 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
     }
     const transcript = await speech(req.file, keyterms);
     const result = await understand(task, transcript, context);
+    if (task === 'vendor') result.entries = vendorEntries.parse(result.entries);
     if (
       task === 'order' &&
       result.lines.some((line) => !context.menu.some((item) => item.id === line.item))
