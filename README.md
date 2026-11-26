@@ -24,3 +24,11 @@ To serve the built web app, run `npm run build` and restart `npm run api`. The A
 - Use a Twilio-verified trial number or a live SMS and a real voice note to verify the provider connections on a device. To test the static QR, scan the bill with a separate phone and confirm that the displayed merchant matches the original card.
 
 See the [scope and build plan](docs/PLAN.md) and [design brief](docs/DESIGN.md).
+
+## Owner workspace
+
+Overview shows paid sales for the selected India business date. Orders takes a voice note, lets the cashier review or correct the basket, issues a numbered bill, and records receipt of cash or UPI. Vendors keeps purchase orders, purchases on credit, actual payments and outstanding balances. Menu reads one or more page photos and lets the owner correct dishes and prices before publishing. Bank details previews the payee on the restaurant’s reusable UPI QR and attaches the confirmed code to the bill.
+
+Run `npm run eval:counter` with a server-side OpenAI key to grade order and vendor interpretation on multilingual transcripts. It checks menu IDs, quantities, request-to-bill intent, clarification and supplier postings. The command exits unsuccessfully on a failed case and prints the differences. Set `COUNTER_MODEL` to compare another model; orders and vendors default to gpt-4.1. Speech recognition uses Sarvam. The transcript suite measures interpretation after transcription. Run `npm test` for the database, permissions, retry and billing checks without API keys.
+
+To include recognition errors, run `npm run eval:counter -- /path/to/recordings` with Sarvam and OpenAI keys. Name WAV recordings after the one-based case number in `evals/counter.mjs`, e.g. `order-1-shop.wav`, `order-2-half.wav`, or `vendor-1.wav`. Each recording runs through Sarvam and the same exact-result grader. Keep customer recordings outside the public repository.

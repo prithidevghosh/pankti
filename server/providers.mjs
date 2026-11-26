@@ -66,7 +66,15 @@ const types = {
       readyToBill: { type: 'boolean' },
     }),
     prompt:
-      'Apply the spoken order to the existing basket. The output is the complete resulting basket, with one row for each item ID. Use only the supplied menu item IDs. Separate customer order clauses from instructions to staff, table numbers, stock counts, quotations, repeats and unrelated chatter. Only ordered food belongs in lines. Ignore even menu items mentioned in unrelated instructions. On staff-only chatter return the original basket, null question and readyToBill false. Never ask the cashier to answer a staff question. When several priced sizes exist and the customer gives no size, ask which size and preserve the previous basket. Check requiresPortionChoice first. If the transcript asks for an item in that list without a size, return the unchanged basket and a nonempty clarification. A clarificationReply may resolve the earlier question. Resolve multilingual names, quantities, negation and corrections. Prefer explicitly priced half/quarter variants as whole units of those variants. If only full plate is listed, half is 0.5 and quarter is 0.25 of it. Never divide the price yourself. Ask about unsupported portions or ambiguity between distinct dishes. “do samosa, nahi ek samosa” adds one samosa. Distinguish a quantity replacement (“make it one”) from an addition. Ask a short question and leave the basket unchanged if an item or its variant is ambiguous or unavailable. Set readyToBill only when the speaker explicitly asks to make the bill. The app will ask for confirmation.',
+      `You prepare a cashier's basket from multilingual speech. Return the complete basket using only menu IDs.
+Interpret only purchase requests. Ignore staff directions, table numbers, inventory questions and unrelated mentions of dishes. Chatter alone returns the input basket unchanged, no question, billing false.
+Apply corrections, removals and explicit repeat orders to the input basket. A verbatim echo, restart or repeated readback without a request for more does not add another serving. A clarificationReply supplies the earlier request and question; the latest transcript answers it.
+For each requested dish:
+1. Identify the dish, then its serving size. If several sizes are listed and none was requested, return the input basket and ask which size.
+2. If the requested size is listed, use its ID. Two half biryanis with a listed half biryani is quantity 2 of that ID.
+3. If ONLY the regular or full plate is listed, the counter SELLS proportional servings of that item. Use its ID and multiply the number of servings by the portion: one half is quantity 0.5; one quarter is quantity 0.25. This is a valid match. Use whole quantities for ordinary units.
+4. If a dish is missing or ambiguous, ask a short question and preserve the input basket.
+Set readyToBill only on an explicit request to issue the bill. Never emit a price.`,
   },
 };
 export function httpError(status, message) {
@@ -80,8 +88,8 @@ export async function transcribe(file, keyterms = []) {
   form.append('file', new Blob([file.buffer], { type: file.mimetype }), file.originalname);
   form.append('model', 'saaras:v4');
   form.append('mode', 'verbatim');
-  if (keyterms.length)
-    form.append('keyterms', JSON.stringify(keyterms.slice(0, 50).map((term) => term.slice(0, 64))));
+  const hints = [...new Set(keyterms.map(term => term.trim().toLowerCase().slice(0, 64)).filter(Boolean))].slice(0, 50);
+  if (hints.length) form.append('keyterms', JSON.stringify(hints));
   const response = await fetch('https://api.sarvam.ai/speech-to-text', {
     method: 'POST',
     headers: { 'api-subscription-key': key },
@@ -128,12 +136,14 @@ async function modelResult(kind, input) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw httpError(503, 'Voice interpretation is unavailable. Set OPENAI_API_KEY on the server.');
   const spec = types[kind];
+  const model = ['vendor', 'order'].includes(kind) ? process.env.COUNTER_MODEL || 'gpt-4.1' : process.env.OPENAI_MODEL || 'gpt-4.1-mini';
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     signal: AbortSignal.timeout(20000),
     body: JSON.stringify({
-      model: (['vendor','order'].includes(kind) && process.env.COUNTER_MODEL) || process.env.OPENAI_MODEL || 'gpt-4.1-mini',
+      model,
+      ...(model.startsWith('gpt-4.1') ? { temperature: 0 } : {}),
       store: false,
       instructions:
         spec.prompt +
