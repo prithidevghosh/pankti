@@ -1,0 +1,6 @@
+.env
+.env.*
+.data/
+.firebase/
+apps/mobile/
+evals/

@@ -23,6 +23,8 @@ The default connection is local and unauthenticated. For hosted use, set the ser
 
 ## API and service boundaries
 
+The Vercel project builds the web workspace and serves the Express API under `/api` on the same domain. Run `vercel deploy --prod` from the repository root to deploy. The production environment needs a hosted `MONGODB_URI` and the Twilio Verify, Sarvam, and OpenAI credentials listed in [the credential guide](CREDENTIALS.md). Verify the deployment by opening the homepage and checking that `GET /api/health` returns `{"status":"ok"}`. Keep multipart requests below [Vercel's default 4.5 MB request limit](https://vercel.com/docs/functions/limitations).
+
 | Workflow | Endpoints under /api | Implementation |
 | --- | --- | --- |
 | Identity | auth/signup, auth/login, auth/send, auth/verify, auth/session, auth/logout | phone-auth.mjs handles sessions and verification. phone-store.mjs persists identity and rate limits. |

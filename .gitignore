@@ -12,3 +12,4 @@ apps/mobile/google-services.json
 apps/mobile/GoogleService-Info.plist
 *.tsbuildinfo
 .DS_Store
+/.vercel/
