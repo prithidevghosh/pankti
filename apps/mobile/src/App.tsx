@@ -171,12 +171,12 @@ function Login({ onSignIn }: { onSignIn: (token: string) => Promise<void> }) {
           )}
         </View>
         <Image
-          source={image}
+          source={creating ? require('../assets/bill-handoff.jpg') : image}
           style={[
             styles.loginArtwork,
-            { height: creating ? Math.min(68, height * 0.08) : Math.min(280, height * 0.27) },
+            { height: creating ? Math.min(112, height * 0.13) : Math.min(280, height * 0.27) },
           ]}
-          accessibilityLabel="Abstract print of curved steel reflections and receipt paper"
+          accessibilityLabel={creating ? "Two ink silhouettes pass a receipt across a counter" : "Abstract print of curved steel reflections and receipt paper"}
         />
         <Text style={styles.title}>{creating ? 'Open your counter.' : 'Say the order. Get the bill.'}</Text>
         {creating ? (

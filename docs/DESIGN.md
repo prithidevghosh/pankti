@@ -82,3 +82,9 @@ Built-in ImageGen prompts:
 ### Vendor corrections
 
 Keep each posted entry in the list throughout editing. Show the correction sheet alongside the journal on wide screens and below a scrollable list on phones. Keep its original supplier and date visible while editing the name. Use the vendor ledger’s plum ink for the sheet heading. Allow Bengali and other scripts to wrap in names and notes. Mark an unpriced order as “Price pending”. Check the neighboring row, reduced motion, keyboard focus on cancel and a full preview-to-save cycle at phone width.
+
+### The handoff
+
+Signup introduces a human gesture through two ink silhouettes passing a receipt. The desktop composition has open paper above and below. Android uses a horizontal detail centred on the slip.
+
+Built-in ImageGen brief: an abstract collagraph of cropped bottle-green and ochre forearms exchanging a narrow ivory receipt. Use a carved notch for each grip, three broken graphite rules on the slip, a low charcoal counter edge and one brick-red offset.

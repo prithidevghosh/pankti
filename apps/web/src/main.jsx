@@ -128,13 +128,13 @@ function Login({ onSignIn, mode }) {
 
   return (
     <main className={creating ? "login is-signup" : "login"}>
-      <section className="login-visual" aria-label="Counter rhythm artwork">
+      <section className="login-visual" aria-label={creating ? "The handoff artwork" : "Counter rhythm artwork"}>
         <img
-          src="/counter-print.jpg"
-          alt="Abstract monotype with bottle-green arcs, amber ink and a ribbon of paper"
+          src={creating ? "/bill-handoff.webp" : "/counter-print.jpg"}
+          alt={creating ? "Two ink silhouettes pass a receipt across a counter" : "Abstract monotype with bottle-green arcs, amber ink and a ribbon of paper"}
         />
         <div className="photo-caption">
-          <span className="caption-rule" /> Counter rhythm
+          <span className="caption-rule" /> {creating ? "The handoff" : "Counter rhythm"}
         </div>
       </section>
       <section className="login-content">
