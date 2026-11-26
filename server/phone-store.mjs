@@ -6,28 +6,6 @@ export const sessionAge = 30 * 24 * 60 * minute;
 const hashToken = (token) => createHash('sha256').update(token).digest('hex');
 
 export function openPhoneStore(db, transaction) {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS phone_accounts (
-      phone TEXT PRIMARY KEY, uid TEXT NOT NULL UNIQUE, disabled INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE IF NOT EXISTS local_signup_profiles (
-      uid TEXT PRIMARY KEY REFERENCES phone_accounts(uid), name TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS phone_auth_config (
-      key TEXT PRIMARY KEY
-    );
-    CREATE TABLE IF NOT EXISTS phone_challenges (
-      id TEXT PRIMARY KEY, phone TEXT NOT NULL, ip TEXT NOT NULL, created INTEGER NOT NULL,
-      sid TEXT, attempts INTEGER NOT NULL DEFAULT 0, checking INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE INDEX IF NOT EXISTS phone_challenges_phone ON phone_challenges(phone, created);
-    CREATE INDEX IF NOT EXISTS phone_challenges_ip ON phone_challenges(ip, created);
-    CREATE TABLE IF NOT EXISTS phone_sessions (
-      token_hash TEXT PRIMARY KEY, uid TEXT NOT NULL REFERENCES phone_accounts(uid),
-      expires INTEGER NOT NULL
-    );
-  `);
-
   function assertImportComplete(requireLegacyImport) {
     const imported = db.prepare("SELECT 1 FROM phone_auth_config WHERE key = 'firebase-imported'").get();
     const unmapped = db.prepare(`
