@@ -111,7 +111,7 @@ export function Orders({ menu, onBill }) {
             disabled={op.busy || speechBusy || Boolean(question)}
             onClick={() =>
               op.run(async () => {
-                const prices = Object.fromEntries(rows.map(row => [row.item, row.price]));
+                const prices = Object.fromEntries(rows.map((row) => [row.item, row.price]));
                 const { bill } = await request('/bills', { body: { request: key.current, basket, prices } });
                 update([]);
                 setHeard('');
@@ -347,7 +347,21 @@ export function Menu({ menu, onMenu }) {
             onSubmit={(e) => {
               e.preventDefault();
               op.run(async () => {
-                const { menu: saved } = await request('/menu', { body: draft.map(entry) });
+                const entries = draft.map(entry);
+                const prices = new Map();
+                for (const item of entries) {
+                  const key = JSON.stringify(
+                    [item.name, item.variant].map((s) =>
+                      s.normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' '),
+                    ),
+                  );
+                  if (prices.has(key) && prices.get(key) !== item.price)
+                    throw Error(
+                      item.name + ' has two different prices. Check its portion or omit the duplicate.',
+                    );
+                  prices.set(key, item.price);
+                }
+                const { menu: saved } = await request('/menu', { body: entries });
                 onMenu(saved);
                 setDraft([]);
                 op.setMessage('Menu saved.');

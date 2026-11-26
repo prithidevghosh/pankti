@@ -202,3 +202,31 @@
     margin-top: 10px;
   }
 }
+
+.overview-next {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px 0;
+  margin-bottom: 28px;
+  border-block: 1px solid #b6ac95;
+}
+.overview-next h2 {
+  font:
+    400 1.9rem/1.15 'Pankti Wordmark',
+    Georgia,
+    serif;
+}
+.overview-next p {
+  color: #526055;
+  margin-top: 4px;
+}
+.overview-next a {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  text-underline-offset: 4px;
+}

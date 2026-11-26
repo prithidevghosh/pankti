@@ -399,6 +399,11 @@ function Ledger({ onSignOut, onSessionExpired }) {
                 <strong>{asRupees(analytics.average)}</strong>
               </div>
             </div>
+            {!analytics.orders && date === today() && <section className="overview-next">
+              <div><h2>{state.menu?.length ? 'Take the first order' : 'Bring your menu to the counter'}</h2>
+              <p>{state.menu?.length ? 'Your dishes are ready for voice billing.' : 'A photo of the printed menu is enough to get started.'}</p></div>
+              <a href={state.menu?.length ? '#orders' : '#menu'}>{state.menu?.length ? 'Open orders' : 'Add menu'} <ArrowRight size={16}/></a>
+            </section>}
             <div className="report-grid">
               <section>
                 <h2>Sales by hour</h2>
