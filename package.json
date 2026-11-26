@@ -18,7 +18,8 @@
     "test": "node --test server/*.test.mjs",
     "auth:import-firebase": "node --env-file-if-exists=.env server/import-firebase-accounts.mjs",
     "eval:counter": "node --env-file-if-exists=.env evals/counter.mjs",
-    "eval:vendor-edits": "node --env-file-if-exists=.env evals/vendor-corrections.mjs"
+    "eval:vendor-edits": "node --env-file-if-exists=.env evals/vendor-corrections.mjs",
+    "db:import-sqlite": "node --env-file-if-exists=.env server/import-sqlite.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
