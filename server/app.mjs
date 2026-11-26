@@ -31,6 +31,7 @@ export async function createApp({
   otp,
   requireLegacyImport = false,
   localPhoneOnly = false,
+  allowHostedPhoneOnly = false,
   speech = transcribe,
   understand = interpret,
   scan = scanMenu,
@@ -46,7 +47,7 @@ export async function createApp({
   if (localPhoneOnly) {
     app.use('/api', (req, _res, next) => {
       const localHost = ['127.0.0.1', 'localhost', '[::1]', '10.0.2.2'].includes(req.hostname);
-      if (!localHost || req.get('sec-fetch-site') === 'cross-site')
+      if ((!localHost && !allowHostedPhoneOnly) || req.get('sec-fetch-site') === 'cross-site')
         throw httpError(403, 'This workspace is available only on this device.');
       next();
     });

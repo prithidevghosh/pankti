@@ -1,9 +1,11 @@
 import express from 'express';
 import { createApp } from '../server/app.mjs';
+import { databaseName } from '../server/db/mongo.mjs';
 import { twilioVerify } from '../server/phone-auth.mjs';
 
 const app = express();
 app.disable('x-powered-by');
+const localPhoneOnly = process.env.APP_AUTH_MODE === 'phone-only';
 let api;
 
 app.use(async (req, res, next) => {
@@ -14,7 +16,12 @@ app.use(async (req, res, next) => {
     return res.status(503).json({ error: 'The database is not configured.' });
   }
 
-  api ??= createApp({ otp: twilioVerify() }).then(({ app: application }) => {
+  api ??= createApp({
+    database: databaseName(localPhoneOnly),
+    otp: twilioVerify(),
+    localPhoneOnly,
+    allowHostedPhoneOnly: localPhoneOnly,
+  }).then(({ app: application }) => {
     // Vercel supplies the client IP at its ingress for the OTP rate limit.
     application.set('trust proxy', 1);
     return application;
