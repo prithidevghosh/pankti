@@ -1,0 +1,46 @@
+services:
+  mongo:
+    image: mongo:8.0
+    command: ["mongod", "--replSet", "pankti", "--bind_ip_all"]
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      # Initiate only an unconfigured set, then wait for its writable primary.
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - |
+          try {
+            if (rs.status().myState === 1) quit(0);
+          } catch (error) {
+            if (error.code === 94) rs.initiate({_id:"pankti",members:[{_id:0,host:"mongo:27017"}]});
+          }
+          quit(1);
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+
+  app:
+    build: .
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${PANKTI_PORT:-4180}:4100"
+    environment:
+      APP_AUTH_MODE: phone-only
+      PANKTI_BIND_ADDRESS: 0.0.0.0
+      MONGODB_URI: mongodb://mongo:27017/?replicaSet=pankti
+      SARVAM_API_KEY: ${SARVAM_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4100/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  mongo-data:

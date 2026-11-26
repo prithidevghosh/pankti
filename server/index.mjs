@@ -12,7 +12,7 @@ const { app, close } = await createApp({
 });
 const web = resolve('apps/web/dist');
 if (existsSync(web)) app.use(express.static(web));
-const server = app.listen(Number(process.env.PORT || 4100), localPhoneOnly ? '127.0.0.1' : '0.0.0.0', () => {
+const server = app.listen(Number(process.env.PORT || 4100), process.env.PANKTI_BIND_ADDRESS || (localPhoneOnly ? '127.0.0.1' : '0.0.0.0'), () => {
   console.log(`Pankti API listening on port ${process.env.PORT || 4100}`);
 });
 
