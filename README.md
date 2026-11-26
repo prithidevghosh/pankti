@@ -10,7 +10,7 @@ From a fresh clone, run this with Docker Compose v2 and Docker running:
 docker compose up --build --wait
 ```
 
-Open [Pankti on localhost](http://localhost:4180). Choose **Sign up** and enter a name, business name, and an Indian mobile number. This local workspace accepts phone-only sign-in and starts without an environment file. The Express server serves the built website and API. MongoDB runs on the private Compose network. Speech recognition requires a Sarvam key, and menu scanning and voice interpretation require an OpenAI key.
+Open [Pankti on localhost](http://localhost:4180). Choose **Create an account** and enter a name, business name, and an Indian mobile number. This local workspace accepts phone-only sign-in and starts without an environment file. The Express server serves the built website and API. MongoDB runs on the private Compose network. Speech recognition requires a Sarvam key, and menu scanning and voice interpretation require an OpenAI key.
 
 Run `docker compose down` to stop. The named volume keeps your data for the next start. If port 4180 is occupied, run `PANKTI_PORT=4181 docker compose up --build --wait` and open port 4181.
 
