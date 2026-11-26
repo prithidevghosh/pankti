@@ -97,7 +97,7 @@ export function api(token: string, onSessionExpired: () => void) {
       return call<Qr>('/qr/preview', 'POST', form);
     },
     saveQr: (uri: string) => call<{ restaurant: Restaurant }>('/qr', 'PUT', { uri }),
-    bill: (request: string, basket: Line[]) => call<{ bill: Bill }>('/bills', 'POST', { request, basket }),
+    bill: (request: string, basket: Line[], prices: Record<string,number>) => call<{ bill: Bill }>('/bills', 'POST', { request, basket, prices }),
     payment: (id: string, method: 'cash' | 'upi') =>
       call<{ bill: Bill }>('/bills/' + id + '/payment', 'POST', { method }),
   };

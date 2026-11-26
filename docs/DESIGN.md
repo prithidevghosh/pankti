@@ -70,3 +70,11 @@ The built-in ImageGen prompts for the supplier and menu prints are below.
 ## Android counter
 
 Design for one-handed service. On signup, keep the account switch at the top, the fields editable after dictation and the form scrollable with the keyboard open. Give the menu its blue folded-paper cover and the order its white running ticket. Place recording and confirmation above the bottom navigation so long menus and orders can scroll independently. Use text and an icon for each recording state. Display the final receipt number, payment state and rupee total separately from the actions that record payment. A cashier must be able to take the next order with one tap after settlement.
+
+Orders and Bank now each have a dedicated print on web and Android. Keep the rail above the recording surface and the stamp outside the QR quiet zone. Package smaller JPEG copies for the Android app.
+
+Built-in ImageGen prompts:
+
+> Original horizontal abstract drypoint and relief print about the restaurant order rail. Three thin angular silhouettes of clipped order slips hanging on a long diagonal black steel rail, loose charcoal incisions suggesting a short spoken call from the left. Muted saffron yellow ink, graphite and warm cotton paper with one blue-grey shadow. Energetic asymmetry; raw dry ink and irregular pressure. Designed as a narrow horizontal artwork for a busy cashier's workspace. Single museum print flat and full bleed, no text, no numerals, no food, no frame, no logos, no photorealism. Art only.
+
+> Original abstract horizontal museum relief print for Pankti's bank details screen, the subject is a merchant's rubber payment stamp pressing down on a long narrow settlement slip. Main shape a large inky teal oblong imprint with missing dry ink opposed to a small dark carmine rectangular block and a thin ivory slip. Deep smoky petrol, oxidized copper and warm rag paper. Dynamic asymmetrical cut-paper and carved-block composition, tactile physical grain. Flat full bleed work on paper, legible at small sizes. No text, no symbols, no digits, no QR codes or grids, no banknotes, no frame or mockup.

@@ -28,7 +28,7 @@ export default () => {
         {
           cameraPermission: 'Pankti uses the camera to scan your existing UPI QR card.',
           photosPermission: 'Pankti can read a UPI QR card from a photo you pick.',
-          microphonePermission: false,
+          microphonePermission: 'Pankti uses your microphone for spoken orders and menu entries.',
         },
       ],
     ],

@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -37,8 +38,8 @@ import {
 
 const color = {
   ink: '#1D2724',
-  paper: '#F5F5ED',
-  rule: '#DADFD2',
+  paper: '#F7F1E4',
+  rule: '#D5CDB9',
   green: '#234C40',
   gold: '#F2D777',
   white: '#FFFFFF',
@@ -96,6 +97,7 @@ function Login({ onSignIn }: { onSignIn: (token: string) => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   const requestInFlight = useRef(false);
   const locked = busy || voiceBusy;
+  const { height } = useWindowDimensions();
 
   async function loadMode() {
     setLoadingMode(true);
@@ -109,7 +111,9 @@ function Login({ onSignIn }: { onSignIn: (token: string) => Promise<void> }) {
     }
   }
 
-  useEffect(() => { void loadMode(); }, []);
+  useEffect(() => {
+    void loadMode();
+  }, []);
 
   async function fillSignup(uri: string) {
     const details = await phoneAuth.signupVoice(uri);
@@ -147,13 +151,30 @@ function Login({ onSignIn }: { onSignIn: (token: string) => Promise<void> }) {
   return (
     <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.login} keyboardShouldPersistTaps="handled">
-        <Brand />
+        <View style={styles.loginHead}>
+          <Brand />
+          {mode === 'phone-only' && (
+            <Button
+              label={creating ? 'Back to sign in' : 'Create an account'}
+              quiet
+              disabled={locked}
+              onPress={() => {
+                setCreating(!creating);
+                setError('');
+                setVoiceStatus('');
+              }}
+            />
+          )}
+        </View>
         <Image
           source={image}
-          style={styles.loginArtwork}
+          style={[
+            styles.loginArtwork,
+            { height: creating ? Math.min(68, height * 0.08) : Math.min(280, height * 0.27) },
+          ]}
           accessibilityLabel="Abstract print of curved steel reflections and receipt paper"
         />
-        <Text style={styles.title}>Say the order.{'\n'}Get the bill.</Text>
+        <Text style={styles.title}>{creating ? 'Open your counter.' : 'Say the order. Get the bill.'}</Text>
         {creating ? (
           <>
             <Text style={styles.body}>Say your name, business name and mobile number.</Text>
@@ -161,7 +182,10 @@ function Login({ onSignIn }: { onSignIn: (token: string) => Promise<void> }) {
               disabled={busy}
               idleLabel="Fill by voice"
               onRecording={fillSignup}
-              onError={(message) => { setError(message); setVoiceStatus(''); }}
+              onError={(message) => {
+                setError(message);
+                setVoiceStatus('');
+              }}
               onBusy={setVoiceBusy}
             />
             <Text style={styles.voiceLabel}>Your name</Text>
@@ -211,27 +235,45 @@ function Login({ onSignIn }: { onSignIn: (token: string) => Promise<void> }) {
           />
         </View>
         <Button
-          label={mode === 'phone-only' ? (creating ? 'Create account' : 'Sign in')
-            : pending ? 'Verify and sign in' : 'Send verification code'}
-          disabled={!mode || locked || (pending ? otp.length !== 6 : phone.length !== 10)
-            || (creating && (!name.trim() || !businessName.trim()))}
+          label={
+            mode === 'phone-only'
+              ? creating
+                ? 'Create account'
+                : 'Sign in'
+              : pending
+                ? 'Verify and sign in'
+                : 'Send verification code'
+          }
+          disabled={
+            !mode ||
+            locked ||
+            (pending ? otp.length !== 6 : phone.length !== 10) ||
+            (creating && (!name.trim() || !businessName.trim()))
+          }
           onPress={() => void submit()}
         />
-        {busy && <Text accessibilityLiveRegion="polite" style={styles.body}>
-          {mode === 'phone-only' ? (creating ? 'Creating your account…' : 'Signing in…')
-            : pending ? 'Checking your code…' : 'Sending your code…'}
-        </Text>}
-        {mode === 'phone-only' && (
-          <Button
-            label={creating ? 'Back to sign in' : 'Create an account'}
-            quiet
-            disabled={locked}
-            onPress={() => { setCreating(!creating); setError(''); setVoiceStatus(''); }}
-          />
+        {busy && (
+          <Text accessibilityLiveRegion="polite" style={styles.body}>
+            {mode === 'phone-only'
+              ? creating
+                ? 'Creating your account…'
+                : 'Signing in…'
+              : pending
+                ? 'Checking your code…'
+                : 'Sending your code…'}
+          </Text>
         )}
-        {!mode && (loadingMode ? <ActivityIndicator color={color.green} />
-          : <Button label="Retry connecting" quiet onPress={() => void loadMode()} />)}
-        {!!voiceStatus && <Text accessibilityLiveRegion="polite" style={styles.body}>{voiceStatus}</Text>}
+        {!mode &&
+          (loadingMode ? (
+            <ActivityIndicator color={color.green} />
+          ) : (
+            <Button label="Retry connecting" quiet onPress={() => void loadMode()} />
+          ))}
+        {!!voiceStatus && (
+          <Text accessibilityLiveRegion="polite" style={styles.body}>
+            {voiceStatus}
+          </Text>
+        )}
         {pending && (
           <Button
             label="Start over"
@@ -323,28 +365,23 @@ function VoiceButton({
   }
 
   return (
-    <View style={styles.voice}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={active ? 'Finish recording' : idleLabel}
-        disabled={disabled || working}
-        style={({ pressed }) => [styles.mic, active && styles.micActive, (pressed || working) && styles.dim]}
-        onPress={() => void (active ? finish() : start())}
-      >
-        {working ? (
-          <ActivityIndicator color={color.white} />
-        ) : (
-          <Ionicons
-            name={active ? 'stop' : 'mic-outline'}
-            size={34}
-            color={active ? color.ink : color.white}
-          />
-        )}
-      </Pressable>
-      <Text style={styles.voiceLabel}>
-        {working ? 'Reading your voice note…' : active ? 'Listening. Tap to finish' : idleLabel}
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={working ? 'Reading your voice note' : active ? 'Finish recording' : idleLabel}
+      accessibilityState={{ disabled: disabled || working, busy: working }}
+      disabled={disabled || working}
+      style={({ pressed }) => [styles.mic, active && styles.micActive, (pressed || working) && styles.dim]}
+      onPress={() => void (active ? finish() : start())}
+    >
+      {working ? (
+        <ActivityIndicator color={color.white} />
+      ) : (
+        <Ionicons name={active ? 'stop' : 'mic-outline'} size={23} color={active ? color.ink : color.white} />
+      )}
+      <Text accessibilityLiveRegion="polite" style={[styles.micText, active && { color: color.ink }]}>
+        {working ? 'Reading voice note…' : active ? 'Finish recording' : idleLabel}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -359,7 +396,11 @@ const taskExamples: Record<Task, string> = {
   order: 'Say what the customer ordered, or dictate a correction.',
 };
 
-function Counter({ token, onSignOut, onSessionExpired }: {
+function Counter({
+  token,
+  onSignOut,
+  onSessionExpired,
+}: {
   token: string;
   onSignOut: () => Promise<void>;
   onSessionExpired: () => void;
@@ -382,6 +423,11 @@ function Counter({ token, onSignOut, onSessionExpired }: {
   const [voiceBusy, setVoiceBusy] = useState(false);
   const requestId = useRef<string | undefined>(undefined);
   const writing = useRef(false);
+  const scroll = useRef<ScrollView>(null);
+  const feedback = useRef<Record<string, { text: string; question: string; ready: boolean }>>({});
+  useEffect(() => {
+    scroll.current?.scrollTo({ y: 0, animated: false });
+  }, [tab, bill?.id, bill?.paid, restaurant?.id]);
 
   async function load() {
     setError('');
@@ -419,11 +465,13 @@ function Counter({ token, onSignOut, onSessionExpired }: {
   }
 
   function changeTab(next: typeof tab) {
+    feedback.current[tab] = { text, question, ready };
+    const previous = feedback.current[next];
     setTab(next);
-    setText('');
-    setQuestion('');
+    setText(previous?.text || '');
+    setQuestion(previous?.question || '');
     setError('');
-    setReady(false);
+    setReady(previous?.ready || false);
   }
 
   async function record(uri: string) {
@@ -439,7 +487,11 @@ function Counter({ token, onSignOut, onSessionExpired }: {
       setText(response.transcript);
       setQuestion(response.result.question || '');
     } else {
-      const response = await client.voice('order', uri, { basket });
+      const response = await client.voice('order', uri, {
+        basket,
+        clarificationReply: question ? { previous: text, question } : undefined,
+      });
+      requestId.current = undefined;
       setBasket(response.result.lines);
       setText(response.transcript);
       setQuestion(response.result.question || '');
@@ -466,8 +518,60 @@ function Counter({ token, onSignOut, onSessionExpired }: {
     const item = menu.find((entry) => entry.id === line.item);
     return item ? [{ ...item, quantity: line.quantity }] : [];
   });
-  const draftTotal = draftLines.reduce((acc, line) => acc + line.price * line.quantity, 0);
+  const draftTotal = draftLines.reduce((acc, line) => acc + Math.round(line.price * line.quantity), 0);
 
+  const setupAction = setup && (
+    <Button
+      label="Create restaurant"
+      disabled={saving || voiceBusy || !!question || !setup.name || !setup.city}
+      onPress={() =>
+        void save(async () => {
+          if (!setup.name || !setup.city) return;
+          setRestaurant((await api(token, onSessionExpired).setup(setup.name, setup.city)).restaurant);
+          changeTab('menu');
+        })
+      }
+    />
+  );
+  const menuAction = entries.length > 0 && (
+    <Button
+      label={'Save ' + entries.length + (entries.length === 1 ? ' dish' : ' dishes')}
+      disabled={saving || voiceBusy || !!question}
+      onPress={() =>
+        void save(async () => {
+          setMenu((await api(token, onSessionExpired).menu(entries)).menu);
+          setEntries([]);
+          setText('');
+          setQuestion('');
+        })
+      }
+    />
+  );
+  const billAction = draftLines.length > 0 && (
+    <Button
+      label={'Create bill · ' + formatMoney(draftTotal)}
+      disabled={saving || voiceBusy || !!question}
+      onPress={() =>
+        void save(async () => {
+          requestId.current ??= randomUUID();
+          try {
+            const prices = Object.fromEntries(draftLines.map((line) => [line.id, line.price]));
+            setBill((await api(token, onSessionExpired).bill(requestId.current, basket, prices)).bill);
+          } catch (e) {
+            if ((e as { status?: number }).status === 409)
+              setMenu((await api(token, onSessionExpired).workspace()).menu);
+            throw e;
+          }
+          feedback.current.order = { text: '', question: '', ready: false };
+          setText('');
+          setQuestion('');
+          setReady(false);
+          requestId.current = undefined;
+          setBasket([]);
+        })
+      }
+    />
+  );
   return (
     <View style={styles.fill}>
       <View style={styles.header}>
@@ -484,17 +588,23 @@ function Counter({ token, onSignOut, onSessionExpired }: {
           <Ionicons name="log-out-outline" size={22} color={color.green} />
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {loading && <ActivityIndicator color={color.green} />}
         {!loading && !loaded && <Button label="Retry workspace" quiet onPress={() => void load()} />}
         {loaded && restaurant && (
           <Text style={styles.kicker}>
-            {restaurant.name} · {restaurant.city}
+            {restaurant.name}
+            {restaurant.city ? ' · ' + restaurant.city : ''}
           </Text>
         )}
         {loaded &&
           (restaurant && tab === 'setup' ? (
             <>
+              <Image
+                source={require('../assets/settlement-stamp.jpg')}
+                style={styles.menuArt}
+                accessible={false}
+              />
               <Text style={styles.title}>Payment QR</Text>
               <Text style={styles.body}>
                 Photograph the UPI card you already use. Check the payee before adding it to bills.
@@ -541,26 +651,26 @@ function Counter({ token, onSignOut, onSessionExpired }: {
           ) : tab === 'order' && bill && restaurant ? (
             <>
               <Text style={styles.title}>Bill #{String(bill.number).padStart(4, '0')}</Text>
-              <Text style={styles.body}>
+              <Text style={styles.paymentState}>
                 {bill.paid
                   ? bill.method === 'upi'
                     ? 'UPI payment recorded'
                     : 'Cash payment recorded'
                   : 'Awaiting payment'}
               </Text>
-              <View style={styles.receipt}>
+              <View style={styles.ticket}>
+                <Text style={styles.billAmount}>{formatMoney(bill.total)}</Text>
                 {bill.lines.map((line) => (
                   <View key={line.item} style={styles.row}>
                     <Text style={styles.rowName}>
                       {line.quantity} × {line.name} {line.variant}
                     </Text>
-                    <Text style={styles.rowValue}>{formatMoney(line.price * line.quantity)}</Text>
+                    <Text style={styles.rowValue}>{formatMoney(Math.round(line.price * line.quantity))}</Text>
                   </View>
                 ))}
-                <View style={styles.row}>
-                  <Text style={styles.rowName}>Total</Text>
-                  <Text style={styles.total}>{formatMoney(bill.total)}</Text>
-                </View>
+                {!bill.paid && restaurant.qr && (
+                  <Text style={styles.body}>Check your merchant app before confirming UPI.</Text>
+                )}
                 {restaurant.qr && !bill.paid && (
                   <Image
                     source={{ uri: restaurant.qr }}
@@ -569,63 +679,32 @@ function Counter({ token, onSignOut, onSessionExpired }: {
                   />
                 )}
               </View>
-              {bill.paid ? (
-                <Button
-                  label="Start next order"
-                  onPress={() => {
-                    setBill(null);
-                    changeTab('order');
-                  }}
-                />
-              ) : (
-                <>
-                  {restaurant.qr ? (
-                    <>
-                      <Text style={styles.body}>
-                        Check the payment on your merchant app before recording UPI.
-                      </Text>
-                      <Button
-                        label="Record verified UPI payment"
-                        disabled={saving}
-                        onPress={() =>
-                          void save(async () => setBill((await api(token, onSessionExpired).payment(bill.id, 'upi')).bill))
-                        }
-                      />
-                    </>
-                  ) : (
-                    <Button label="Set up the counter QR" quiet onPress={() => changeTab('setup')} />
-                  )}
-                  <Button
-                    label="Record cash payment"
-                    quiet
-                    disabled={saving}
-                    onPress={() =>
-                      void save(async () => setBill((await api(token, onSessionExpired).payment(bill.id, 'cash')).bill))
-                    }
-                  />
-                </>
-              )}
             </>
           ) : (
             <>
-              <Text style={styles.title}>{taskTitles[task]}</Text>
+              {task === 'order' && !basket.length && (
+                <Image
+                  source={require('../assets/order-rail.jpg')}
+                  style={styles.menuArt}
+                  accessible={false}
+                />
+              )}
+              {task === 'menu' && (
+                <Image
+                  accessible={false}
+                  source={require('../assets/folded-menu.jpg')}
+                  style={styles.menuArt}
+                />
+              )}
+              <Text accessibilityRole="header" style={styles.title}>
+                {taskTitles[task]}
+              </Text>
               <Text style={styles.body}>{taskExamples[task]}</Text>
               {!restaurant && (
                 <Image
                   source={image}
                   style={styles.taskArtwork}
                   accessibilityLabel="Abstract counter rhythm print"
-                />
-              )}
-              {task === 'order' && !menu.length ? (
-                <Button label="Add menu items first" onPress={() => changeTab('menu')} />
-              ) : (
-                <VoiceButton
-                  key={task}
-                  disabled={saving}
-                  onRecording={record}
-                  onError={setError}
-                  onBusy={setVoiceBusy}
                 />
               )}
               {!!text && <Text style={styles.transcript}>{text}</Text>}
@@ -638,17 +717,6 @@ function Counter({ token, onSignOut, onSessionExpired }: {
                 <View style={styles.receipt}>
                   <Text style={styles.sectionTitle}>{setup.name || 'Restaurant name needed'}</Text>
                   <Text style={styles.body}>{setup.city || 'Location needed'}</Text>
-                  <Button
-                    label="Create restaurant"
-                    disabled={saving || voiceBusy || !!question || !setup.name || !setup.city}
-                    onPress={() =>
-                      void save(async () => {
-                        if (!setup.name || !setup.city) return;
-                        setRestaurant((await api(token, onSessionExpired).setup(setup.name, setup.city)).restaurant);
-                        changeTab('menu');
-                      })
-                    }
-                  />
                 </View>
               )}
               {task === 'menu' && (
@@ -664,18 +732,6 @@ function Counter({ token, onSignOut, onSessionExpired }: {
                           <Text style={styles.rowValue}>{formatMoney(entry.price)}</Text>
                         </View>
                       ))}
-                      <Button
-                        label="Save menu items"
-                        disabled={saving || voiceBusy || !!question}
-                        onPress={() =>
-                          void save(async () => {
-                            setMenu((await api(token, onSessionExpired).menu(entries)).menu);
-                            setEntries([]);
-                            setText('');
-                            setQuestion('');
-                          })
-                        }
-                      />
                     </View>
                   )}
                   {menu.length > 0 && (
@@ -693,33 +749,46 @@ function Counter({ token, onSignOut, onSessionExpired }: {
                   )}
                 </>
               )}
+              {task === 'order' && !draftLines.length && (
+                <View style={styles.ticket}>
+                  <Text style={styles.sectionTitle}>Current ticket</Text>
+                  <Text style={styles.body}>
+                    {menu.length
+                      ? 'Your ordered items and total will appear here.'
+                      : 'Save your first dish to start taking orders.'}
+                  </Text>
+                </View>
+              )}
               {task === 'order' && draftLines.length > 0 && (
-                <View style={styles.receipt}>
+                <View style={styles.ticket}>
                   <Text style={styles.sectionTitle}>{ready ? 'Confirm the bill' : 'Current order'}</Text>
                   {draftLines.map((line) => (
                     <View key={line.id} style={styles.row}>
                       <Text style={styles.rowName}>
                         {line.quantity} × {line.name} {line.variant}
                       </Text>
-                      <Text style={styles.rowValue}>{formatMoney(line.price * line.quantity)}</Text>
+                      <Text style={styles.rowValue}>
+                        {formatMoney(Math.round(line.price * line.quantity))}
+                      </Text>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={'Remove ' + line.name}
+                        style={styles.remove}
+                        disabled={saving || voiceBusy}
+                        onPress={() => {
+                          setBasket((old) => old.filter((x) => x.item !== line.id));
+                          requestId.current = undefined;
+                          setReady(false);
+                        }}
+                      >
+                        <Ionicons name="close-outline" size={19} color={color.muted} />
+                      </Pressable>
                     </View>
                   ))}
                   <View style={styles.row}>
                     <Text style={styles.rowName}>Total</Text>
                     <Text style={styles.total}>{formatMoney(draftTotal)}</Text>
                   </View>
-                  <Button
-                    label="Create bill"
-                    disabled={saving || voiceBusy || !!question}
-                    onPress={() =>
-                      void save(async () => {
-                        requestId.current ??= randomUUID();
-                        setBill((await api(token, onSessionExpired).bill(requestId.current, basket)).bill);
-                        requestId.current = undefined;
-                        setBasket([]);
-                      })
-                    }
-                  />
                 </View>
               )}
             </>
@@ -730,6 +799,74 @@ function Counter({ token, onSignOut, onSessionExpired }: {
           </Text>
         )}
       </ScrollView>
+      {loaded && !(restaurant && tab === 'setup') && (
+        <View style={styles.dock}>
+          {tab === 'order' && bill && restaurant ? (
+            bill.paid ? (
+              <Button
+                label="Start next order"
+                onPress={() => {
+                  setBill(null);
+                  setText('');
+                  setQuestion('');
+                  setReady(false);
+                  setError('');
+                }}
+              />
+            ) : (
+              <>
+                {restaurant.qr ? (
+                  <>
+                    <Button
+                      label="Confirm UPI received"
+                      disabled={saving}
+                      onPress={() =>
+                        void save(async () =>
+                          setBill((await api(token, onSessionExpired).payment(bill.id, 'upi')).bill),
+                        )
+                      }
+                    />
+                  </>
+                ) : (
+                  <Button label="Set up the counter QR" quiet onPress={() => changeTab('setup')} />
+                )}
+                <Button
+                  label="Confirm cash received"
+                  quiet
+                  disabled={saving}
+                  onPress={() =>
+                    void save(async () =>
+                      setBill((await api(token, onSessionExpired).payment(bill.id, 'cash')).bill),
+                    )
+                  }
+                />
+              </>
+            )
+          ) : task === 'order' && !menu.length ? (
+            <Button label="Add menu items first" onPress={() => changeTab('menu')} />
+          ) : (
+            <>
+              <VoiceButton
+                key={task}
+                disabled={saving}
+                onBusy={setVoiceBusy}
+                onRecording={record}
+                onError={setError}
+                idleLabel={
+                  task === 'menu'
+                    ? 'Speak dishes and prices'
+                    : task === 'order'
+                      ? basket.length
+                        ? 'Add or correct items'
+                        : 'Speak order'
+                      : 'Speak restaurant details'
+                }
+              />
+              {task === 'onboarding' ? setupAction : task === 'menu' ? menuAction : billAction}
+            </>
+          )}
+        </View>
+      )}
       {restaurant && (
         <View style={styles.nav}>
           <Tab
@@ -794,10 +931,13 @@ export default function App() {
     Wordmark: require('../assets/InstrumentSerif-Regular.ttf'),
   });
   useEffect(() => {
-    void SecureStore.getItemAsync(sessionKey).then((session) => {
-      activeSession.current = session;
-      setToken(session);
-    }, () => setToken(null));
+    void SecureStore.getItemAsync(sessionKey).then(
+      (session) => {
+        activeSession.current = session;
+        setToken(session);
+      },
+      () => setToken(null),
+    );
   }, []);
 
   async function signIn(session: string) {
@@ -814,7 +954,9 @@ export default function App() {
   function sessionExpired() {
     if (!token || activeSession.current !== token) return;
     activeSession.current = null;
-    void SecureStore.deleteItemAsync(sessionKey).catch(() => {}).finally(() => setToken(null));
+    void SecureStore.deleteItemAsync(sessionKey)
+      .catch(() => {})
+      .finally(() => setToken(null));
   }
 
   async function signOut() {
@@ -848,10 +990,10 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.paper },
   fill: { flex: 1 },
   loader: { marginTop: 45 },
-  login: { padding: 23, paddingBottom: 36, gap: 14 },
+  login: { flexGrow: 1, justifyContent: 'center', padding: 20, paddingBottom: 22, gap: 8 },
   header: {
     paddingHorizontal: 22,
-    minHeight: 66,
+    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -861,7 +1003,7 @@ const styles = StyleSheet.create({
   brandName: { color: color.ink, fontFamily: 'Wordmark', fontSize: 38, letterSpacing: -0.8 },
   loginArtwork: { width: '100%', height: 202, marginTop: 8, backgroundColor: color.green },
   taskArtwork: { width: '100%', height: 96, backgroundColor: color.green },
-  title: { color: color.ink, fontFamily: 'Display', fontSize: 46, letterSpacing: -2.8, lineHeight: 49 },
+  title: { color: color.ink, fontFamily: 'Wordmark', fontSize: 42, letterSpacing: -1.3, lineHeight: 46 },
   body: { color: color.muted, fontSize: 15, lineHeight: 22, flexShrink: 1 },
   field: {
     flexDirection: 'row',
@@ -898,12 +1040,30 @@ const styles = StyleSheet.create({
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: 22, paddingTop: 22, paddingBottom: 28, gap: 13 },
   kicker: { color: color.green, fontWeight: '600', fontSize: 14 },
+  loginHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  menuArt: { width: '100%', height: 72, backgroundColor: '#263b72' },
+  ticket: { backgroundColor: '#fffcf6', borderTopWidth: 4, borderColor: '#987444', padding: 18, gap: 10 },
+  paymentState: { fontSize: 15, fontWeight: '600', color: color.green },
+  billAmount: { fontFamily: 'Wordmark', fontSize: 52, color: color.ink },
+  dock: {
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderTopWidth: 1,
+    borderColor: color.rule,
+    gap: 6,
+    backgroundColor: color.paper,
+  },
+  remove: { minHeight: 48, minWidth: 48, alignItems: 'center', justifyContent: 'center' },
+  micText: { fontSize: 16, fontWeight: '600', color: color.white, flexShrink: 1 },
   voice: { alignItems: 'center', gap: 10, paddingVertical: 12 },
   mic: {
     backgroundColor: color.green,
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    minHeight: 50,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 10,
+    flexDirection: 'row',
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -918,7 +1078,7 @@ const styles = StyleSheet.create({
   },
   followup: { fontSize: 15, color: color.ink, backgroundColor: '#F7EAB8', lineHeight: 21, padding: 12 },
   receipt: { backgroundColor: color.white, borderWidth: 1, borderColor: color.rule, padding: 15, gap: 9 },
-  sectionTitle: { fontFamily: 'Display', fontSize: 24, color: color.ink, letterSpacing: -0.7 },
+  sectionTitle: { fontFamily: 'Wordmark', fontSize: 28, color: color.ink, letterSpacing: -0.7 },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
