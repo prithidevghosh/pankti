@@ -30,12 +30,13 @@ const shape = (properties) => ({
 const string = { type: 'string' };
 const integer = { type: 'integer' };
 const nullableText = { type: ['string', 'null'] };
+const romanizedName = { ...nullableText, pattern: '^[ -~]+$' };
 const array = (items) => ({ type: 'array', items });
 const types = {
   signup: {
-    schema: shape({ name: nullableText, businessName: nullableText, phone: nullableText }),
+    schema: shape({ name: romanizedName, businessName: romanizedName, phone: nullableText }),
     prompt:
-      'Extract only the speaker’s name, their business name and their Indian mobile number. Preserve names as spoken. Convert explicitly spoken digits to a +91 mobile number with exactly ten national digits. Return null for any missing or ambiguous field. Never invent digits or infer either name from the other.',
+      'Extract only the speaker’s name, their business name and their Indian mobile number. For every spoken language, write both names in ordinary English letters. Transliterate proper names by sound, preserving the business name rather than translating its meaning (अपना ढाबा → Apna Dhaba). Preserve explicit English spellings, initials, digits and brand punctuation. Apply spoken corrections. Convert explicitly spoken digits to a +91 mobile number with exactly ten national digits. Return null for any missing or ambiguous field. Never invent digits or infer either name from the other.',
   },
   onboarding: {
     schema: shape({ name: nullableText, city: nullableText, question: nullableText }),
