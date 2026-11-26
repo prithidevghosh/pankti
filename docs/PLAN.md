@@ -30,3 +30,15 @@ Start with short recorded voice notes using Sarvam's documented synchronous endp
 ## GitHub development history
 
 Keep the Pankti repository public so the development history is easy to follow. Commit one coherent change at a time with a descriptive message. Run the checks relevant to that change and push it once they pass. Use new commits for follow-up fixes so the history shows how the project evolved. Keep credentials, local databases, and generated builds out of Git.
+
+## Owner dashboard
+
+Build five addressable views with a persistent phone navigation bar. Use the existing Counter rhythm print and serif type for the dashboard masthead, and keep the transaction surfaces readable. [Material navigation](https://m3.material.io/components/navigation-bar/overview) · [Design reference](https://www.cooperhewitt.org/membership/)
+
+Read each photographed menu page at high detail. Let the owner correct dishes, portions and missing prices before saving. Keep existing menu IDs stable across edits. [Vision input guidance](https://developers.openai.com/api/docs/guides/images-vision)
+
+Save the reusable UPI payload after showing the decoded payee. Show the clean QR with an unpaid bill and let the cashier record receipt. [NPCI merchant QR guidance](https://www.npci.org.in/what-we-do/upi/faqs)
+
+Use the menu and current basket as context for the order model. Grade exact item IDs, quantities, clarification and billing intent with real model calls. Price fractional plates from the stored menu and prefer an explicitly priced portion. [Evaluation guidance](https://developers.openai.com/api/docs/guides/evaluation-best-practices)
+
+Keep supplier orders, purchases and money paid as distinct ledger events. Display the balance after posting and support partial payments. [Vendor bills and partial payment](https://www.zoho.com/us/books/help/bills/basic-functions.html)
