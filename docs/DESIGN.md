@@ -42,3 +42,11 @@ The direct action language in [Cooper Hewitt’s membership page](https://www.co
 At 390 × 844, signup left 309 px below Create account while the artwork occupied just 59 px. At 430 × 932, the gap grew to 393 px. In 568 × 320 landscape, the sign-in button fell below the screen. Our first review only checked whether signup overflowed.
 
 Review the composition of both screens in portrait and landscape. Keep the fields together and the primary action a comfortable thumb's reach from the bottom. Give spare portrait height to the print. Let the document scroll naturally for larger text, feedback or the on-screen keyboard. Check where the button actually lands and inspect screenshots alongside the overflow measurements.
+
+### Closing the Counter
+
+The overview has its own print. Stacked order slips suggest what the owner sees at closing time, the accumulation of one service. The torn edges and ink transfer connect it to the sign-in monotype. A vermilion impression gives it a distinct focal point that survives the mobile crop. The four operational views use a compact double-ruled header to leave room for work. Give each future print a specific subject and place in the product.
+
+Built-in ImageGen prompt:
+
+> A new abstract fine-art print for an independent Indian restaurant owner's dashboard, titled Closing the Counter (do not print words). Landscape 3:2, single full-bleed digitised handmade collagraph on warm unbleached paper. Subject: the day's handwritten order slips gathered into a stack at closing time. Compose a tight staggered fan of torn rectangular chits and flat carbon-paper impressions pressing diagonally from lower left toward upper right, a few broken horizontal lines like pressure marks transferring between sheets, a single intense vermilion rectangular ink offset amid deep indigo-black, smoky bottle green and buff. Make the silhouette instantly legible at thumbnail size. Physical dry-ink skips, relief edges, uneven embossing in small areas, ample open paper, restrained, editorial, museum print-room quality. Keep the most distinctive overlapping junction in the center so it also reads in a narrow mobile crop. No text, numbers, lettering, food imagery, utensils, circles, arcs, gradients, wall, frame or shadows. Flat print, no mockup.

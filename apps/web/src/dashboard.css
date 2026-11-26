@@ -37,15 +37,20 @@
 }
 .masthead-print {
   position: absolute;
-  inset: 0 0 0 65%;
-  background: url('/counter-print.jpg') center 53% / cover;
+  inset: 0 0 0 auto;
+  width: 45%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 55% 52%;
 }
-.ledger[data-view='orders'] .masthead-print {
-  background-position: 50% 75%;
+.ledger[data-view='overview'] .ledger-header > div:first-child { width: 52%; }
+.ledger:not([data-view='overview']) .ledger-header {
+  min-height: auto;
+  background: transparent;
+  padding: 16px 0 24px;
+  border-bottom: 3px double #a69b80;
 }
-.ledger[data-view='menu'] .masthead-print {
-  background-position: 50% 30%;
-}
+.ledger:not([data-view='overview']) .ledger-header > div:first-child { width: 100%; }
 .ledger-tools {
   display: flex;
   justify-content: flex-end;

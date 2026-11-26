@@ -327,7 +327,8 @@ function Ledger({ onSignOut, onSessionExpired }) {
             )}
             <h1>{destinations.find(([id]) => id === view)[1]}</h1>
           </div>
-          <div className="masthead-print" aria-hidden="true" />
+          {view === 'overview' && <img className="masthead-print" src="/closing-the-counter.webp"
+            alt="Closing the Counter, an abstract print of stacked order slips in vermilion, green and carbon ink" />}
         </header>
         <div className="ledger-tools">
           <div className="ledger-controls">
