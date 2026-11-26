@@ -1,0 +1,32 @@
+{
+  "name": "pankti",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "workspaces": [
+    "apps/web",
+    "apps/mobile"
+  ],
+  "scripts": {
+    "api": "node --env-file-if-exists=.env server/index.mjs",
+    "web": "npm run dev --workspace @pankti/web",
+    "build": "npm run build --workspace @pankti/web",
+    "mobile": "npm run start --workspace @pankti/mobile",
+    "check:mobile": "npm run check --workspace @pankti/mobile",
+    "test": "node --test server/*.test.mjs",
+    "auth:import-firebase": "node --env-file-if-exists=.env server/import-firebase-accounts.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "jsqr": "^1.4.0",
+    "multer": "^2.0.0",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.34.0",
+    "zod": "^4.0.0"
+  },
+  "overrides": {
+    "expo-asset": "~12.0.14"
+  }
+}

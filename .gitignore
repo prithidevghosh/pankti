@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.firebase/
+.data/
+dist/
+.expo/
+apps/mobile/android/
+apps/mobile/ios/
+apps/mobile/google-services.json
+apps/mobile/GoogleService-Info.plist
+*.tsbuildinfo
+.DS_Store
