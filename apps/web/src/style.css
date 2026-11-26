@@ -594,17 +594,20 @@ th:last-child {
   }
 }
 @media (max-width: 680px) {
-  .login { grid-template-columns: minmax(0, 1fr); align-content: start; }
-  .login-visual { height: clamp(96px, 19svh, 160px); }
-  .login-visual img { object-position: center 52%; }
+  .login {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(48px, 1fr) auto;
+    min-height: 100dvh;
+  }
+  .login-visual img { object-position: center 51%; }
   .photo-caption { bottom: 10px; font-size: .9rem; padding: 4px 12px; }
-  .login-content { min-height: 0; padding: 16px clamp(18px, 5vw, 34px); }
-  .login-form { padding-block: 28px; }
+  .login-content {
+    min-height: 0;
+    padding: 16px clamp(18px, 5vw, 34px) max(24px, env(safe-area-inset-bottom));
+  }
+  .login-form { padding: clamp(16px, 3svh, 30px) 0 0; margin: 0; max-width: none; }
   .login-form h1 { font-size: clamp(3.3rem, 12vw, 5rem); }
   .account-intro { margin: 15px 0 20px; }
-  .is-signup .login-visual { height: clamp(28px, 7svh, 60px); }
-  .is-signup .photo-caption { display: none; }
-  .is-signup .login-form { padding-block: clamp(16px, 3svh, 28px); }
   .is-signup h1 { font-size: clamp(2.4rem, 9vw, 3.7rem); }
   .is-signup .title-break { display: inline; }
   .is-signup .account-intro { margin: 8px 0 12px; }
@@ -650,13 +653,14 @@ th:last-child {
 }
 
 @media (orientation: landscape) and (max-height: 500px) and (min-width: 560px) {
-  .is-signup { grid-template-columns: minmax(64px, .22fr) 1fr; }
-  .is-signup .login-visual { height: 100%; }
-  .is-signup .photo-caption { display: none; }
-  .is-signup .login-content { padding: 8px 20px; }
-  .is-signup .account-header { padding-bottom: 4px; }
-  .is-signup .login-form {
+  .login { grid-template-columns: minmax(64px, .22fr) 1fr; grid-template-rows: auto; }
+  .login .login-visual { height: 100%; }
+  .login .photo-caption { display: none; }
+  .login .login-content { padding: 8px 20px; }
+  .login .account-header { padding-bottom: 4px; }
+  .login .login-form {
     max-width: none;
+    margin-block: auto;
     display: grid;
     grid-template-columns: minmax(120px, .65fr) minmax(230px, 1.35fr);
     align-content: center;
@@ -664,9 +668,10 @@ th:last-child {
     column-gap: 16px;
     padding-block: 8px;
   }
-  .is-signup h1 { font-size: clamp(2.4rem, 5vw, 3.6rem); }
-  .is-signup .account-intro { grid-column: 1; }
-  .is-signup form { grid-column: 2; grid-row: 1 / span 3; }
-  .is-signup .entry-line { min-height: 44px; }
-  .is-signup .account-submit { min-height: 44px; margin-top: 10px; }
+  .login h1 { font-size: clamp(2.4rem, 5vw, 3.6rem); }
+  .login .account-intro { grid-column: 1; margin: 8px 0; }
+  .login .hero-first-line { flex-wrap: wrap; column-gap: .2em; }
+  .login form { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+  .login .entry-line { min-height: 44px; }
+  .login .account-submit { min-height: 44px; margin-top: 10px; }
 }
