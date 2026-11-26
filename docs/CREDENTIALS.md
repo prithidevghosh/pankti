@@ -16,7 +16,7 @@ Restart the API after adding the Twilio credentials. Both clients use its sign-i
 
 ## Preserve existing Firebase accounts
 
-If this installation previously used Firebase, keep `FIREBASE_PROJECT_ID` set until you import the accounts. Pause sign-up on the old version, take a SQLite backup, and export Auth from the same Firebase project. Keep the export outside the repo because it contains phone numbers.
+If this installation previously used Firebase, keep `FIREBASE_PROJECT_ID` set until you import the accounts. Pause sign-up on the old version, back up the database and complete the [MongoDB cutover](BACKEND.md) if this installation still uses SQLite, and export Auth from the same Firebase project. Keep the export outside the repo because it contains phone numbers.
 
 ```sh
 npx firebase-tools login
