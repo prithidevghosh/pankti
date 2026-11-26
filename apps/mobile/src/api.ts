@@ -13,12 +13,27 @@ export type Bill = {
   method: 'cash' | 'upi' | null;
   lines: (Line & Pick<Entry, 'name' | 'variant' | 'price'>)[];
 };
+export type VendorKind = 'order' | 'purchase' | 'payment' | 'balance';
+export type VendorFields = { vendor: string; note: string; amount: number; paid: number };
+export type VendorEntry = Omit<VendorFields, 'paid'> & { kind: VendorKind };
+export type VendorEvent = VendorFields & { id: number; kind: VendorKind; linkedPurchase?: number };
+export type VendorLedger = {
+  revision: string;
+  events: VendorEvent[];
+  balances: { vendor: string; due: number }[];
+};
 export type Workspace = { restaurant: Restaurant | null; menu: Item[]; pendingBill: Bill | null };
 export type Qr = { uri: string; payee: string; address: string; image: string };
 export type Task = 'onboarding' | 'menu' | 'order';
 export type Results = {
   onboarding: { name: string | null; city: string | null; question: string | null };
   menu: { entries: Entry[]; question: string | null };
+  vendor: {
+    entries: VendorEntry[];
+    question: string | null;
+    edit?: { id: number; revision: string; details: VendorFields };
+  };
+  vendorEdit: VendorFields & { question: string | null };
   order: { lines: Line[]; question: string | null; readyToBill: boolean };
 };
 export const formatMoney = (paise: number) =>
@@ -34,7 +49,12 @@ function appendFile(form: FormData, name: string, file: { uri: string; type: str
   form.append(name, file as unknown as Blob);
 }
 
-async function request<T>(path: string, method = 'GET', body?: object | FormData, token?: string): Promise<T> {
+async function request<T>(
+  path: string,
+  method = 'GET',
+  body?: object | FormData,
+  token?: string,
+): Promise<T> {
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = 'Bearer ' + token;
   if (body && !(body instanceof FormData)) headers['Content-Type'] = 'application/json';
@@ -46,9 +66,10 @@ async function request<T>(path: string, method = 'GET', body?: object | FormData
   if (!response.headers.get('content-type')?.includes('application/json'))
     throw new Error('Could not reach the restaurant server.');
   const value = await response.json();
-  if (!response.ok) throw Object.assign(new Error(value.error || 'Could not complete the request.'), {
-    status: response.status,
-  });
+  if (!response.ok)
+    throw Object.assign(new Error(value.error || 'Could not complete the request.'), {
+      status: response.status,
+    });
   return value;
 }
 
@@ -85,19 +106,28 @@ export function api(token: string, onSessionExpired: () => void) {
     setup: (name: string, city: string) =>
       call<{ restaurant: Restaurant }>('/workspace', 'POST', { name, city }),
     menu: (entries: Entry[]) => call<{ menu: Item[] }>('/menu', 'POST', entries),
-    voice: <T extends Task>(task: T, uri: string, context: object) => {
+    voice: <T extends keyof Results>(task: T, uri: string, context: object) => {
       const form = new FormData();
       appendFile(form, 'audio', { uri, name: 'recording.m4a', type: 'audio/mp4' });
       form.append('context', JSON.stringify(context));
       return call<{ transcript: string; result: Results[T] }>('/voice/' + task, 'POST', form);
     },
+    vendors: () => call<VendorLedger>('/vendors'),
+    postVendor: (request: string, entries: VendorEntry[]) =>
+      call<VendorLedger>('/vendors', 'POST', { request, entries }),
+    correctVendor: (id: number, revision: string, details: VendorFields, save: boolean) =>
+      call<VendorLedger>('/vendors/' + id + (save ? '' : '/preview'), save ? 'PUT' : 'POST', {
+        revision,
+        details,
+      }),
     qr: (uri: string, type: string) => {
       const form = new FormData();
       appendFile(form, 'photo', { uri, name: 'qr-card.jpg', type });
       return call<Qr>('/qr/preview', 'POST', form);
     },
     saveQr: (uri: string) => call<{ restaurant: Restaurant }>('/qr', 'PUT', { uri }),
-    bill: (request: string, basket: Line[], prices: Record<string,number>) => call<{ bill: Bill }>('/bills', 'POST', { request, basket, prices }),
+    bill: (request: string, basket: Line[], prices: Record<string, number>) =>
+      call<{ bill: Bill }>('/bills', 'POST', { request, basket, prices }),
     payment: (id: string, method: 'cash' | 'upi') =>
       call<{ bill: Bill }>('/bills/' + id + '/payment', 'POST', { method }),
   };

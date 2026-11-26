@@ -27,6 +27,10 @@ import {
   formatMoney,
   phoneAuth,
   type AuthMode,
+  type VendorEvent,
+  type VendorFields,
+  type VendorLedger,
+  type VendorEntry,
   type Bill,
   type Entry,
   type Item,
@@ -410,8 +414,8 @@ function Counter({
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const { height: screenHeight } = useWindowDimensions();
-  const openingArt = {height: Math.max(80,Math.min(220,screenHeight * 0.23))};
-  const [tab, setTab] = useState<'order' | 'menu' | 'setup'>('order');
+  const openingArt = { height: Math.max(80, Math.min(220, screenHeight * 0.23)) };
+  const [tab, setTab] = useState<'order' | 'menu' | 'setup' | 'vendors'>('order');
   const [setup, setSetup] = useState<{ name: string | null; city: string | null }>();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [basket, setBasket] = useState<Line[]>([]);
@@ -600,7 +604,9 @@ function Counter({
           </Text>
         )}
         {loaded &&
-          (restaurant && tab === 'setup' ? (
+          (restaurant && tab === 'vendors' ? (
+            <VendorCounter reveal={() => scroll.current?.scrollTo({y:0,animated:false})} token={token} expired={onSessionExpired} onBusy={setVoiceBusy} />
+          ) : restaurant && tab === 'setup' ? (
             <>
               <Image
                 source={require('../assets/settlement-stamp.jpg')}
@@ -687,7 +693,7 @@ function Counter({
               {task === 'order' && !basket.length && (
                 <Image
                   source={require('../assets/order-rail.jpg')}
-                  style={[styles.menuArt,openingArt]}
+                  style={[styles.menuArt, openingArt]}
                   accessible={false}
                 />
               )}
@@ -695,7 +701,7 @@ function Counter({
                 <Image
                   accessible={false}
                   source={require('../assets/folded-menu.jpg')}
-                  style={[styles.menuArt,!menu.length && !entries.length && openingArt]}
+                  style={[styles.menuArt, !menu.length && !entries.length && openingArt]}
                 />
               )}
               <Text accessibilityRole="header" style={styles.title}>
@@ -801,7 +807,7 @@ function Counter({
           </Text>
         )}
       </ScrollView>
-      {loaded && !(restaurant && tab === 'setup') && (
+      {loaded && tab !== 'vendors' && !(restaurant && tab === 'setup') && (
         <View style={styles.dock}>
           {tab === 'order' && bill && restaurant ? (
             bill.paid ? (
@@ -887,12 +893,301 @@ function Counter({
           />
           <Tab
             disabled={voiceBusy || saving}
+            label="Vendors"
+            icon="people-outline"
+            active={tab === 'vendors'}
+            onPress={() => changeTab('vendors')}
+          />
+          <Tab
+            disabled={voiceBusy || saving}
             label="Payment QR"
             icon="qr-code-outline"
             active={tab === 'setup'}
             onPress={() => changeTab('setup')}
           />
         </View>
+      )}
+    </View>
+  );
+}
+
+const eventNames = { order: 'Order placed', purchase: 'Purchase', payment: 'Payment', balance: 'Balance' };
+function VendorCounter({
+  reveal,
+  token,
+  expired,
+  onBusy,
+}: {
+  token: string;
+  reveal: () => void;
+  expired: () => void;
+  onBusy: (value: boolean) => void;
+}) {
+  const client = api(token, expired);
+  const [ledger, setLedger] = useState<VendorLedger>();
+  const [selected, select] = useState<VendorEvent>();
+  const [name, setName] = useState('');
+  const [note, setNote] = useState('');
+  const [amount, setAmount] = useState('');
+  const [paid, setPaid] = useState('');
+  const [status, setStatus] = useState('Unpaid');
+  const [preview, setPreview] = useState<VendorLedger>();
+  const [entries, setEntries] = useState<VendorEntry[]>([]);
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [listening, setListening] = useState(false);
+  const requestKey = useRef(randomUUID());
+  const lock = useRef(false);
+  async function run(action: () => Promise<void>) {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    onBusy(true);
+    setMessage('');
+    try {
+      await action();
+    } catch (e) {
+      setMessage(errorText(e));
+    } finally {
+      lock.current = false;
+      onBusy(false);
+      setBusy(false);
+    }
+  }
+  useEffect(() => {
+    let alive = true;
+    client
+      .vendors()
+      .then((data) => {
+        if (alive) setLedger(data);
+      })
+      .catch((e) => {
+        if (alive) setMessage(errorText(e));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [token]);
+  function edit(event: VendorEvent, fields: VendorFields = event) {
+    reveal();
+    select(event);
+    setEntries([]);
+    setName(fields.vendor);
+    setNote(fields.note);
+    setAmount(String(fields.amount / 100));
+    setPaid(String(fields.paid / 100));
+    setStatus(fields.paid === 0 ? 'Unpaid' : fields.amount === fields.paid ? 'Paid' : 'Part paid');
+    setPreview(undefined);
+  }
+  const total = Math.round(Number(amount) * 100);
+  const fields = {
+    vendor: name,
+    note,
+    amount: total,
+    paid: status === 'Paid' ? total : status === 'Unpaid' ? 0 : Math.round(Number(paid) * 100),
+  };
+  const locked = busy || listening;
+  async function record(uri: string) {
+    if (!ledger) return;
+    if (selected) {
+      const { result } = await client.voice('vendorEdit', uri, { id: selected.id, draft: fields });
+      if (result.question) {
+        setMessage(result.question);
+        return;
+      }
+      edit(selected, result);
+      setMessage('Review your correction.');
+    } else {
+      const { result } = await client.voice('vendor', uri, {});
+      if (result.edit) {
+        const target = ledger.events.find((row) => row.id === result.edit?.id);
+        if (!target || ledger.revision !== result.edit.revision)
+          throw Error('Refresh entries and try again.');
+        edit(target, result.edit.details);
+      } else {
+        requestKey.current = randomUUID();
+        setEntries(result.entries);
+        setMessage(result.question || (!result.entries.length ? 'No entry to record.' : ''));
+      }
+    }
+  }
+  function field(label: string, value: string, set: (v: string) => void, numeric = false) {
+    return (
+      <View>
+        <Text style={styles.voiceLabel}>{label}</Text>
+        <View style={styles.field}>
+          <TextInput
+            accessibilityLabel={label}
+            value={value}
+            editable={!locked}
+            keyboardType={numeric ? 'decimal-pad' : 'default'}
+            style={styles.input}
+            onChangeText={(v) => {
+              set(v);
+              setPreview(undefined);
+            }}
+          />
+        </View>
+      </View>
+    );
+  }
+  return (
+    <View style={styles.vendorPage}>
+      <Text style={styles.title}>{selected ? 'Edit entry' : 'Vendors'}</Text>
+      {ledger && (
+        <VoiceButton
+          disabled={busy}
+          onBusy={(v) => {
+            setListening(v);
+            onBusy(v);
+          }}
+          onRecording={record}
+          onError={setMessage}
+          idleLabel={selected ? 'Speak correction' : 'Speak vendor entry'}
+        />
+      )}
+      {!!message && (
+        <Text accessibilityLiveRegion="polite" style={styles.followup}>
+          {message}
+        </Text>
+      )}
+      {selected && ledger ? (
+        <View style={styles.receipt}>
+          <Text style={styles.sectionTitle}>{eventNames[selected.kind]}</Text>
+          {field('Vendor name', name, setName)}
+          {field('Amount (₹)', amount, setAmount, true)}
+          <Text style={styles.voiceLabel}>Payment status</Text>
+          <View style={styles.statusChoices}>
+            {['Unpaid', 'Part paid', 'Paid'].map((s) => (
+              <Pressable
+                key={s}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: s === status }}
+                disabled={locked}
+                onPress={() => {
+                  setStatus(s);
+                  setPreview(undefined);
+                }}
+                style={[styles.statusChoice, s === status && styles.selectedChoice]}
+              >
+                <Text style={{ color: s === status ? color.white : color.green }}>{s}</Text>
+              </Pressable>
+            ))}
+          </View>
+          {status === 'Part paid' && field('Paid amount (₹)', paid, setPaid, true)}
+          {field('Entry note', note, setNote)}
+          {preview && (
+            <>
+              <Text style={styles.sectionTitle}>Balance after correction</Text>
+              {preview.balances
+                .filter((b) => [name.trim(), selected.vendor].includes(b.vendor))
+                .map((b) => (
+                  <Text key={b.vendor} style={styles.body}>
+                    {b.vendor} · {formatMoney(Math.abs(b.due))} {b.due < 0 ? 'advance' : 'due'}
+                  </Text>
+                ))}
+            </>
+          )}
+          <Button
+            disabled={
+              locked ||
+              !name.trim() ||
+              !amount.trim() ||
+              !Number.isFinite(total) ||
+              (status === 'Part paid' && !(fields.paid > 0 && fields.paid < total))
+            }
+            label={preview ? 'Save correction' : 'Preview correction'}
+            onPress={() =>
+              void run(async () => {
+                const data = await client.correctVendor(selected.id, ledger.revision, fields, !!preview);
+                if (preview) {
+                  setLedger(data);
+                  select(undefined);
+                  setPreview(undefined);
+                  setMessage('Correction saved.');
+                } else setPreview(data);
+              })
+            }
+          />
+          <Button
+            quiet
+            disabled={locked}
+            label="Cancel edit"
+            onPress={() => {
+              select(undefined);
+              setPreview(undefined);
+            }}
+          />
+        </View>
+      ) : (
+        <>
+          {entries.length > 0 && (
+            <View style={styles.receipt}>
+              {entries.map((e, i) => (
+                <Text key={i} style={styles.body}>
+                  {e.vendor} · {eventNames[e.kind]} · {formatMoney(e.amount)}
+                </Text>
+              ))}
+              <Button
+                label="Confirm entries"
+                disabled={locked}
+                onPress={() =>
+                  void run(async () => {
+                    setLedger(await client.postVendor(requestKey.current, entries));
+                    setEntries([]);
+                    setMessage('Entries saved.');
+                  })
+                }
+              />
+              <Button label="Discard" quiet disabled={locked} onPress={() => setEntries([])} />
+            </View>
+          )}
+          {ledger && (
+            <>
+              <Text style={styles.sectionTitle}>Vendor balances</Text>
+              {!ledger.balances.length && (
+                <Text style={styles.body}>Speak a supplier purchase or payment to open the ledger.</Text>
+              )}
+              {ledger.balances.map((b) => (
+                <View key={b.vendor} style={styles.row}>
+                  <Text style={styles.rowName}>{b.vendor}</Text>
+                  <Text style={styles.rowValue}>
+                    {formatMoney(Math.abs(b.due))} {b.due < 0 ? 'advance' : 'due'}
+                  </Text>
+                </View>
+              ))}
+              {ledger.events.length > 0 && <Text style={styles.sectionTitle}>Recent entries</Text>}
+              {ledger.events
+                .filter((e) => !e.linkedPurchase)
+                .map((e) => (
+                  <Pressable
+                    key={e.id}
+                    disabled={locked}
+                    accessibilityRole="button"
+                    onPress={() => {
+                      edit(e);
+                      setMessage('');
+                    }}
+                    style={styles.receipt}
+                  >
+                    <Text style={styles.rowValue}>
+                      {e.vendor} · {formatMoney(e.amount)}
+                    </Text>
+                    <Text style={styles.body}>
+                      {eventNames[e.kind]} · {e.note}
+                    </Text>
+                    <Text style={styles.voiceLabel}>Edit entry</Text>
+                  </Pressable>
+                ))}
+            </>
+          )}
+          <Button
+            quiet
+            disabled={locked}
+            label="Refresh entries"
+            onPress={() => void run(async () => setLedger(await client.vendors()))}
+          />
+        </>
       )}
     </View>
   );
@@ -914,6 +1209,7 @@ function Tab({
   return (
     <Pressable
       accessibilityRole="tab"
+      accessibilityLabel={label}
       accessibilityState={{ selected: active, disabled }}
       disabled={disabled}
       onPress={onPress}
@@ -1047,6 +1343,17 @@ const styles = StyleSheet.create({
   ticket: { backgroundColor: '#fffcf6', borderTopWidth: 4, borderColor: '#987444', padding: 18, gap: 10 },
   paymentState: { fontSize: 15, fontWeight: '600', color: color.green },
   billAmount: { fontFamily: 'Wordmark', fontSize: 52, color: color.ink },
+  vendorPage: { gap: 12 },
+  statusChoices: { flexDirection: 'row', gap: 4 },
+  statusChoice: {
+    minHeight: 48,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: color.rule,
+  },
+  selectedChoice: { backgroundColor: color.green },
   dock: {
     paddingVertical: 8,
     paddingHorizontal: 18,
