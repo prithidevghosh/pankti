@@ -409,6 +409,8 @@ function Counter({
   const [menu, setMenu] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
+  const { height: screenHeight } = useWindowDimensions();
+  const openingArt = {height: Math.max(80,Math.min(220,screenHeight * 0.23))};
   const [tab, setTab] = useState<'order' | 'menu' | 'setup'>('order');
   const [setup, setSetup] = useState<{ name: string | null; city: string | null }>();
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -685,7 +687,7 @@ function Counter({
               {task === 'order' && !basket.length && (
                 <Image
                   source={require('../assets/order-rail.jpg')}
-                  style={styles.menuArt}
+                  style={[styles.menuArt,openingArt]}
                   accessible={false}
                 />
               )}
@@ -693,7 +695,7 @@ function Counter({
                 <Image
                   accessible={false}
                   source={require('../assets/folded-menu.jpg')}
-                  style={styles.menuArt}
+                  style={[styles.menuArt,!menu.length && !entries.length && openingArt]}
                 />
               )}
               <Text accessibilityRole="header" style={styles.title}>
@@ -832,7 +834,7 @@ function Counter({
                 )}
                 <Button
                   label="Confirm cash received"
-                  quiet
+                  quiet={!!restaurant.qr}
                   disabled={saving}
                   onPress={() =>
                     void save(async () =>
