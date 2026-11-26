@@ -144,3 +144,26 @@ test('supplier orders, purchases, partial payments and balances post once and st
   assert.equal(adjustment.balances[0].due,25000);
   assert.deepEqual((await call('/vendors',{token:'other'})).events,[]);
 });
+
+test('vendor corrections preview and replay balances without double charging or overwriting concurrent edits', async t => {
+  const call = await start(t);
+  for (const token of ['owner','other']) await call('/workspace',{method:'POST',token,body:restaurant});
+  const {revision,events} = await call('/vendors',{method:'POST',body:{request:randomUUID(),entries:[
+    {vendor:'Mohan',kind:'purchase',amount:80000,note:'Potatoes'},
+    {vendor:'Mohan',kind:'payment',amount:30000,note:'Cash'},
+  ]}});
+  const purchase = events.find(e=>e.kind==='purchase');
+  assert.equal(purchase.paid,30000);
+  const details = {vendor:'Mohan Foods',note:'Potatoes',amount:90000,paid:90000};
+  const path = '/vendors/'+purchase.id;
+  const preview = await call(path+'/preview',{method:'POST',body:{revision,details}});
+  assert.deepEqual(preview.balances,[{vendor:'Mohan Foods',due:0}]);
+  assert.equal((await call('/vendors')).balances[0].due,50000);
+  await call(path,{method:'PUT',token:'other',body:{revision,details},status:404});
+  const saved=await call(path,{method:'PUT',body:{revision,details}});
+  assert.equal(saved.events.find(e=>e.kind==='payment').paid,90000);
+  await call(path,{method:'PUT',body:{revision,details},status:409});
+  const reset=await call('/vendors',{method:'POST',body:{request:randomUUID(),entries:[{vendor:'Mohan Foods',kind:'balance',amount:5000,note:'Reconciled'}]}});
+  const replay=await call(path,{method:'PUT',body:{revision:reset.revision,details:{...details,paid:0}}});
+  assert.equal(replay.balances[0].due,5000);
+});

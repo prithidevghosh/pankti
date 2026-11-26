@@ -543,3 +543,9 @@
 .file-field:has(input:disabled) {
   opacity: 0.55;
 }
+
+.station-print { display:block; width:100%; height:clamp(80px, 10vw, 134px); object-fit:cover; margin-bottom:16px; }
+.vendor-editor {background:#f4eade;padding:16px;}
+.vendor-editor h3 {margin:0;font:1.6rem 'Pankti Wordmark',Georgia,serif;}
+.vendor-editor fieldset {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:10px;margin:12px 0;}
+.vendor-editor select {min-height:40px;background:#fffcf6;font:inherit;}

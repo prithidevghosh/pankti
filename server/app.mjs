@@ -27,6 +27,8 @@ const vendorEntries = z.array(z.object({
   vendor: shortText, kind: z.enum(['order', 'purchase', 'payment', 'balance']),
   note: z.string().trim().max(300), amount: z.number().int().min(0).max(1000000000),
 }).refine(entry => entry.amount > 0 || ['order', 'balance'].includes(entry.kind))).max(30);
+const vendorCorrection = z.object({vendor:shortText,note:z.string().trim().max(300),
+  amount:z.number().int().nonnegative().max(1000000000),paid:z.number().int().nonnegative().max(1000000000)});
 const workspace = async (restaurant) =>
   restaurant
     ? {
@@ -116,8 +118,22 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
     store.postVendor(restaurant.id, request, entries);
     res.json(store.vendors(restaurant.id));
   });
+  for (const [path,commit] of [['/api/vendors/:id/preview',false],['/api/vendors/:id',true]]) {
+    app[commit ? 'put' : 'post'](path,(req,res) => {
+      const restaurant = requireRestaurant(req);
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const {revision,details} = z.object({revision:z.string().length(64),details:vendorCorrection}).parse(req.body);
+      const event = store.vendors(restaurant.id).events.find(row => row.id === id);
+      if (!event) throw httpError(404,'Vendor entry not found.');
+      if (event.linkedPurchase) throw httpError(409,'Edit the linked purchase to correct this payment.');
+      if (details.paid > details.amount
+        || (['purchase','payment'].includes(event.kind) && details.amount === 0))
+        throw httpError(400,'Check the entry amount and the amount paid.');
+      res.json(store.correctVendor(restaurant.id,{id,revision,details},commit));
+    });
+  }
   app.post('/api/voice/:task', upload.single('audio'), async (req, res) => {
-    const task = z.enum(['onboarding', 'menu', 'order', 'vendor']).parse(req.params.task);
+    const task = z.enum(['onboarding', 'menu', 'order', 'vendor', 'vendorEdit']).parse(req.params.task);
     if (!req.file?.size) throw httpError(400, 'Record a voice note first.');
     if (!/^(audio\/|video\/mp4$)/.test(req.file.mimetype))
       throw httpError(400, 'This recording format is unavailable.');
@@ -139,8 +155,15 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
           .array(entrySchema)
           .max(80)
           .parse(supplied.previous ?? []);
+      } else if (task === 'vendorEdit') {
+        const event = store.vendors(restaurant.id).events.find(e => e.id === supplied.id);
+        if (!event) throw httpError(404,'Choose a saved vendor entry first.');
+        context.entry = {...vendorCorrection.parse(supplied.draft),kind:event.kind};
       } else if (task === 'vendor') {
-        context.vendors = store.vendors(restaurant.id).balances;
+        const ledger = store.vendors(restaurant.id);
+        context.vendors = ledger.balances;
+        context.recentEntries = ledger.events.filter(e => !e.linkedPurchase).slice(0,50);
+        context.revision = ledger.revision;
         keyterms = context.vendors.map(row => row.vendor);
       } else {
         context.menu = store.menuFor(restaurant.id).map(({ id, name, variant }) => ({ id, name, variant }));
@@ -155,7 +178,17 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
     }
     const transcript = await speech(req.file, keyterms);
     const result = await understand(task, transcript, context);
-    if (task === 'vendor') result.entries = vendorEntries.parse(result.entries);
+    if (task === 'vendor') {
+      result.entries = vendorEntries.parse(result.entries);
+      if (result.editId != null) {
+        const entry = context.recentEntries.find(row => row.id === result.editId);
+        if (!entry) throw httpError(422,'Select the vendor entry and use Speak correction.');
+        const change = await understand('vendorEdit',transcript,{entry, clarificationReply:context.clarificationReply});
+        result.entries = [];
+        result.question = change.question;
+        if (!change.question) result.edit = {id:entry.id,revision:context.revision,details:vendorCorrection.parse(change)};
+      }
+    }
     if (
       task === 'order' &&
       result.lines.some((line) => !context.menu.some((item) => item.id === line.item))

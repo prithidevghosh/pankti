@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { vendorLedger } from './vendor-edits.mjs';
 import { openPhoneStore } from './phone-store.mjs';
 
 export function openStore(path) {
@@ -38,6 +39,10 @@ export function openStore(path) {
       vendor TEXT NOT NULL, vendor_key TEXT NOT NULL, kind TEXT NOT NULL,
       note TEXT NOT NULL, amount INTEGER NOT NULL, delta INTEGER NOT NULL,
       UNIQUE(restaurant, request, sequence)
+    );
+    CREATE TABLE IF NOT EXISTS vendor_edits (
+      id INTEGER PRIMARY KEY, restaurant TEXT NOT NULL REFERENCES restaurants(id),
+      event INTEGER NOT NULL REFERENCES vendor_events(id), details TEXT NOT NULL, created TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS bill_paid ON bills(restaurant, paid);
   `);
@@ -123,9 +128,16 @@ export function openStore(path) {
       }
     },
     vendors(restaurant) {
-      const balances = db.prepare('SELECT min(vendor) vendor, SUM(delta) due FROM vendor_events WHERE restaurant=? GROUP BY vendor_key ORDER BY vendor').all(restaurant);
-      const events = db.prepare('SELECT id, created, vendor, kind, note, amount FROM vendor_events WHERE restaurant=? ORDER BY id DESC LIMIT 100').all(restaurant);
-      return { balances, events };
+      return vendorLedger(db,restaurant);
+    },
+    correctVendor(restaurant,correction,commit) {
+      return transaction(() => {
+        const preview = vendorLedger(db,restaurant,correction);
+        if (!commit) return preview;
+        db.prepare('INSERT INTO vendor_edits(restaurant,event,details,created) VALUES(?,?,?,?)')
+          .run(restaurant,correction.id,JSON.stringify(correction.details),new Date().toISOString());
+        return vendorLedger(db,restaurant);
+      });
     },
     postVendor(restaurant, request, entries) {
       transaction(() => {

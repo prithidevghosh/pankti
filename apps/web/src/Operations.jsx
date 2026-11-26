@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ImagePlus } from 'lucide-react';
+import { VendorEditor } from './VendorEditor.jsx';
 import { SignupVoice } from './SignupVoice.jsx';
 import { request, asRupees } from './api.js';
 
@@ -67,6 +68,7 @@ export function Orders({ menu, onBill }) {
   return (
     <section className="work-sheet order-desk">
       <div className="record-side">
+        <img className="station-print" src="/order-rail.webp" alt="" loading="lazy" />
         <h2>Take an order</h2>
         <p className="subtle">
           {menu.length
@@ -158,6 +160,8 @@ const kinds = {
   balance: 'Outstanding balance',
 };
 export function Vendors({ revision }) {
+  const [editing, setEditing] = useState(null);
+  const [voiceEdit, setVoiceEdit] = useState(null);
   const [ledger, setLedger] = useState({ balances: [], events: [] });
   const [draft, setDraft] = useState([]);
   const [speechBusy, setSpeechBusy] = useState(false);
@@ -183,12 +187,24 @@ export function Vendors({ revision }) {
           task="vendor"
           context={{ clarificationReply: question ? { previous: heard, question } : undefined }}
           label="Speak vendor entry"
-          disabled={op.busy}
+          disabled={op.busy || !!editing}
           onBusy={setSpeechBusy}
           onError={op.setMessage}
           onResult={({ result, transcript }) => {
             key.current = crypto.randomUUID();
             setHeard(transcript);
+            if (result.edit) {
+              setDraft([]);
+              setQuestion('');
+              if (result.edit.revision !== ledger.revision) {
+                op.setMessage('Refresh the ledger before making this correction.');
+                return;
+              }
+              setVoiceEdit(result.edit);
+              setEditing(result.edit.id);
+              op.setMessage('Review the selected entry correction.');
+              return;
+            }
             setQuestion(result.question || '');
             setDraft(result.question ? [] : result.entries);
             op.setMessage(result.question || (result.entries.length ? '' : 'No transaction to record.'));
@@ -265,13 +281,41 @@ export function Vendors({ revision }) {
           <ul className="work-lines">
             {ledger.events.map((e) => (
               <li key={e.id}>
-                <span>
-                  {e.vendor} · {kinds[e.kind]}
-                  <small>
-                    {new Date(e.created).toLocaleDateString('en-IN')} · {e.note}
-                  </small>
-                </span>
-                <strong>{asRupees(e.amount)}</strong>
+                {editing === e.id ? (
+                  <VendorEditor
+                    suggested={voiceEdit?.id === e.id ? voiceEdit.details : null}
+                    event={e}
+                    ledger={ledger}
+                    onCancel={() => setEditing(null)}
+                    onSave={(next) => {
+                      setLedger(next);
+                      setEditing(null);
+                      op.setMessage('Correction saved.');
+                    }}
+                  />
+                ) : (
+                  <>
+                    <span>
+                      {e.vendor} · {kinds[e.kind]}
+                      <small>
+                        {new Date(e.created).toLocaleDateString('en-IN')} · {e.note}
+                      </small>
+                    </span>
+                    <strong>{asRupees(e.amount)}</strong>
+                    {['payment', 'purchase'].includes(e.kind) && (
+                      <small>{e.paid === 0 ? 'Unpaid' : e.paid >= e.amount ? 'Paid' : 'Part paid'}</small>
+                    )}
+                    <button
+                      disabled={!!editing || op.busy || speechBusy}
+                      onClick={() => {
+                        setVoiceEdit(null);
+                        setEditing(e.linkedPurchase || e.id);
+                      }}
+                    >
+                      {e.linkedPurchase ? 'Edit linked purchase' : 'Edit'}
+                    </button>
+                  </>
+                )}
               </li>
             ))}
           </ul>
@@ -458,6 +502,7 @@ export function Bank({ restaurant, onSave }) {
   return (
     <section className="work-sheet bank-desk">
       <div>
+        <img className="station-print" src="/settlement-stamp.webp" alt="" loading="lazy" />
         <h2>Store payment QR</h2>
         <p className="subtle">
           Upload the QR card from your counter. Check the recipient before adding it to bills.
