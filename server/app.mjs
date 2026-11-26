@@ -42,7 +42,7 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
   const store = openStore(database);
   const app = express();
   app.disable('x-powered-by');
-  app.use('/api', express.json({ limit: '64kb' }), (_req, res, next) => {
+  app.use('/api', express.json({ limit: '256kb' }), (_req, res, next) => {
     res.set('Cache-Control', 'no-store');
     next();
   });
@@ -96,7 +96,7 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
   });
   app.post('/api/menu', (req, res) => {
     const restaurant = requireRestaurant(req);
-    const entries = z.array(entrySchema).min(1).max(80).parse(req.body);
+    const entries = z.array(entrySchema).min(1).max(500).parse(req.body);
     res.json({ menu: store.saveMenu(restaurant.id, entries) });
   });
   app.post('/api/menu/scan', upload.single('photo'), async (req, res) => {
@@ -128,6 +128,9 @@ export function createApp({ verify, database, otp, requireLegacyImport = false, 
       throw httpError(400, 'Invalid voice context.');
     }
     const context = {};
+    if (['order','vendor'].includes(task) && supplied.clarificationReply) {
+      context.clarificationReply = z.object({ previous: z.string().max(3000), question: z.string().max(600) }).parse(supplied.clarificationReply);
+    }
     let keyterms = [];
     if (task !== 'onboarding') {
       const restaurant = requireRestaurant(req);

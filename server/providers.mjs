@@ -57,7 +57,7 @@ const types = {
   },
   vendor: {
     schema: shape({ entries: array(shape({ vendor: string, kind: { type: 'string', enum: ['order', 'purchase', 'payment', 'balance'] }, note: string, amount: integer })), question: nullableText }),
-    prompt: 'Extract supplier ledger events. Reuse a known vendor spelling where clearly matched. order = a purchase order placed for future delivery, no change to debt, amount may be zero if unpriced. purchase = goods bought on account, increases debt. payment = money actually paid to supplier, reduces debt. balance = explicit outstanding total alone, replaces the current outstanding amount. Never double-count a stated remainder accompanying a purchase or payment. Split a purchase and its partial payment into two events. Use integer paise. Include item and quantity details in note. Ignore side conversations, plans to pay and customer sales. For a missing vendor, unclear amount or ambiguous event return no entries and ask for clarification. Do not invent a payment.',
+    prompt: 'Extract supplier ledger events. Reuse a known vendor spelling where clearly matched. order = a purchase order placed for future delivery, no change to debt, amount may be zero if unpriced. purchase = goods bought on account, increases debt. payment = money actually paid to supplier, reduces debt. balance = explicit outstanding total alone, replaces the current outstanding amount. The balance event is exclusively for a standalone opening balance or explicit reconciliation. For a purchase and part-payment with the leftover mentioned, output exactly the purchase and payment. Example: goods 900, paid 400, remaining 500 yields purchase 90000 and payment 40000 only. Split a purchase and its partial payment into two events. Use integer paise. Include item and quantity details in note. Ignore side conversations, plans to pay and customer sales. For a missing vendor, unclear amount or ambiguous event return no entries and ask for clarification. Do not invent a payment.',
   },
   order: {
     schema: shape({
@@ -66,7 +66,7 @@ const types = {
       readyToBill: { type: 'boolean' },
     }),
     prompt:
-      'Apply the spoken order to the existing basket. The output is the complete resulting basket, with one row for each item ID. Use only the supplied menu item IDs. Separate customer order clauses from instructions to staff, table numbers, stock counts, quotations, repeats and unrelated chatter. Only ordered food belongs in lines. Ignore even menu items mentioned in unrelated instructions. Keep basket unchanged on chatter alone. Resolve multilingual names, quantities, negation and corrections. Prefer explicitly priced half/quarter variants as whole units of those variants. If only full plate is listed, half is 0.5 and quarter is 0.25 of it. Never divide the price yourself. Ask about unsupported portions or ambiguity between distinct dishes. “do samosa, nahi ek samosa” adds one samosa. Distinguish a quantity replacement (“make it one”) from an addition. Ask a short question and leave the basket unchanged if an item or its variant is ambiguous or unavailable. Set readyToBill only when the speaker explicitly asks to make the bill. The app will ask for confirmation.',
+      'Apply the spoken order to the existing basket. The output is the complete resulting basket, with one row for each item ID. Use only the supplied menu item IDs. Separate customer order clauses from instructions to staff, table numbers, stock counts, quotations, repeats and unrelated chatter. Only ordered food belongs in lines. Ignore even menu items mentioned in unrelated instructions. On staff-only chatter return the original basket, null question and readyToBill false. Never ask the cashier to answer a staff question. When several priced sizes exist and the customer gives no size, ask which size and preserve the previous basket. Check requiresPortionChoice first. If the transcript asks for an item in that list without a size, return the unchanged basket and a nonempty clarification. A clarificationReply may resolve the earlier question. Resolve multilingual names, quantities, negation and corrections. Prefer explicitly priced half/quarter variants as whole units of those variants. If only full plate is listed, half is 0.5 and quarter is 0.25 of it. Never divide the price yourself. Ask about unsupported portions or ambiguity between distinct dishes. “do samosa, nahi ek samosa” adds one samosa. Distinguish a quantity replacement (“make it one”) from an addition. Ask a short question and leave the basket unchanged if an item or its variant is ambiguous or unavailable. Set readyToBill only when the speaker explicitly asks to make the bill. The app will ask for confirmation.',
   },
 };
 export function httpError(status, message) {
@@ -111,6 +111,16 @@ export async function scanMenu(buffer) {
 }
 
 export async function interpret(kind, transcript, context) {
+  if (kind === 'order') {
+    const variants = new Map();
+    for (const item of context.menu) {
+      const key = item.name.trim().toLowerCase();
+      const options = variants.get(key) || [];
+      options.push(item.variant);
+      variants.set(key, options);
+    }
+    context = { ...context, requiresPortionChoice: Object.fromEntries([...variants].filter(([, options]) => options.length > 1)) };
+  }
   return modelResult(kind, JSON.stringify({ transcript, ...context }));
 }
 
@@ -123,7 +133,7 @@ async function modelResult(kind, input) {
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     signal: AbortSignal.timeout(20000),
     body: JSON.stringify({
-      model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
+      model: (['vendor','order'].includes(kind) && process.env.COUNTER_MODEL) || process.env.OPENAI_MODEL || 'gpt-4.1-mini',
       store: false,
       instructions:
         spec.prompt +

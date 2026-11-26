@@ -112,3 +112,34 @@ test('detects a reusable UPI code on a photographed card and saves only the QR',
   await call('/qr', { method: 'PUT', body: { uri: preview.uri } });
   assert.equal((await call('/workspace')).restaurant.qr, preview.image);
 });
+
+test('editing an imported menu keeps its ID and fractional bills retain their original price', async t => {
+  const call = await start(t, { scan: async () => [{ ...samosa, price: null }] });
+  await call('/workspace', { method:'POST', body:restaurant });
+  const photo = new FormData();
+  photo.append('photo', new Blob(['image']), 'menu.jpg');
+  const scan = await call('/menu/scan', { method:'POST', body:photo });
+  assert.equal(scan.entries[0].price, null);
+  const { menu } = await call('/menu',{method:'POST',body:[{...scan.entries[0],price:30001}]});
+  const item = menu[0].id;
+  const {bill} = await call('/bills',{method:'POST',status:201,body:{request:randomUUID(),basket:[{item,quantity:.5}]}});
+  assert.equal(bill.total,15001);
+  const updated = await call('/menu/'+item,{method:'PUT',body:{...samosa,name:'Renamed samosa',price:28000}});
+  assert.equal(updated.menu.length,1);
+  assert.equal(updated.menu[0].id,item);
+  assert.equal((await call('/bills/'+bill.id)).bill.lines[0].price,30001);
+});
+
+test('supplier orders, purchases, partial payments and balances post once and stay private', async t => {
+  const call = await start(t);
+  for (const token of ['owner','other']) await call('/workspace',{method:'POST',token,body:restaurant});
+  const entries = [['order',100000],['purchase',80000],['payment',30000]].map(([kind,amount]) => ({kind,amount,vendor:'Mohan',note:'Potatoes'}));
+  const body = {request:randomUUID(),entries};
+  await call('/vendors',{method:'POST',body});
+  const ledger = await call('/vendors',{method:'POST',body});
+  assert.equal(ledger.events.length,3);
+  assert.equal(ledger.balances[0].due,50000);
+  const adjustment = await call('/vendors',{method:'POST',body:{request:randomUUID(),entries:[{...entries[0],kind:'balance',amount:25000}]}});
+  assert.equal(adjustment.balances[0].due,25000);
+  assert.deepEqual((await call('/vendors',{token:'other'})).events,[]);
+});

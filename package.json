@@ -16,7 +16,8 @@
     "mobile": "npm run start --workspace @pankti/mobile",
     "check:mobile": "npm run check --workspace @pankti/mobile",
     "test": "node --test server/*.test.mjs",
-    "auth:import-firebase": "node --env-file-if-exists=.env server/import-firebase-accounts.mjs"
+    "auth:import-firebase": "node --env-file-if-exists=.env server/import-firebase-accounts.mjs",
+    "eval:counter": "node --env-file-if-exists=.env evals/counter.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
