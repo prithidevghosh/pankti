@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ChartNoAxesColumn, LogOut, ReceiptText, RefreshCw, Utensils } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ChartNoAxesColumn, LogOut, ReceiptText, RefreshCw, Utensils } from 'lucide-react';
 import '@fontsource-variable/bricolage-grotesque';
 import './style.css';
 import { SignupVoice } from './SignupVoice.jsx';
@@ -146,7 +146,7 @@ function Login({ onSignIn, mode }) {
   }
 
   return (
-    <main className="login">
+    <main className={creating ? "login is-signup" : "login"}>
       <section className="login-visual" aria-label="Counter rhythm artwork">
         <img
           src="/counter-print.jpg"
@@ -157,103 +157,67 @@ function Login({ onSignIn, mode }) {
         </div>
       </section>
       <section className="login-content">
-        <Wordmark />
+        <header className="account-header">
+          <Wordmark />
+          {localPhoneOnly && (
+            <button className="account-switch" type="button" disabled={locked}
+              onClick={() => {
+                setCreating(!creating);
+                setError('');
+                setVoiceStatus('');
+              }}>
+              {creating ? 'Back to sign in' : 'Create an account'} <ArrowUpRight size={16} aria-hidden="true" />
+            </button>
+          )}
+        </header>
         <div className="login-form">
-          <CounterHeadline />
-          <p>Use your existing UPI QR at checkout and see the day’s sales on the web.</p>
-          <form onSubmit={submit} className={creating ? 'signup-form' : undefined}>
+          {creating ? <h1>Open your<span className="title-break"> </span><em>counter.</em></h1> : <CounterHeadline />}
+          <p className="account-intro">{creating
+            ? 'Speak your details or write them below.'
+            : 'Sign in to see your bills and the day’s sales.'}</p>
+          <form onSubmit={submit}>
             {creating && (
               <>
-                <SignupVoice
-                  disabled={busy}
-                  onBusy={setVoiceBusy}
-                  onRecording={fillSignup}
-                  onError={(message) => { setError(message); setVoiceStatus(''); }}
-                />
-                <p className="account-hint">Say your name, business name and mobile number.</p>
-                <label htmlFor="account-name">Your name</label>
-                <input id="account-name" className="signup-input" autoComplete="name" required maxLength={96}
-                  readOnly={locked} value={name} onChange={(event) => setName(event.target.value)} />
-                <label htmlFor="business-name">Business name</label>
-                <input id="business-name" className="signup-input" autoComplete="organization" required maxLength={96}
-                  readOnly={locked} value={businessName} onChange={(event) => setBusinessName(event.target.value)} />
+                <SignupVoice disabled={busy} onBusy={setVoiceBusy} onRecording={fillSignup}
+                  onError={(message) => { setError(message); setVoiceStatus(''); }} />
+                <div className="entry-line">
+                  <label htmlFor="account-name">Your name</label>
+                  <input id="account-name" autoComplete="name" required maxLength={96}
+                    readOnly={locked} value={name} onChange={(event) => setName(event.target.value)} />
+                </div>
+                <div className="entry-line">
+                  <label htmlFor="business-name">Business name</label>
+                  <input id="business-name" autoComplete="organization" required maxLength={96}
+                    readOnly={locked} value={businessName} onChange={(event) => setBusinessName(event.target.value)} />
+                </div>
               </>
             )}
-            <label htmlFor={confirmation ? 'code' : 'phone'}>
-              {confirmation ? 'Verification code' : 'Mobile number'}
-            </label>
-            <div className="auth-fields">
+            <div className="entry-line">
+              <label htmlFor={confirmation ? 'code' : 'phone'}>
+                {confirmation ? 'Verification code' : 'Mobile number'}
+              </label>
               {confirmation ? (
-                <input
-                  id="code"
-                  className="code-field"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  required
-                  readOnly={busy}
-                  value={code}
-                  onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-                />
+                <input id="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}"
+                  maxLength={6} required readOnly={busy} value={code} autoFocus key="otp"
+                  onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} />
               ) : (
-                <div className="phone-field">
-                  <span aria-label="India country code">+91</span>
-                  <input
-                    id="phone"
-                    aria-describedby={creating ? undefined : "account-hint"}
-                    type="tel"
-                    autoComplete="tel-national"
-                    pattern="[0-9]{10}"
-                    maxLength={10}
-                    required
-                    readOnly={locked}
-                    placeholder="98765 43210"
-                    value={phone}
-                    onChange={(event) => {
-                      setPhone(event.target.value.replace(/\D/g, ''));
-                      setError('');
-                    }}
-                  />
+                <div className="phone-entry">
+                  <span>+91</span>
+                  <input id="phone" type="tel" autoComplete="tel-national" pattern="[0-9]{10}"
+                    maxLength={10} required readOnly={locked} placeholder="98765 43210" value={phone}
+                    onChange={(event) => { setPhone(event.target.value.replace(/\D/g, '')); setError(''); }} />
                 </div>
               )}
-              {!creating && (
-                <button className="primary" disabled={locked} aria-busy={busy}>
-                  {localPhoneOnly ? 'Sign in' : confirmation ? 'Verify code' : 'Send code'}
-                </button>
-              )}
             </div>
+            {confirmation && <p className="account-hint" role="status">Code sent to +91 {phone}.</p>}
+            <button className="account-submit" disabled={locked} aria-busy={busy}>
+              {creating ? 'Create account' : localPhoneOnly ? 'Sign in' : confirmation ? 'Verify code' : 'Send code'}
+              <ArrowRight size={22} aria-hidden="true" />
+            </button>
             {confirmation && (
-              <p className="account-hint" role="status">Code sent to +91 {phone}.</p>
-            )}
-            {creating && <button className="primary" disabled={locked} aria-busy={busy}>Create account</button>}
-            {!confirmation && !creating && (
-              <p id="account-hint" className="account-hint">
-                Use the number linked to your counter app.
-              </p>
-            )}
-            {confirmation && (
-              <button
-                type="button"
-                className="plain"
-                disabled={busy}
-                onClick={() => {
-                  setConfirmation(null);
-                  setCode('');
-                  setError('');
-                }}
-              >
-                Start over
-              </button>
-            )}
-            {localPhoneOnly && (
-              <button className="plain auth-switch" type="button" disabled={locked}
-                onClick={() => {
-                  setCreating(!creating);
-                  setError('');
-                  setVoiceStatus('');
-                }}>
-                {creating ? 'Back to sign in' : 'Create an account'}
+              <button type="button" className="plain" disabled={busy}
+                onClick={() => { setConfirmation(null); setCode(''); setError(''); }}>
+                Change number
               </button>
             )}
             {error && (

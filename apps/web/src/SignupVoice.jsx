@@ -78,7 +78,7 @@ export function SignupVoice({ disabled, onBusy, onRecording, onError }) {
 
   return (
     <button
-      className="signup-voice"
+      className="signup-voice" data-phase={phase}
       type="button"
       disabled={disabled || phase === 'opening' || phase === 'reading'}
       onClick={() => {
@@ -86,8 +86,8 @@ export function SignupVoice({ disabled, onBusy, onRecording, onError }) {
         else if (current.current?.recorder.state === 'recording') current.current.recorder.stop();
       }}
     >
-      {phase === 'recording' ? <Square size={16} /> : <Mic size={17} />}
-      {{ idle: 'Fill by voice', opening: 'Opening microphone…', recording: 'Finish recording', reading: 'Filling details…' }[phase]}
+      <span className="mic-disc" aria-hidden="true">{phase === 'recording' ? <Square size={16} /> : <Mic size={17} />}</span>
+      <span aria-live="polite">{{ idle: 'Fill by voice', opening: 'Opening microphone…', recording: 'Finish recording', reading: 'Filling details…' }[phase]}</span>
     </button>
   );
 }

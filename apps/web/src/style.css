@@ -79,59 +79,86 @@ p {
   letter-spacing: -0.028em;
 }
 .login {
+  --sheet: #f6efdf;
+  --line: #b7af9b;
   min-height: 100svh;
   display: grid;
-  grid-template-columns: minmax(0, 1.14fr) minmax(370px, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(410px, 1fr);
+  background: var(--sheet);
+  color: #20382f;
 }
 .login-visual {
-  min-height: 100%;
   position: relative;
-  background: #303d2e;
   overflow: hidden;
-  isolation: isolate;
+  background: #ddcaa7;
 }
 .login-visual img {
   position: absolute;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 62%;
-  display: block;
+  object-position: center;
 }
 .photo-caption {
   position: absolute;
-  left: clamp(20px, 3vw, 48px);
-  bottom: clamp(20px, 3vw, 48px);
+  left: 0;
+  bottom: 24px;
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 0.87rem;
-  padding: 10px 14px;
-  color: #fff;
-  background: #1d2724;
+  padding: 9px 20px;
+  color: #20382f;
+  background: var(--sheet);
+  font: 1.12rem 'Pankti Wordmark', Georgia, serif;
 }
 .caption-rule {
-  width: 13px;
+  width: 23px;
   height: 1px;
-  background: var(--yellow);
+  background: currentColor;
 }
 .login-content {
   min-height: 100svh;
-  padding: clamp(28px, 5vw, 76px);
+  padding: clamp(24px, 3vw, 48px) clamp(32px, 5vw, 88px);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 34px;
+}
+.account-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 14px;
+}
+.account-switch, .signup-voice {
+  background: none;
+  border: 0;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0;
+  font-weight: 560;
+  font-size: .91rem;
+}
+.account-switch:hover, .signup-voice:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .login-form {
-  margin-block: clamp(24px, calc(28svh - 90px), 170px) auto;
-  padding-block: 24px;
-  max-width: 470px;
   width: 100%;
+  max-width: 540px;
+  margin-block: auto;
+  padding-block: clamp(32px, 6vh, 72px);
 }
 .login-form h1 {
-  font-size: clamp(2.6rem, 4.65vw, 4.45rem);
-  line-height: 1.08;
+  font: 400 clamp(3.9rem, 6.3vw, 7rem)/.98 'Pankti Wordmark', Georgia, serif;
+  letter-spacing: -.045em;
+}
+.login-form h1 em, .rotating-word > span:lang(en) {
+  font-style: italic;
+  font-synthesis: style;
 }
 .hero-first-line {
   display: flex;
@@ -168,118 +195,84 @@ p {
     transition: none;
   }
 }
-.login-form > p {
-  margin-top: 20px;
-  color: var(--soft);
-  max-width: 44ch;
+.account-intro {
+  margin: 18px 0 32px;
+  color: #4d584d;
+  max-width: 37ch;
 }
-.login-form form {
+.entry-line {
   display: grid;
-  gap: 10px;
-  max-width: 415px;
-  margin-top: 30px;
-  padding-top: 17px;
-  border-top: 1px solid var(--rule);
-}
-.login-form label {
-  font-size: 0.96rem;
-  font-weight: 620;
-}
-.auth-fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content;
-  align-items: stretch;
-  gap: 8px;
-}
-.phone-field {
-  display: flex;
+  grid-template-columns: minmax(110px, .8fr) minmax(0, 1.5fr);
   align-items: center;
-  background: #fbfbf5;
-  border: 1px solid #aebbae;
-  border-radius: 6px;
+  min-height: 58px;
+  border-bottom: 1px solid var(--line);
 }
-.phone-field:focus-within {
+.entry-line:focus-within {
   border-color: var(--green);
-  outline: 1px solid var(--green);
+  box-shadow: inset 0 -1px var(--green);
+  background: #eee7d7;
 }
-.phone-field span {
-  padding-inline: 13px 11px;
-  border-inline-end: 1px solid var(--rule);
-  color: var(--soft);
-  font-size: 0.88rem;
-  font-weight: 620;
+.entry-line label {
+  font-size: .86rem;
+  font-weight: 550;
+  padding-right: 6px;
 }
-.phone-field input {
-  flex: 1;
+.entry-line input {
+  width: 100%;
   min-width: 0;
-  padding-inline: 11px 8px;
+  padding: 8px 2px;
+  min-height: 44px;
   background: transparent;
   border: 0;
-  outline: none;
-  border-radius: 0 6px 6px 0;
-}
-.auth-fields input {
-  height: 47px;
+  outline: 0;
+  font-size: 1.12rem;
   font-variant-numeric: tabular-nums;
 }
-.auth-fields .code-field {
-  min-width: 0;
-  padding-inline: 13px;
-  background: #fbfbf5;
-  border: 1px solid #aebbae;
-  border-radius: 6px;
-  letter-spacing: 0.14em;
+.entry-line input::placeholder { color: #736f60; }
+.phone-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
-.primary {
-  min-height: 49px;
-  background: var(--green);
-  color: #fff;
+.phone-entry span { font-size: .94rem; }
+.account-submit {
+  margin-top: 22px;
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 15px 8px 20px;
+  background: #213e32;
+  color: var(--sheet);
   border: 0;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 650;
-  padding-inline: 16px;
-  white-space: nowrap;
+  font-weight: 600;
 }
-.primary:not(:disabled):hover {
-  background: #18392f;
+.account-submit svg { color: #f2c668; }
+.account-submit:hover:not(:disabled) { background: #152f24; }
+.signup-voice {
+  gap: 10px;
+  margin-bottom: 6px;
 }
+.mic-disc {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ebc66a;
+}
+.signup-voice[data-phase="recording"] .mic-disc {
+  background: #803b28;
+  color: white;
+}
+.login-form .feedback, .login-form .account-hint:not(:empty) { margin-top: 12px; }
 .plain {
   background: transparent;
   border: 0;
   padding: 6px 0;
   text-decoration: underline;
   text-underline-offset: 4px;
-}
-.signup-form .auth-fields {
-  grid-template-columns: 1fr;
-}
-.signup-form label {
-  margin-top: 4px;
-}
-.signup-input {
-  min-width: 0;
-  height: 47px;
-  border: 1px solid #aebbae;
-  border-radius: 6px;
-  background: #fbfbf5;
-  padding-inline: 13px;
-}
-.signup-voice {
-  display: inline-flex;
-  align-items: center;
-  justify-self: start;
-  gap: 8px;
-  padding: 9px 13px;
-  border: 1px solid var(--green);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--green);
-  font-weight: 650;
-}
-.auth-switch {
-  justify-self: start;
-  color: var(--green);
 }
 .feedback {
   font-size: 0.9rem;
@@ -291,6 +284,15 @@ p {
 .account-hint {
   color: var(--soft);
   font-size: 0.84rem;
+}
+.title-break { display: block; }
+@media (min-width: 681px) and (max-height: 820px) {
+  .is-signup .login-content { padding-block: 16px; }
+  .is-signup .login-form { padding-block: 16px; }
+  .is-signup h1 { font-size: clamp(3rem, 5vw, 4.8rem); }
+  .is-signup .title-break { display: inline; }
+  .is-signup .account-intro { margin-block: 10px 12px; }
+  .is-signup .entry-line { min-height: 48px; }
 }
 .startup {
   padding: 36px;
@@ -592,33 +594,22 @@ th:last-child {
   }
 }
 @media (max-width: 680px) {
-  .login {
-    grid-template-columns: 1fr;
-    align-content: start;
-  }
-  .login-visual {
-    min-height: 170px;
-    height: 28svh;
-  }
-  .photo-caption {
-    left: 14px;
-    bottom: 14px;
-  }
-  .login-content {
-    min-height: 0;
-    padding: 24px;
-    gap: 22px;
-  }
-  .login-form {
-    margin-block: 0;
-    padding-block: 0 15px;
-  }
-  .login-form h1 {
-    font-size: clamp(2.4rem, 10vw, 4.2rem);
-  }
-  .login-form form {
-    margin-top: 23px;
-  }
+  .login { grid-template-columns: minmax(0, 1fr); align-content: start; }
+  .login-visual { height: clamp(96px, 19svh, 160px); }
+  .login-visual img { object-position: center 52%; }
+  .photo-caption { bottom: 10px; font-size: .9rem; padding: 4px 12px; }
+  .login-content { min-height: 0; padding: 16px clamp(18px, 5vw, 34px); }
+  .login-form { padding-block: 28px; }
+  .login-form h1 { font-size: clamp(3.3rem, 12vw, 5rem); }
+  .account-intro { margin: 15px 0 20px; }
+  .is-signup .login-visual { height: clamp(28px, 7svh, 60px); }
+  .is-signup .photo-caption { display: none; }
+  .is-signup .login-form { padding-block: clamp(16px, 3svh, 28px); }
+  .is-signup h1 { font-size: clamp(2.4rem, 9vw, 3.7rem); }
+  .is-signup .title-break { display: inline; }
+  .is-signup .account-intro { margin: 8px 0 12px; }
+  .is-signup .entry-line { min-height: clamp(46px, 7svh, 58px); }
+  .is-signup .account-submit { margin-top: 17px; }
   .layout {
     display: block;
   }
@@ -656,4 +647,26 @@ th:last-child {
     padding-inline: 8px;
     font-size: 0.83rem;
   }
+}
+
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 560px) {
+  .is-signup { grid-template-columns: minmax(64px, .22fr) 1fr; }
+  .is-signup .login-visual { height: 100%; }
+  .is-signup .photo-caption { display: none; }
+  .is-signup .login-content { padding: 8px 20px; }
+  .is-signup .account-header { padding-bottom: 4px; }
+  .is-signup .login-form {
+    max-width: none;
+    display: grid;
+    grid-template-columns: minmax(120px, .65fr) minmax(230px, 1.35fr);
+    align-content: center;
+    align-items: start;
+    column-gap: 16px;
+    padding-block: 8px;
+  }
+  .is-signup h1 { font-size: clamp(2.4rem, 5vw, 3.6rem); }
+  .is-signup .account-intro { grid-column: 1; }
+  .is-signup form { grid-column: 2; grid-row: 1 / span 3; }
+  .is-signup .entry-line { min-height: 44px; }
+  .is-signup .account-submit { min-height: 44px; margin-top: 10px; }
 }
