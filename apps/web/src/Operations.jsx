@@ -1,3 +1,4 @@
+import { MenuPages, editableDish, menuEntry, needsPrice } from './MenuPages.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Pencil } from 'lucide-react';
 import { VendorEditor } from './VendorEditor.jsx';
@@ -365,58 +366,16 @@ export function Vendors({ revision }) {
   );
 }
 
-function MenuRow({ row, change, remove }) {
-  return (
-    <fieldset className="menu-row">
-      {[
-        ['name', 'Dish'],
-        ['variant', 'Portion'],
-        ['category', 'Category'],
-        ['rupees', 'Price (₹)'],
-      ].map(([key, label]) => (
-        <label key={key}>
-          {label}
-          <input
-            required={key !== 'variant'}
-            value={row[key]}
-            type={key === 'rupees' ? 'number' : 'text'}
-            min={key === 'rupees' ? '0.01' : undefined}
-            step={key === 'rupees' ? '.01' : undefined}
-            onChange={(e) => change({ ...row, [key]: e.target.value })}
-          />
-        </label>
-      ))}
-      {remove && (
-        <button type="button" onClick={remove}>
-          Omit
-        </button>
-      )}
-    </fieldset>
-  );
-}
-const editable = (item) => ({
-  ...item,
-  key: crypto.randomUUID(),
-  rupees: item.price == null ? '' : String(item.price / 100),
-});
-const entry = ({ name, variant, category, rupees }) => ({
-  name,
-  variant,
-  category,
-  price: Math.round(Number(rupees) * 100),
-});
 export function Menu({ menu, onMenu }) {
   const [draft, setDraft] = useState([]);
-  const [edit, setEdit] = useState(null);
+  const [active, setActive] = useState(null);
   const op = useOperation();
-  return (
-    <>
-      <section className="work-sheet menu-scan">
-        <img className="menu-cover" src="/folded-menu.webp" alt="" loading="lazy" />
-        <h2>Read a printed menu</h2>
-        <p className="subtle">
-          Choose a photo for each page. Check the dishes, portions and prices before adding them.
-        </p>
+  const missing = draft.filter(needsPrice);
+  return <>
+    <section className="menu-import">
+      <img src="/folded-menu.webp" alt="" />
+      <div><h2>Import a printed menu</h2>
+        <p>Photograph each page, then review the dishes and prices.</p>
         <label className="file-field">
           <ImagePlus size={18} aria-hidden="true" /> Choose menu photos
           <input
@@ -424,7 +383,7 @@ export function Menu({ menu, onMenu }) {
             type="file"
             accept="image/*"
             multiple
-            disabled={op.busy || !!edit}
+            disabled={op.busy || !!active}
             onChange={(e) => {
               const files = [...e.target.files];
               e.target.value = '';
@@ -437,19 +396,26 @@ export function Menu({ menu, onMenu }) {
                   const { entries } = await request('/menu/scan', { body: form });
                   if (!entries.length)
                     throw Error('No dishes found on ' + file.name + '. Try a closer photo.');
-                  setDraft((previous) => [...previous, ...entries.map(editable)]);
+                  setDraft((previous) => [...previous, ...entries.map(editableDish)]);
                 }
-                op.setMessage('Review the extracted rows below.');
+                op.setMessage('');
               });
             }}
           />
         </label>
-        {draft.length > 0 && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              op.run(async () => {
-                const entries = draft.map(entry);
+</div>
+    </section>
+    <Feedback message={op.message}/>
+    {draft.length > 0 && <section className="menu-folio">
+      <header className="folio-heading"><div><h2>Review your dishes</h2>
+        <p>{draft.length} {draft.length === 1 ? 'dish' : 'dishes'} to review{missing.length ? ' · '+missing.length+' missing a price' : ''}</p></div>
+        <button className="publish-menu" disabled={op.busy || !!active} onClick={()=>{
+          if (missing.length) {
+            setActive(missing[0].key);
+            return;
+          }
+          op.run(async()=>{
+                const entries = draft.map(menuEntry);
                 const prices = new Map();
                 for (const item of entries) {
                   const key = JSON.stringify(
@@ -466,74 +432,29 @@ export function Menu({ menu, onMenu }) {
                 const { menu: saved } = await request('/menu', { body: entries });
                 onMenu(saved);
                 setDraft([]);
-                op.setMessage('Menu saved.');
-              });
-            }}
-          >
-            <fieldset disabled={op.busy}>
-              {draft.map((row) => (
-                <MenuRow
-                  key={row.key}
-                  row={row}
-                  change={(next) => setDraft((list) => list.map((r) => (r.key === next.key ? next : r)))}
-                  remove={() => setDraft((list) => list.filter((r) => r.key !== row.key))}
-                />
-              ))}
-              <button className="action">Save {draft.length} menu items</button>
-            </fieldset>
-          </form>
-        )}
-        <Feedback message={op.message} />
-      </section>
-      <section className="work-sheet price-list">
-        <div className="menu-title">
-          <h2>Your menu</h2>
-          <span>
-            {menu.length} {menu.length === 1 ? 'item' : 'items'}
-          </span>
-        </div>
-        {!menu.length && <p className="subtle">Upload a menu photo to add your first dishes.</p>}
-        <ul className="work-lines">
-          {menu.map((item) => (
-            <li key={item.id}>
-              {edit?.id === item.id ? (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    op.run(async () => {
-                      const saved = await request('/menu/' + item.id, { method: 'PUT', body: entry(edit) });
-                      onMenu(saved.menu);
-                      setEdit(null);
-                      op.setMessage('Changes saved.');
-                    });
-                  }}
-                >
-                  <fieldset disabled={op.busy}>
-                    <MenuRow row={edit} change={setEdit} />
-                    <button className="action">Save changes</button>{' '}
-                    <button type="button" onClick={() => setEdit(null)}>
-                      Cancel
-                    </button>
-                  </fieldset>
-                </form>
-              ) : (
-                <>
-                  <span>
-                    {item.name} {item.variant}
-                    <small>{item.category}</small>
-                  </span>
-                  <strong>{asRupees(item.price)}</strong>
-                  <button disabled={op.busy || !!edit} onClick={() => setEdit(editable(item))}>
-                    Edit
-                  </button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
-    </>
-  );
+            op.setMessage('Menu saved.');
+          });
+        }}>{missing.length ? 'Review missing prices' : 'Save to menu'}</button>
+      </header>
+      <MenuPages rows={draft} draft active={active} setActive={setActive} busy={op.busy}
+        onSave={row => {setDraft(list=>list.map(item=>item.key===row.key ? row : item));return true;}}
+        onRemove={key=>setDraft(list=>list.filter(item=>item.key!==key))}/>
+    </section>}
+    {(menu.length > 0 || !draft.length) && <section className="menu-folio">
+      <header className="folio-heading"><div><h2>Your menu</h2><p>{menu.length ? menu.length+' saved '+(menu.length===1?'dish':'dishes') : 'Your saved dishes will appear here after you review a menu photo.'}</p></div></header>
+      <MenuPages rows={menu} active={active} setActive={setActive} busy={op.busy}
+        onSave={async row=>{
+          let saved = false;
+          await op.run(async()=>{
+            const result = await request('/menu/'+row.id,{method:'PUT',body:menuEntry(row)});
+            onMenu(result.menu);
+            saved = true;
+            op.setMessage('Changes saved.');
+          });
+          return saved;
+        }}/>
+    </section>}
+  </>;
 }
 
 export function Bank({ restaurant, onSave }) {
