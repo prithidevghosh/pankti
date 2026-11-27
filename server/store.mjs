@@ -1,3 +1,4 @@
+import { reviewMenuImport } from '../shared/menu-import.mjs';
 import { randomUUID } from 'node:crypto';
 import { connect, increment } from './db/mongo.mjs';
 import { vendorLedger } from './vendor-edits.mjs';
@@ -53,6 +54,18 @@ export async function openStore(database) {
           );
       });
       return menuFor(restaurant);
+    },
+    async importMenu(restaurant, entries) {
+      const result = await transaction(async session => {
+        await increment(db, session, 'menu-import:' + restaurant);
+        const current = await menu.find({ restaurant }, { session }).toArray();
+        const review = reviewMenuImport(current, entries);
+        const added = entries.flatMap((entry, i) => review[i].duplicate || review[i].conflict ? [] :
+          [{ ...entry, restaurant, _id: randomUUID(), label_key: labelKey(entry) }]);
+        if (added.length) await menu.insertMany(added, { session });
+        return { added: added.length, review };
+      });
+      return { ...result, menu: await menuFor(restaurant) };
     },
     async editMenu(restaurant, id, entry) {
       try {

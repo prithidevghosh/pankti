@@ -26,3 +26,20 @@ test('concurrent duplicate bills share one number and malformed documents are re
     { code: 121 },
   );
 });
+
+test('photo imports skip matches across pages and concurrent uploads while protecting changed prices', async t => {
+  const { name } = await testDatabase(t);
+  const store = await openStore(name);
+  t.after(() => store.close());
+  const restaurant = await store.createRestaurant('owner', 'Kitchen', 'Pune');
+  const dish = { name:'Butter Naan', variant:'Full', category:'Breads', price:3500 };
+  const repeat = { ...dish, name:'BUTTER-NAN', category:' breads ' };
+  const results = await Promise.all([1,2].map(() => store.importMenu(restaurant.id,[dish,repeat])));
+  assert.equal(results.reduce((n,r)=>n+r.added,0),1);
+  assert.ok(results.some(r=>r.review[1].duplicate === 'Repeated on upload'));
+  assert.ok(results.some(r=>r.review[0].duplicate === 'Already on menu'));
+  const next = await store.importMenu(restaurant.id,[{...dish,price:4000},{...dish,variant:'Half',price:2000}]);
+  assert.equal(next.review[0].conflict,true);
+  assert.equal(next.added,1);
+  assert.equal(next.menu.find(row=>row.variant==='Full').price,3500);
+});

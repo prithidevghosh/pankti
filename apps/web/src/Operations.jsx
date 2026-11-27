@@ -1,3 +1,4 @@
+import { reviewMenuImport } from '../../../shared/menu-import.mjs';
 import { MenuPages, editableDish, menuEntry, needsPrice } from './MenuPages.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Pencil } from 'lucide-react';
@@ -370,91 +371,174 @@ export function Menu({ menu, onMenu }) {
   const [draft, setDraft] = useState([]);
   const [active, setActive] = useState(null);
   const op = useOperation();
-  const missing = draft.filter(needsPrice);
-  return <>
-    <section className="menu-import">
-      <img src="/folded-menu.webp" alt="" />
-      <div><h2>Import a printed menu</h2>
-        <p>Photograph each page, then review the dishes and prices.</p>
-        <label className="file-field">
-          <ImagePlus size={18} aria-hidden="true" /> Choose menu photos
-          <input
-            aria-label="Menu photos"
-            type="file"
-            accept="image/*"
-            multiple
-            disabled={op.busy || !!active}
-            onChange={(e) => {
-              const files = [...e.target.files];
-              e.target.value = '';
-              if (!files.length) return;
-              op.run(async () => {
-                for (const [index, file] of files.entries()) {
-                  op.setMessage('Reading page ' + (index + 1) + ' of ' + files.length + '…');
-                  const form = new FormData();
-                  form.append('photo', file);
-                  const { entries } = await request('/menu/scan', { body: form });
-                  if (!entries.length)
-                    throw Error('No dishes found on ' + file.name + '. Try a closer photo.');
-                  setDraft((previous) => [...previous, ...entries.map(editableDish)]);
+  const reviews = reviewMenuImport(menu, draft.map(menuEntry));
+  const reviewed = draft.map((row, i) => ({ ...row, ...reviews[i] }));
+  const remaining = reviewed.filter((row) => !row.duplicate);
+  const missing = remaining.filter(needsPrice);
+  const conflicts = remaining.filter((row) => row.conflict);
+  const skipped = draft.length - remaining.length;
+  return (
+    <>
+      <section className="menu-import">
+        <img src="/folded-menu.webp" alt="" />
+        <div>
+          <h2>Import a printed menu</h2>
+          <p>Photograph each page, then review the dishes and prices.</p>
+          <label className="file-field">
+            <ImagePlus size={18} aria-hidden="true" /> Choose menu photos
+            <input
+              aria-label="Menu photos"
+              type="file"
+              accept="image/*"
+              multiple
+              disabled={op.busy || !!active}
+              onChange={(e) => {
+                const files = [...e.target.files];
+                e.target.value = '';
+                if (!files.length) return;
+                op.run(async () => {
+                  for (const [index, file] of files.entries()) {
+                    op.setMessage('Reading page ' + (index + 1) + ' of ' + files.length + '…');
+                    const form = new FormData();
+                    form.append('photo', file);
+                    const { entries } = await request('/menu/scan', { body: form });
+                    if (!entries.length)
+                      throw Error('No dishes found on ' + file.name + '. Try a closer photo.');
+                    setDraft((previous) => [...previous, ...entries.map(editableDish)]);
+                  }
+                  op.setMessage('');
+                });
+              }}
+            />
+          </label>
+        </div>
+      </section>
+      <Feedback message={op.message} />
+      {draft.length > 0 && (
+        <section className="menu-folio">
+          <header className="folio-heading">
+            <div>
+              <h2>Review your dishes</h2>
+              <p>
+                {draft.length} {draft.length === 1 ? 'dish' : 'dishes'} to review
+                {missing.length ? ' · ' + missing.length + ' missing a price' : ''}
+              </p>
+              {skipped > 0 && (
+                <p role="status">
+                  {skipped} {skipped === 1 ? 'duplicate will' : 'duplicates will'} be skipped.
+                </p>
+              )}
+              {conflicts.length > 0 && (
+                <p>
+                  This name and portion already have a different price or category. Edit or omit the flagged
+                  dish.
+                </p>
+              )}
+            </div>
+            <button
+              className="publish-menu"
+              disabled={op.busy || !!active}
+              onClick={() => {
+                if (!remaining.length) {
+                  setDraft([]);
+                  return;
                 }
-                op.setMessage('');
+                if (missing.length || conflicts.length) {
+                  setActive((missing[0] || conflicts[0]).key);
+                  return;
+                }
+                op.run(async () => {
+                  const result = await request('/menu/import', { body: remaining.map(menuEntry) });
+                  onMenu(result.menu);
+                  setDraft(
+                    remaining
+                      .filter((_, i) => result.review[i].conflict)
+                      .map(({ conflict, duplicate, ...row }) => row),
+                  );
+                  const totalSkipped = skipped + result.review.filter((row) => row.duplicate).length;
+                  op.setMessage(
+                    result.added +
+                      ' ' +
+                      (result.added === 1 ? 'dish' : 'dishes') +
+                      ' added.' +
+                      (totalSkipped
+                        ? ' ' +
+                          totalSkipped +
+                          ' ' +
+                          (totalSkipped === 1 ? 'duplicate' : 'duplicates') +
+                          ' skipped.'
+                        : ''),
+                  );
+                });
+              }}
+            >
+              {!remaining.length
+                ? 'Finish review'
+                : missing.length
+                  ? 'Review missing prices'
+                  : conflicts.length
+                    ? 'Review conflict'
+                    : 'Save to menu'}
+            </button>
+          </header>
+          <MenuPages
+            rows={reviewed}
+            draft
+            active={active}
+            setActive={setActive}
+            busy={op.busy}
+            onSave={(row) => {
+              setDraft((list) =>
+                list.map((item) =>
+                  item.key === row.key
+                    ? {
+                        ...item,
+                        name: row.name,
+                        variant: row.variant,
+                        category: row.category,
+                        rupees: row.rupees,
+                      }
+                    : item,
+                ),
+              );
+              return true;
+            }}
+            onRemove={(key) => setDraft((list) => list.filter((item) => item.key !== key))}
+          />
+        </section>
+      )}
+      {(menu.length > 0 || !draft.length) && (
+        <section className="menu-folio">
+          <header className="folio-heading">
+            <div>
+              <h2>Your menu</h2>
+              <p>
+                {menu.length
+                  ? menu.length + ' saved ' + (menu.length === 1 ? 'dish' : 'dishes')
+                  : 'Your saved dishes will appear here after you review a menu photo.'}
+              </p>
+            </div>
+          </header>
+          <MenuPages
+            rows={menu}
+            active={active}
+            setActive={setActive}
+            busy={op.busy}
+            onSave={async (row) => {
+              let saved = false;
+              await op.run(async () => {
+                const result = await request('/menu/' + row.id, { method: 'PUT', body: menuEntry(row) });
+                onMenu(result.menu);
+                saved = true;
+                op.setMessage('Changes saved.');
               });
+              return saved;
             }}
           />
-        </label>
-</div>
-    </section>
-    <Feedback message={op.message}/>
-    {draft.length > 0 && <section className="menu-folio">
-      <header className="folio-heading"><div><h2>Review your dishes</h2>
-        <p>{draft.length} {draft.length === 1 ? 'dish' : 'dishes'} to review{missing.length ? ' · '+missing.length+' missing a price' : ''}</p></div>
-        <button className="publish-menu" disabled={op.busy || !!active} onClick={()=>{
-          if (missing.length) {
-            setActive(missing[0].key);
-            return;
-          }
-          op.run(async()=>{
-                const entries = draft.map(menuEntry);
-                const prices = new Map();
-                for (const item of entries) {
-                  const key = JSON.stringify(
-                    [item.name, item.variant].map((s) =>
-                      s.normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' '),
-                    ),
-                  );
-                  if (prices.has(key) && prices.get(key) !== item.price)
-                    throw Error(
-                      item.name + ' has two different prices. Check its portion or omit the duplicate.',
-                    );
-                  prices.set(key, item.price);
-                }
-                const { menu: saved } = await request('/menu', { body: entries });
-                onMenu(saved);
-                setDraft([]);
-            op.setMessage('Menu saved.');
-          });
-        }}>{missing.length ? 'Review missing prices' : 'Save to menu'}</button>
-      </header>
-      <MenuPages rows={draft} draft active={active} setActive={setActive} busy={op.busy}
-        onSave={row => {setDraft(list=>list.map(item=>item.key===row.key ? row : item));return true;}}
-        onRemove={key=>setDraft(list=>list.filter(item=>item.key!==key))}/>
-    </section>}
-    {(menu.length > 0 || !draft.length) && <section className="menu-folio">
-      <header className="folio-heading"><div><h2>Your menu</h2><p>{menu.length ? menu.length+' saved '+(menu.length===1?'dish':'dishes') : 'Your saved dishes will appear here after you review a menu photo.'}</p></div></header>
-      <MenuPages rows={menu} active={active} setActive={setActive} busy={op.busy}
-        onSave={async row=>{
-          let saved = false;
-          await op.run(async()=>{
-            const result = await request('/menu/'+row.id,{method:'PUT',body:menuEntry(row)});
-            onMenu(result.menu);
-            saved = true;
-            op.setMessage('Changes saved.');
-          });
-          return saved;
-        }}/>
-    </section>}
-  </>;
+        </section>
+      )}
+    </>
+  );
 }
 
 export function Bank({ restaurant, onSave }) {

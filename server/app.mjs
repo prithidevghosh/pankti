@@ -96,6 +96,11 @@ export async function createApp({
     const entries = z.array(entrySchema).min(1).max(500).parse(req.body);
     res.json({ menu: await store.saveMenu(restaurant.id, entries) });
   });
+  app.post('/api/menu/import', async (req, res) => {
+    const restaurant = requireRestaurant(req);
+    const entries = z.array(entrySchema).min(1).max(500).parse(req.body);
+    res.json(await store.importMenu(restaurant.id, entries));
+  });
   app.post('/api/menu/scan', upload.single('photo'), async (req, res) => {
     requireRestaurant(req);
     if (!req.file?.size) throw httpError(400, 'Choose a menu photo.');
