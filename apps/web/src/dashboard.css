@@ -811,3 +811,6 @@
 }
 .conversation-control.conversation-start:hover {background:#fffdf8;border-color:#54677e;}
 .conversation-control.conversation-start:active {background:#e5e7e4;}
+.conversation-language {display:flex;align-items:center;gap:8px;margin:.65rem 0;color:var(--soft);font-size:.85rem;}
+.conversation-language select {max-width:100%;min-height:36px;background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:3px 6px;font:inherit;}
+@media(max-width:680px){.conversation-panel[data-active=true] .conversation-language{justify-content:center;}.conversation-language{flex-wrap:wrap;}}
