@@ -14,8 +14,8 @@ test('version 1 bills can upgrade when Atlas denies validator changes', async (t
   delete properties.paymentRevision;
   delete properties.movements;
   delete properties.lines.items.properties.note;
-  await db.command({ collMod: 'bills', validator });
-  await db.collection('bills').dropIndex('restaurant_1_movements.at_1');
+  await db.collection('bills').drop();
+  await db.createCollection('bills', { validator });
   await db.collection('phrases').drop();
   await db.collection('schema_versions').deleteOne({ _id: 2 });
 
@@ -27,7 +27,9 @@ test('version 1 bills can upgrade when Atlas denies validator changes', async (t
   };
   await bills.insertOne(receipt);
 
-  await ensureSchema({
+  // Exercise the actual migration on hosted MongoDB. Simulate the Atlas
+  // permission error locally so this path stays covered without credentials.
+  const restrictedDb = {
     collection: db.collection.bind(db),
     createCollection: db.createCollection.bind(db),
     command: async (command) => {
@@ -37,7 +39,8 @@ test('version 1 bills can upgrade when Atlas denies validator changes', async (t
         codeName: 'AtlasError',
       });
     },
-  });
+  };
+  await ensureSchema(process.env.MONGODB_URI?.startsWith('mongodb+srv://') ? db : restrictedDb);
 
   assert.deepEqual(await bills.findOne({ _id: receipt._id }), receipt);
   assert.ok(await db.collection('schema_versions').findOne({ _id: 2 }));
