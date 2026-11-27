@@ -748,3 +748,11 @@
 .ticket-editor label { display: grid; gap: 4px; min-width: 0; color: var(--ink); font-size: .9rem; }
 .ticket-editor :is(input,select) { max-width: 100%; min-width: 0; padding: 8px; min-height: 44px; border: 1px solid var(--rule); background: var(--paper); color: inherit; font: inherit; }
 .ticket-editor input[type=number] { width: 6rem; }
+
+.overview-voice {background:var(--clay-wash);padding:clamp(18px,2.7vw,32px);margin-block:20px;}
+.overview-voice header {display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.overview-voice h2 {font:400 clamp(1.85rem,3vw,2.6rem)/1.1 'Pankti Wordmark',Georgia,serif;}
+.overview-voice header p,.overview-answer blockquote {font-size:.92rem;color:var(--soft);margin:6px 0;}
+.overview-answer {margin-top:18px;padding-top:14px;border-top:1px solid var(--rule);overflow-wrap:anywhere;}
+.overview-answer p {font-size:1.1rem;line-height:1.65;margin-block:8px;}
+.overview-answer audio {display:block;max-width:100%;height:40px;margin-top:12px;}

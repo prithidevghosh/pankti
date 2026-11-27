@@ -9,12 +9,15 @@ let action;
 const { app, close } = await createApp({
   database: name,
   localPhoneOnly: true,
+  readAloud: async () => Buffer.from("RIFF").toString("base64"),
   readInvoice: async () => ({ vendor:'Shyam Dairy', number:'834', lines:[{name:'Paneer',quantity:10,unit:'kg',ratePaise:32000}] }),
   speech: async (file) => {
     assert.ok(file.size);
     return 'browser test';
   },
   understand: async (task, t, ctx) => {
+    if (task === 'overview') return {period:'today',days:1,start:null,end:null,language:'en-IN',
+      metrics:[{key:'billedSales',label:'Billed sales'},{key:'partialCount',label:'Part-paid bills'}],empty:'None',clarification:null};
     if (task === 'deliveryClaim') return {claims:[{line:0,name:'Paneer',ordered:{quantity:10,unit:'kg'},received:{quantity:9,unit:'kg'}}]};
     if (task === 'menu') return { entries: [], question: null, availability: [{ item: ctx.menu[0].id, available: false }] };
     if (task === 'phrase')
@@ -151,6 +154,10 @@ try {
       await desk.evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
       await desk.screenshot({path:process.env.PANKTI_QA_SCREENSHOTS+'/delivery-'+width+'.png'});
     }
+    await page.getByRole('link',{name:'Overview',exact:true}).click();
+    await speak('Ask by voice');
+    await page.locator('.overview-answer').getByText(/Billed sales.*315.*Part-paid bills.*1/).waitFor();
+    await page.getByLabel('Spoken answer').waitFor();
     await page.close();
     console.log(width, 'voice controls, phrase, note, partial payment, persistence passed');
   }
