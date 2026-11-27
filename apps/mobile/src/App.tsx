@@ -1,3 +1,4 @@
+import { billTotals } from '../../../shared/bill-totals.mjs';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -526,7 +527,7 @@ function Counter({
     const item = menu.find((entry) => entry.id === line.item);
     return item ? [{ ...item, quantity: line.quantity }] : [];
   });
-  const draftTotal = draftLines.reduce((acc, line) => acc + Math.round(line.price * line.quantity), 0);
+  const { total: draftTotal } = billTotals(draftLines, restaurant?.gstBps ?? 0);
 
   const setupAction = setup && (
     <Button
@@ -564,10 +565,13 @@ function Counter({
           requestId.current ??= randomUUID();
           try {
             const prices = Object.fromEntries(draftLines.map((line) => [line.id, line.price]));
-            setBill((await api(token, onSessionExpired).bill(requestId.current, basket, prices)).bill);
+            setBill((await api(token, onSessionExpired).bill(requestId.current, basket, prices, restaurant?.gstBps ?? 0)).bill);
           } catch (e) {
-            if ((e as { status?: number }).status === 409)
-              setMenu((await api(token, onSessionExpired).workspace()).menu);
+            if ((e as { status?: number }).status === 409) {
+              const current = await api(token, onSessionExpired).workspace();
+              setMenu(current.menu);
+              setRestaurant(current.restaurant);
+            }
             throw e;
           }
           feedback.current.order = { text: '', question: '', ready: false };
@@ -670,6 +674,7 @@ function Counter({
               </Text>
               <View style={styles.ticket}>
                 <Text style={styles.billAmount}>{formatMoney(bill.total)}</Text>
+                {!!bill.gstBps && <Text>Includes GST ({bill.gstBps / 100}%) · {formatMoney(bill.gstAmount ?? 0)}</Text>}
                 {bill.lines.map((line) => (
                   <View key={line.item} style={styles.row}>
                     <Text style={styles.rowName}>

@@ -9,7 +9,7 @@ const fields = [
   ['city', 'City', 'address-level2'],
 ];
 export function Profile({ profile, restaurant, onSaved }) {
-  const saved = { name: profile.name || '', businessName: restaurant?.name || '', city: restaurant?.city || '' };
+  const saved = { name: profile.name || '', businessName: restaurant?.name || '', city: restaurant?.city || '', gstRate: (restaurant?.gstBps ?? 0) / 100 };
   const [draft, setDraft] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -19,7 +19,8 @@ export function Profile({ profile, restaurant, onSaved }) {
     setBusy(true);
     setMessage('');
     try {
-      onSaved(await request('/profile', { method: 'PUT', body: draft }));
+      const { gstRate, ...details } = draft;
+      onSaved(await request('/profile', { method: 'PUT', body: { ...details, gstBps: Math.round(Number(gstRate) * 100) } }));
       setDraft(null);
       setMessage('Profile saved.');
     } catch (error) {
@@ -45,6 +46,11 @@ export function Profile({ profile, restaurant, onSaved }) {
                 onChange={e => setDraft({ ...draft, [key]: e.target.value })} /> : saved[key] || 'Not provided'}</dd>
             </div>
           ))}
+          <div><dt><label htmlFor="profile-gst">GST per order (%)</label></dt>
+            <dd>{draft ? <input id="profile-gst" type="number" inputMode="decimal" min="0" max="100"
+              step="0.01" required disabled={busy} value={draft.gstRate}
+              onChange={e => setDraft({ ...draft, gstRate: e.target.value })} /> : saved.gstRate + '%'}</dd>
+          </div>
           <div><dt>Mobile number <LockKeyhole size={13} aria-label="Read only" /></dt><dd>{profile.phone || 'Not provided'}</dd></div>
         </dl>
         {draft && <footer>

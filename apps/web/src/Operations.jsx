@@ -1,3 +1,4 @@
+import { billTotals } from '../../../shared/bill-totals.mjs';
 import { reviewMenuImport } from '../../../shared/menu-import.mjs';
 import { MenuPages, editableDish, menuEntry, needsPrice } from './MenuPages.jsx';
 import React, { useEffect, useRef, useState } from 'react';
@@ -35,7 +36,8 @@ function useOperation() {
   return { busy, message, run, setMessage };
 }
 
-export function Orders({ menu, onBill }) {
+
+export function Orders({ menu, gstBps, onBill }) {
   const [basket, setBasket] = useState([]);
   const [speechBusy, setSpeechBusy] = useState(false);
   const [heard, setHeard] = useState('');
@@ -43,6 +45,7 @@ export function Orders({ menu, onBill }) {
   const key = useRef(crypto.randomUUID());
   const op = useOperation();
   const rows = basket.map((line) => ({ ...menu.find((item) => item.id === line.item), ...line }));
+  const totals = billTotals(rows, gstBps);
   function update(lines) {
     key.current = crypto.randomUUID();
     setBasket(lines);
@@ -107,6 +110,7 @@ export function Orders({ menu, onBill }) {
                 </li>
               ))}
             </ul>
+            {gstBps > 0 && <p>GST ({gstBps / 100}%) · {asRupees(totals.gstAmount)}</p>}
             <button
               className="action"
               disabled={op.busy || speechBusy || Boolean(question)}
@@ -114,7 +118,7 @@ export function Orders({ menu, onBill }) {
                 op.run(async () => {
                   const prices = Object.fromEntries(rows.map((row) => [row.item, row.price]));
                   const { bill } = await request('/bills', {
-                    body: { request: key.current, basket, prices },
+                    body: { request: key.current, basket, prices, gstBps },
                   });
                   update([]);
                   setHeard('');
@@ -123,7 +127,7 @@ export function Orders({ menu, onBill }) {
                 })
               }
             >
-              Create bill · {asRupees(rows.reduce((sum, r) => sum + Math.round(r.quantity * r.price), 0))}
+              Create bill · {asRupees(totals.total)}
             </button>
           </>
         )}

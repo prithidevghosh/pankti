@@ -66,12 +66,13 @@ try {
     await page.getByLabel('Name', {exact:true}).fill('Mira Sen');
     await page.getByLabel('Business name').fill('Corner Kitchen');
     await page.getByLabel('City').fill('Kolkata');
-    assert.equal(await profile.locator('input').count(), 3);
+    await page.getByLabel('GST per order (%)').fill('5');
     await page.getByRole('button', { name:'Save changes' }).click();
     await page.getByText('Profile saved.').waitFor();
     await page.reload();
     await profile.getByText('Mira Sen').waitFor();
     await profile.getByText('Kolkata').waitFor();
+    await profile.getByText('5%', { exact: true }).waitFor();
     await page.getByRole('link', {name:'Overview', exact:true}).click();
     await page.locator('.restaurant-name').getByText('Kolkata').waitFor();
     await page.getByRole('link', {name:'Menu',exact:true}).click();
@@ -91,11 +92,12 @@ try {
     await page.getByRole('button', { name: /Create bill/ }).click();
     const dialog = page.locator('dialog');
     await dialog.getByText('Less onion; chilli on the side.').waitFor();
+    await dialog.getByText('GST (5%)', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Close bill' }).click();
     action = 'pay';
     await speak('Speak order');
     await dialog.getByLabel('Total received').waitFor();
-    assert.equal(await dialog.getByLabel('Total received').inputValue(), '100');
+    assert.equal(await dialog.getByLabel('Total received').inputValue(), '115');
     assert.equal(await dialog.getByRole('button', { name: 'Save payment' }).isEnabled(), false);
     await dialog.getByLabel('Payment method').selectOption('cash');
     await dialog.getByRole('button', { name: 'Save payment' }).click();

@@ -1,6 +1,6 @@
 const origin = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://10.0.2.2:4100';
 
-export type Restaurant = { id: string; name: string; city: string; qr: string | null; payee: string | null };
+export type Restaurant = { id: string; name: string; city: string; gstBps?: number; qr: string | null; payee: string | null };
 export type Entry = { name: string; variant: string; category: string; price: number };
 export type Item = Entry & { id: string };
 export type Line = { item: string; quantity: number };
@@ -9,6 +9,8 @@ export type Bill = {
   number: number;
   created: string;
   total: number;
+  gstBps?: number;
+  gstAmount?: number;
   paid: string | null;
   method: 'cash' | 'upi' | null;
   lines: (Line & Pick<Entry, 'name' | 'variant' | 'price'>)[];
@@ -126,8 +128,8 @@ export function api(token: string, onSessionExpired: () => void) {
       return call<Qr>('/qr/preview', 'POST', form);
     },
     saveQr: (uri: string) => call<{ restaurant: Restaurant }>('/qr', 'PUT', { uri }),
-    bill: (request: string, basket: Line[], prices: Record<string, number>) =>
-      call<{ bill: Bill }>('/bills', 'POST', { request, basket, prices }),
+    bill: (request: string, basket: Line[], prices: Record<string, number>, gstBps: number) =>
+      call<{ bill: Bill }>('/bills', 'POST', { request, basket, prices, gstBps }),
     payment: (id: string, method: 'cash' | 'upi') =>
       call<{ bill: Bill }>('/bills/' + id + '/payment', 'POST', { method }),
   };

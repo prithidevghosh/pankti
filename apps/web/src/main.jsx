@@ -433,7 +433,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
             </p>
           </div>
         )}
-        {restaurant && <div hidden={view !== 'orders'}><Orders menu={state.menu || []} onBill={(bill,proposal) => {
+        {restaurant && <div hidden={view !== 'orders'}><Orders gstBps={restaurant.gstBps ?? 0} menu={state.menu || []} onBill={(bill,proposal) => {
           setOpenBill({id:bill.id,bill,proposal}); dialog.current?.showModal(); setRevision(v => v+1);
         }}/></div>}
         {restaurant && <div className="menu-spread" hidden={view !== 'menu'}><Menu menu={state.menu || []}
