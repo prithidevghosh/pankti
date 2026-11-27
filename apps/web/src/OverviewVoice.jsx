@@ -3,8 +3,9 @@ import {Mic,PhoneOff} from 'lucide-react';
 import {ConversationOrb} from './ConversationOrb.jsx';
 import {LiveOverviewCall} from './LiveOverviewCall.js';
 
-export function OverviewVoice({date,days,visible}) {
+export function OverviewVoice({date,days,visible,onMenuChanged}) {
   const [phase,setPhase]=useState('Idle'),[error,setError]=useState(''),[reply,setReply]=useState('');
+  const [sections,setSections]=useState([]);
   const call=useRef(null), period=useRef(null);
   const [textOnly,setTextOnly]=useState(false);
   period.current={date,days};
@@ -12,12 +13,12 @@ export function OverviewVoice({date,days,visible}) {
   const active=phase!=='Idle';
   function end(){
     call.current?.close();call.current=null;
-    setPhase('Idle');setError('');setReply('');
+    setPhase('Idle');setError('');setReply('');setSections([]);
   }
   async function start(){
     if(call.current && !call.current.abort.signal.aborted) return;
-    setError('');setReply('');setTextOnly(false);setPhase('Connecting');
-    const session=new LiveOverviewCall({phase:setPhase,message:setError,caption:(text,onlyText)=>{setReply(text);setTextOnly(onlyText);},period:()=>period.current});
+    setError('');setReply('');setSections([]);setTextOnly(false);setPhase('Connecting');
+    const session=new LiveOverviewCall({phase:setPhase,message:setError,changed:onMenuChanged,caption:(text,onlyText,rows)=>{setReply(text);setTextOnly(onlyText);setSections(rows);},period:()=>period.current});
     call.current=session;
     try{await session.start();}
     catch(e){if(call.current===session&&!session.abort.signal.aborted)session.fail(e.name==='NotAllowedError'?'Allow microphone access to start a conversation.':e.message);}
@@ -30,6 +31,10 @@ export function OverviewVoice({date,days,visible}) {
       {active ? <p className="conversation-state" role="status"><i/>{phase}</p>
         : <p>Ask about your sales, bills or supplier payments.</p>}
       {reply && <p className="conversation-reply" aria-live="polite">{reply}</p>}
+      {sections.filter(s=>s.rows.length>3 || s.clipped).map(s=><details key={s.key} className="conversation-results">
+        <summary>{s.title} ({s.rows.length})</summary>
+        <ul>{s.rows.map((row,i)=><li key={i}>{row}</li>)}</ul>
+      </details>)}
       {active && textOnly && <p>Listening. For a spoken reply, ask me to answer in a language such as Hindi or English.</p>}
       {error && <p role="alert" className="conversation-error">{error}</p>}
       <button type="button" className={'conversation-control'+(active?'':' conversation-start')} onClick={active?end:start}>

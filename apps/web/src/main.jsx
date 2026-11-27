@@ -442,7 +442,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
         {restaurant && <div className="vendor-spread" hidden={view !== 'vendors'}><Vendors revision={revision}/></div>}
         {restaurant && <div hidden={view !== 'bank'}><Bank restaurant={restaurant}
           onSave={restaurant => setState(s => ({...s,restaurant}))}/></div>}
-        <OverviewVoice date={date} days={days} visible={view === 'overview' && !!restaurant}/>
+        <OverviewVoice onMenuChanged={()=>setRevision(v=>v+1)} date={date} days={days} visible={view === 'overview' && !!restaurant}/>
         {!loading && analytics && (
           <>
             {view === 'overview' && <><div className="metrics">

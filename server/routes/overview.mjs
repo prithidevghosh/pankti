@@ -1,8 +1,14 @@
+import {greetingFor} from '../services/overview-greeting.mjs';
 import { z } from 'zod';
 import { overviewAnswer,speechLanguages } from '../services/overview-question.mjs';
 import { httpError } from '../errors.mjs';
 
 export function registerOverview(app,{store,requireRestaurant,upload,speech,understand,readAloud}) {
+  const greet=greetingFor(readAloud);
+  app.post('/api/overview/live/greeting',async(req,res)=>{
+    requireRestaurant(req);
+    res.json(await greet(z.string().max(40).optional().parse(req.body.language)));
+  });
   app.post('/api/overview/live',async(req,res)=>{
     requireRestaurant(req);
     if(!process.env.SARVAM_API_KEY || !process.env.OPENAI_API_KEY) throw httpError(503,'Voice is unavailable until the server keys are configured.');
@@ -17,7 +23,7 @@ export function registerOverview(app,{store,requireRestaurant,upload,speech,unde
     const start=new Date(Date.parse(date+'T00:00:00Z')-(Number(days)-1)*86400000).toISOString().slice(0,10);
     const previous=previousId && await store.overviewReply(shop.id,previousId);
     const answer=await overviewAnswer(store,understand,shop.id,question,{start,end:date},undefined,{
-      shop,uid:req.uid,detectedLanguage:heard?.language,previousLanguage:previous?.answer?.language,previousFacts:(previous?.answer?.facts || []).map(({key,start,end})=>({key,start,end})),
+      shop,uid:req.uid,pendingAvailability:previous?.answer?.pendingAvailability,previousMenuRefs:previous?.answer?.menuRefs,detectedLanguage:heard?.language,previousLanguage:previous?.answer?.language,previousFacts:(previous?.answer?.facts || []).map(({key,start,end})=>({key,start,end})),
     });
     const {insertedId}=await store.recordOverview(req.uid,shop.id,question,answer);
     res.json({...answer,id:insertedId,voiceId:speechLanguages.has(answer.language)?insertedId:null});

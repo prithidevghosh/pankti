@@ -11,8 +11,8 @@ function wave(pcm,rate){
   return new Blob([header.buffer,pcm],{type:'audio/wav'});
 }
 export class LiveOverviewCall {
-  constructor({phase, message, caption, period}) {
-    Object.assign(this,{phase,message,caption,period});
+  constructor({phase, message, caption, period, changed}) {
+    Object.assign(this,{phase,message,caption,period,changed});
     this.abort=new AbortController();
     this.turn=0;
   }
@@ -38,7 +38,20 @@ export class LiveOverviewCall {
     this.source.connect(this.processor);
     this.processor.connect(this.context.destination); // The processor outputs silence.
     this.processor.port.onmessage=({data})=>this.handle(data).catch(e=>this.recover(e));
-    this.phase('Listening');
+    let language=navigator.language;
+    try{language=localStorage.getItem('pankti.voice.language') || language;}catch{}
+    const turn=this.turn;
+    this.pending=new AbortController();
+    this.phase('Preparing voice');
+    try{
+      const greeting=await request('/overview/live/greeting',{body:{language},signal:this.pending.signal});
+      if(this.turn!==turn || this.abort.signal.aborted) return;
+      this.caption(greeting.text,!greeting.audio,[]);
+      if(greeting.audio) await this.play(greeting.audio,turn);
+      else this.phase('Listening');
+    }catch{
+      if(this.turn===turn && !this.abort.signal.aborted) this.phase('Listening');
+    }
   }
   level() {
     const analyser=this.playing?this.output:this.input;
@@ -67,20 +80,24 @@ export class LiveOverviewCall {
         const report=await request('/overview/live/report',{body,signal:controller.signal});
         if(turn!==this.turn || this.abort.signal.aborted) return;
         this.previousId=report.id;
-        this.caption(report.text,!report.voiceId);
+        this.caption(report.text,!report.voiceId,report.sections || []);
+        try{localStorage.setItem('pankti.voice.language',report.language);}catch{}
+        if(report.menuChanged) this.changed();
         if(!report.voiceId){this.phase('Listening');return;}
         this.phase('Preparing voice');
         const {audio}=await request('/overview/'+report.voiceId+'/speech',{body:{},signal:controller.signal});
         if(turn!==this.turn || this.abort.signal.aborted) return;
-        const buffer=await this.context.decodeAudioData(Uint8Array.from(atob(audio),c=>c.charCodeAt(0)).buffer);
-        if(turn!==this.turn || this.abort.signal.aborted) return;
-        this.playing=this.context.createBufferSource();
-        this.playing.buffer=buffer;
-        this.playing.connect(this.output);
-        this.playing.onended=()=>{this.playing?.disconnect();this.playing=null;this.phase('Listening');};
-        this.phase('Speaking');this.playing.start();
-
+        await this.play(audio,turn);
     }
+  }
+  async play(audio,turn){
+    const buffer=await this.context.decodeAudioData(Uint8Array.from(atob(audio),c=>c.charCodeAt(0)).buffer);
+    if(turn!==this.turn || this.abort.signal.aborted) return;
+    this.playing=this.context.createBufferSource();
+    this.playing.buffer=buffer;
+    this.playing.connect(this.output);
+    this.playing.onended=()=>{this.playing?.disconnect();this.playing=null;this.phase('Listening');};
+    this.phase('Speaking');this.playing.start();
   }
   recover(e){if(!this.abort.signal.aborted && e.name!=='AbortError'){this.message(e.message);this.phase('Listening');}}
   fail(text){this.close();this.message(text);this.phase('Idle');}

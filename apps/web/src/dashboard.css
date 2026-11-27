@@ -811,3 +811,7 @@
 }
 .conversation-control.conversation-start:hover {background:#fffdf8;border-color:#54677e;}
 .conversation-control.conversation-start:active {background:#e5e7e4;}
+.conversation-results {margin:10px 0;color:var(--ink);}
+.conversation-results summary {cursor:pointer;padding:6px 0;font-weight:550;}
+.conversation-results ul {max-height:16rem;overflow:auto;padding-inline-start:1.3rem;overflow-wrap:anywhere;text-align:start;}
+.conversation-results li {margin-block:.4rem;}
