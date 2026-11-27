@@ -7,7 +7,8 @@ import {createApp} from '../server/app.mjs';
 import {testDatabase} from '../server/test-database.mjs';
 import {randomUUID} from 'node:crypto';
 
-const wavs=await Promise.all(process.argv.slice(2).map(path=>readFile(path)));
+const confirmation=process.argv[2]==='--paid-confirmation';
+const wavs=await Promise.all(process.argv.slice(confirmation?3:2).map(path=>readFile(path)));
 assert.ok(wavs.length>=2,'Supply question.wav, follow-up.wav and optionally unrelated questions as WAV files');
 const cleanup=[];
 const {name}=await testDatabase({after:f=>cleanup.push(f)});
@@ -47,15 +48,34 @@ try{
     await page.evaluate(bytes=>window.sayFixture(bytes),wav.toString('base64'));
     const response=await reported;const report=await response.json();if(index>=2){
       assert.deepEqual(report.facts,[]);
+      if(confirmation && index===2){
+        assert.equal(report.language,'hi-IN');
+        assert.match(report.text,/^मैं पंक्ति हूँ/);
+      }
       assert.doesNotMatch(report.text,/delhi|दिल्ली|four|चार/i);
       await state.filter({hasText:/^Speaking$/}).waitFor({timeout:35000});
       assert.equal(await page.locator('.conversation-reply').innerText(),report.text);
       await state.filter({hasText:/^Listening$/}).waitFor({timeout:30000});
-      console.log('Spoken out-of-scope question redirected');
+      console.log(confirmation && index===2 ? report.text : 'Spoken out-of-scope question redirected');
       continue;
     }
     assert.ok(report.facts?.length,JSON.stringify(report));
     await state.filter({hasText:/^Speaking$/}).waitFor({timeout:35000});
+    if(confirmation){
+      assert.equal(report.language,'hi-IN');
+      if(index===0){
+        assert.ok(report.facts.some(f=>f.key==='billedSales'));
+        firstDay=report.facts[0].start;
+      }else{
+        assert.deepEqual(report.facts.map(f=>f.key),['paidCount']);
+        assert.equal(report.facts[0].value,'0');
+        assert.equal(report.facts[0].start,firstDay);
+        assert.equal(report.text,'आज एक भी बिल का पूरा भुगतान दर्ज नहीं है।');
+      }
+      console.log(report.text);
+      await state.filter({hasText:/^Listening$/}).waitFor({timeout:30000});
+      continue;
+    }
     const fact=report.facts.find(f=>f.key==='topDish');
     assert.ok(fact,'The follow-up must retain the top dish topic');
     if(index===0){
