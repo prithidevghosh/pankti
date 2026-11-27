@@ -37,6 +37,12 @@ export async function openStore(database) {
   return {
     ...openPhoneStore(db, transaction),
     close: () => client.close(),
+    recordOverview(owner,restaurant,transcript,answer) {
+      return db.collection('overview_questions').insertOne({_id:randomUUID(),owner,restaurant,transcript,answer,createdAt:new Date()});
+    },
+    overviewReply(restaurant,id) {
+      return db.collection('overview_questions').findOne({_id:id,restaurant},{projection:{answer:1}});
+    },
     async recordTranscript(owner, restaurant, task, transcript) {
       const _id = randomUUID();
       await db.collection('voice_transcripts').insertOne({
@@ -256,6 +262,35 @@ export async function openStore(database) {
     async forgetPhrase(restaurant, id) {
       await db.collection('phrases').deleteOne({ restaurant, _id: id });
       return this.phrasesFor(restaurant);
+    },
+    async overviewFigures(restaurant,start,end) {
+      const range = { $gte:new Date(start+'T00:00:00+05:30').toISOString(),
+        $lt:new Date(Date.parse(end+'T00:00:00+05:30')+86400000).toISOString() };
+      return transaction(async session=>{
+        const result={billedSales:0,collections:0,billCount:0,paidCount:0,paidValue:0,unpaidCount:0,partialCount:0,outstanding:0};
+        const dishes=new Map();
+        const filter={restaurant,$or:[{created:range},{paid:range},{'movements.at':range}]};
+        for await(const bill of bills.find(filter,{session})) {
+          for(const m of bill.movements ?? (bill.paid?[{at:bill.paid,amount:bill.total}]:[])) {
+            if(m.at>=range.$gte && m.at<range.$lt) result.collections+=m.amount;
+          }
+          if(bill.created<range.$gte || bill.created>=range.$lt) continue;
+          result.billCount++;
+          result.billedSales+=bill.total;
+          const received=receivedOn(bill);
+          result.outstanding+=bill.total-received;
+          if(bill.paid) {result.paidCount++;result.paidValue+=bill.total;}
+          else if(received) result.partialCount++;
+          else result.unpaidCount++;
+          for(const line of bill.lines) {
+            const name=[line.name,line.variant].filter(Boolean).join(' ');
+            dishes.set(name,(dishes.get(name)||0)+line.quantity);
+          }
+        }
+        const highest=Math.max(0,...dishes.values());
+        result.topDish=[...dishes].filter(([,q])=>q===highest).map(([name,quantity])=>({name,quantity}));
+        return result;
+      });
     },
     async analytics(restaurant, date, days = 1) {
       const end = Date.parse(date + 'T00:00:00+05:30') + 86400000;

@@ -150,8 +150,8 @@ async function installCoreCollections(db) {
 export async function ensureSchema(db) {
   const history = db.collection('schema_versions');
   const latest = await history.find().sort({ _id: -1 }).limit(1).next();
-  if (latest?._id > 5) throw Error('This database requires a newer Pankti server.');
-  if (latest?._id === 5) return;
+  if (latest?._id > 6) throw Error('This database requires a newer Pankti server.');
+  if (latest?._id === 6) return;
   if (!latest || latest._id < 4) {
     if (latest && latest._id >= 2) {
       for (const name of ['restaurants', 'bills']) {
@@ -190,4 +190,11 @@ export async function ensureSchema(db) {
   } catch (error) { if (error.code !== 48) throw error; }
   await db.collection('vendor_invoices').createIndex({restaurant:1,created:-1});
   await history.updateOne({_id:5},{$setOnInsert:{appliedAt:new Date()}},{upsert:true});
+  try {
+    await db.createCollection('overview_questions',{validator:{$jsonSchema:object({
+      owner:string,restaurant:string,transcript:string,answer:{bsonType:'object'},createdAt:{bsonType:'date'},
+    })}});
+  } catch(error) { if(error.code!==48) throw error; }
+  await db.collection('overview_questions').createIndex({restaurant:1,createdAt:-1});
+  await history.updateOne({_id:6},{$setOnInsert:{appliedAt:new Date()}},{upsert:true});
 }

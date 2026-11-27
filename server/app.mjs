@@ -1,4 +1,5 @@
 import { availabilityChanges, basketSchema } from './schemas.mjs';
+import { registerOverview } from './routes/overview.mjs';
 import { registerBillsRoutes } from './routes/bills.mjs';
 import { registerVendorInvoices } from './routes/vendor-invoices.mjs';
 import { registerVendorsRoutes } from './routes/vendors.mjs';
@@ -8,7 +9,7 @@ import multer from 'multer';
 import { z, ZodError } from 'zod';
 import { openStore } from './store.mjs';
 import { indiaPhone, registerPhoneAuth, requestToken } from './phone-auth.mjs';
-import { scanVendorInvoice, scanMenu, transcribe, interpret, decodeQr, renderQr } from './providers.mjs';
+import { readOverviewAloud, scanVendorInvoice, scanMenu, transcribe, interpret, decodeQr, renderQr } from './providers.mjs';
 import { httpError } from './errors.mjs';
 import { restaurantSchema, shortText, entrySchema } from './schemas.mjs';
 
@@ -38,6 +39,7 @@ export async function createApp({
   localPhoneOnly = false,
   allowHostedPhoneOnly = false,
   speech = transcribe,
+  readAloud = readOverviewAloud,
   understand = interpret,
   scan = scanMenu,
   readInvoice = scanVendorInvoice,
@@ -146,6 +148,7 @@ export async function createApp({
   app.delete('/api/phrases/:id', async (req, res) =>
     res.json({ phrases: await store.forgetPhrase(requireRestaurant(req).id, req.params.id) }),
   );
+  registerOverview(app,{ store, requireRestaurant, upload, speech, understand, readAloud });
   registerVendorInvoices(app, { store, requireRestaurant, upload, readInvoice, speech, understand });
   registerVendorsRoutes(app, { store, requireRestaurant });
   app.post('/api/voice/:task', upload.single('audio'), async (req, res) => {

@@ -196,3 +196,20 @@ test('daily menu availability is scoped, atomic and expires for billing the next
   await db.collection('menu').updateOne({_id:dish.id}, {$set:{soldOutDay:'2000-01-01'}});
   await issue();
 });
+
+test('spoken reporting counts all bills at IST boundaries and separates payments, statuses and units', async t=>{
+  const {name,db}=await testDatabase(t);
+  const store=await openStore(name);t.after(()=>store.close());
+  const at='2026-11-27T18:30:00.000Z', yesterday='2026-11-27T18:29:59.999Z';
+  const bills=Array.from({length:104},(_,n)=>({
+    _id:randomUUID(),restaurant:n===103?'other':'shop',number:n+1,request:randomUUID(),
+    created:n===102?yesterday:at,total:100,paid:n>=100?at:null,method:n>=100?'cash':null,
+    received:n>=100?100:n===0?40:0,
+    movements:n>=100?[{at,amount:100,method:'cash'}]:n===0?[{at,amount:40,method:'upi'}]:[],
+    lines:[{item:'tea',name:'Tea',quantity:1,price:100,variant:''}],
+  }));
+  await db.collection('bills').insertMany(bills);
+  const figures=await store.overviewFigures('shop','2026-11-28','2026-11-28');
+  assert.deepEqual(figures,{billedSales:10200,collections:340,billCount:102,paidCount:2,paidValue:200,
+    partialCount:1,unpaidCount:99,outstanding:9960,topDish:[{name:'Tea',quantity:102}]});
+});
