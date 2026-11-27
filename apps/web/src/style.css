@@ -130,7 +130,7 @@ p {
   border-bottom: 1px solid var(--line);
   padding-bottom: 14px;
 }
-.account-switch, .signup-voice {
+.account-switch {
   background: none;
   border: 0;
   color: inherit;
@@ -142,7 +142,7 @@ p {
   font-weight: 560;
   font-size: .91rem;
 }
-.account-switch:hover, .signup-voice:hover {
+.account-switch:hover {
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -250,22 +250,6 @@ p {
 }
 .account-submit svg { color: #f2c668; }
 .account-submit:hover:not(:disabled) { background: #152f24; }
-.signup-voice {
-  gap: 10px;
-  margin-bottom: 6px;
-}
-.mic-disc {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #ebc66a;
-}
-.signup-voice[data-phase="recording"] .mic-disc {
-  background: #803b28;
-  color: white;
-}
 .login-form .feedback, .login-form .account-hint:not(:empty) { margin-top: 12px; }
 .plain {
   background: transparent;

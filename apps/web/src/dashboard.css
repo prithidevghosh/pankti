@@ -84,7 +84,7 @@
     serif;
   margin-bottom: 10px;
 }
-.work-sheet .signup-voice {
+.work-sheet .voice-control {
   margin-top: 12px;
 }
 .work-sheet blockquote {
@@ -144,7 +144,7 @@
   background: #fffcf5;
   border-radius: 2px;
 }
-.work-sheet button:not(.signup-voice),
+.work-sheet button:not(.voice-control),
 .bill-dialog .action {
   min-height: 40px;
   padding: 6px 12px;
@@ -305,16 +305,6 @@
 }
 .record-side {
   padding: 6px 0;
-}
-.work-sheet .signup-voice {
-  background: #244735;
-  color: #fffaf0;
-  min-height: 50px;
-  padding: 6px 20px 6px 8px;
-  border-radius: 30px;
-}
-.work-sheet .signup-voice .mic-disc {
-  color: #24392a;
 }
 .order-ticket {
   background: #fffcf6;
@@ -582,9 +572,7 @@
 .correction-header span {white-space:nowrap;}
 .correction-header h3 {overflow-wrap:anywhere;margin:5px 0 0;font:400 clamp(1.6rem,2.5vw,2.4rem)/1.2 'Pankti Wordmark',Georgia,serif;}
 .correction-body {padding:0 20px 16px;}
-.vendor-editor .signup-voice {margin:14px 0 16px; background:transparent; color:#563544; border:1px solid #bda9a6;
-  padding:5px 12px 5px 5px;min-height:44px;}
-.vendor-editor .signup-voice .mic-disc {background:#ecded6;}
+.vendor-editor .voice-control {margin:14px 0 16px;}
 .vendor-editor fieldset {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
 .vendor-editor label {color:#495548;font-weight:560;gap:6px;}
 .vendor-editor .full-line {grid-column:1/-1;}
@@ -613,10 +601,3 @@
 @media(prefers-reduced-motion:reduce) {
   .journal-layout,.vendor-editor,.journal-layout[data-open="false"] .vendor-editor {transition:none;animation:none;}
 }
-/* The same recording control appears on the signup sheet, menu and counter. */
-button.counter-mic.signup-voice,.work-sheet button.counter-mic.signup-voice {display:inline-flex;align-items:center;gap:10px;min-height:48px;max-width:100%;padding:6px 15px 6px 7px;border-radius:9px;border:1px solid #275144;color:#fffaf0;background:#234639;font-size:.93rem;font-weight:550}
-button.counter-mic.signup-voice .mic-disc {width:32px;height:32px;display:grid;place-items:center;border-radius:6px;background:#efe9c9;color:#234639;flex:none}
-.counter-mic .voice-bars {display:flex;height:19px;align-items:center;gap:2px}.voice-bars i{width:2px;height:5px;background:#d5ce9c}.voice-bars i:nth-child(2n){height:12px}.voice-bars i:nth-child(3){height:17px}
-button.counter-mic[data-phase=recording]{background:#55392f}.counter-mic[data-phase=recording] .voice-bars i{animation:voice-level .75s ease-in-out infinite alternate}.voice-bars i:nth-child(2n){animation-delay:-.4s!important}
-@keyframes voice-level {to{transform:scaleY(.4)}}@media(prefers-reduced-motion:reduce){.counter-mic .voice-bars i{animation:none!important}}
-button.counter-mic:focus-visible{outline:3px solid #b5853b;outline-offset:3px}
