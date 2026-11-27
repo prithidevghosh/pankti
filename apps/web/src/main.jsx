@@ -377,8 +377,8 @@ function Ledger({ onSignOut, onSessionExpired }) {
             </p>
           </div>
         )}
-        {restaurant && <div hidden={view !== 'orders'}><Orders menu={state.menu || []} onBill={bill => {
-          setOpenBill({id:bill.id,bill}); dialog.current?.showModal(); setRevision(v => v+1);
+        {restaurant && <div hidden={view !== 'orders'}><Orders menu={state.menu || []} onBill={(bill,proposal) => {
+          setOpenBill({id:bill.id,bill,proposal}); dialog.current?.showModal(); setRevision(v => v+1);
         }}/></div>}
         {restaurant && <div className="menu-spread" hidden={view !== 'menu'}><Menu menu={state.menu || []}
           onMenu={menu => setState(s => ({...s,menu}))}/></div>}
@@ -409,7 +409,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
             <div className="report-grid">
               <section>
                 <h2>Sales by hour</h2>
-                {analytics.paidCount ? <HourlyChart values={analytics.hourly} /> : <p className="subtle">Hourly sales appear when you record the first payment for this date.</p>}
+                {analytics.hourly.some(value => value !== 0) ? <HourlyChart values={analytics.hourly} /> : <p className="subtle">Hourly sales appear when you record the first payment for this date.</p>}
               </section>
               <section>
                 <h2>Top dishes</h2>
@@ -455,10 +455,8 @@ function Ledger({ onSignOut, onSessionExpired }) {
                           <td>{time.format(new Date(bill.created))}</td>
                           <td>
                             {bill.paid
-                              ? bill.method === 'upi'
-                                ? 'UPI · Paid'
-                                : 'Cash · Paid'
-                              : 'Awaiting payment'}
+                              ? bill.movements?.some(m => m.amount > 0 && m.method !== bill.method) ? 'Paid' : bill.method === 'upi' ? 'UPI · Paid' : 'Cash · Paid'
+                              : bill.received ? asRupees(bill.total-bill.received)+' due' : 'Awaiting payment'}
                           </td>
                           <td>{asRupees(bill.total)}</td>
                         </tr>
@@ -478,11 +476,11 @@ function Ledger({ onSignOut, onSessionExpired }) {
           onClose={() => setOpenBill(null)}
           aria-labelledby="bill-title"
         >
-          <BillReceipt openBill={openBill} restaurant={restaurant} onPayment={async method => {
+          <BillReceipt openBill={openBill} restaurant={restaurant} onPayment={async (method,change) => {
                   const id = openBill.bill.id;
                   setOpenBill(b => ({...b,saving:true,error:null}));
                   try {
-                    const {bill} = await request('/bills/'+id+'/payment',{body:{method}});
+                    const {bill} = await request('/bills/'+id+'/payment',{body:{method,...change}});
                     setOpenBill(b => b?.id === id ? {id,bill} : b); setRevision(v => v+1);
                   } catch(e) {setOpenBill(b => b?.id === id ? {...b,error:e.message,saving:false} : b);}
                 }}/>

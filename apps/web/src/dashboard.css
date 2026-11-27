@@ -613,3 +613,10 @@
 @media(prefers-reduced-motion:reduce) {
   .journal-layout,.vendor-editor,.journal-layout[data-open="false"] .vendor-editor {transition:none;animation:none;}
 }
+/* The same recording control appears on the signup sheet, menu and counter. */
+button.counter-mic.signup-voice,.work-sheet button.counter-mic.signup-voice {display:inline-flex;align-items:center;gap:10px;min-height:48px;max-width:100%;padding:6px 15px 6px 7px;border-radius:9px;border:1px solid #275144;color:#fffaf0;background:#234639;font-size:.93rem;font-weight:550}
+button.counter-mic.signup-voice .mic-disc {width:32px;height:32px;display:grid;place-items:center;border-radius:6px;background:#efe9c9;color:#234639;flex:none}
+.counter-mic .voice-bars {display:flex;height:19px;align-items:center;gap:2px}.voice-bars i{width:2px;height:5px;background:#d5ce9c}.voice-bars i:nth-child(2n){height:12px}.voice-bars i:nth-child(3){height:17px}
+button.counter-mic[data-phase=recording]{background:#55392f}.counter-mic[data-phase=recording] .voice-bars i{animation:voice-level .75s ease-in-out infinite alternate}.voice-bars i:nth-child(2n){animation-delay:-.4s!important}
+@keyframes voice-level {to{transform:scaleY(.4)}}@media(prefers-reduced-motion:reduce){.counter-mic .voice-bars i{animation:none!important}}
+button.counter-mic:focus-visible{outline:3px solid #b5853b;outline-offset:3px}

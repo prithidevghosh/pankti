@@ -37,3 +37,9 @@ dialog.bill-dialog::backdrop {background:#16261fc2}
 .receipt-payee figcaption {font-size:1.35rem;overflow-wrap:anywhere;min-width:0}
 .receipt-error,.receipt-loading {padding:10px var(--receipt-gutter)}
 @media(max-width:420px){.receipt-payment button{font-size:.85rem}.receipt-paper td,.receipt-paper tbody th{font-size:.91rem}}
+.receipt-payment .payment-edit {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.payment-edit label,.phrase-review label {display:grid;gap:5px;font-size:.84rem}
+.payment-edit input,.payment-edit select,.phrase-review input {width:100%;min-width:0;min-height:44px;padding:8px;border:1px solid #969e90;background:#fffaf0;font:inherit;color:inherit}
+.receipt-payment .payment-edit p {grid-column:1/-1;margin:4px 0}
+.receipt-payment .adjust-balance {margin-top:8px;padding-inline:0;background:none;border:none;text-decoration:underline;text-underline-offset:4px;font-size:.86rem}
+.receipt-paper .kitchen-note,.order-ticket .kitchen-note {display:block;color:#754829;border-left:2px solid #c59956;padding-left:7px;margin-top:5px}

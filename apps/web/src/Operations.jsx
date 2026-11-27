@@ -3,30 +3,10 @@ import { MenuPages, editableDish, menuEntry, needsPrice } from './MenuPages.jsx'
 import React, { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Pencil } from 'lucide-react';
 import { VendorEditor } from './VendorEditor.jsx';
-import { SignupVoice } from './SignupVoice.jsx';
+import { Voice } from './Voice.jsx';
+import { SpecialPhrases } from './SpecialPhrases.jsx';
 import { request, asRupees } from './api.js';
 
-function Voice({ task, label, context, disabled, onResult, onBusy, onError }) {
-  return (
-    <SignupVoice
-      label={label}
-      processing="Reading your note…"
-      disabled={disabled}
-      onBusy={onBusy}
-      onError={onError}
-      onRecording={async (audio) => {
-        const form = new FormData();
-        form.append(
-          'audio',
-          audio,
-          'note.' + (audio.type.includes('mp4') ? 'm4a' : audio.type.includes('ogg') ? 'ogg' : 'webm'),
-        );
-        form.append('context', JSON.stringify(context || {}));
-        onResult(await request('/voice/' + task, { body: form }));
-      }}
-    />
-  );
-}
 function Feedback({ message }) {
   return message ? (
     <p className="op-feedback" role="status">
@@ -80,11 +60,16 @@ export function Orders({ menu, onBill }) {
         <Voice
           task="order"
           label="Speak order"
-          disabled={op.busy || !menu.length}
+          disabled={op.busy}
           context={{ basket, clarificationReply: question ? { previous: heard, question } : undefined }}
           onBusy={setSpeechBusy}
           onError={op.setMessage}
           onResult={({ transcript, result }) => {
+            if (result.payment) {
+              setQuestion('');
+              onBill(result.payment.bill, result.payment);
+              return;
+            }
             setHeard(transcript);
             setQuestion(result.question || '');
             update(result.lines);
@@ -104,6 +89,7 @@ export function Orders({ menu, onBill }) {
                 <li key={line.item}>
                   <span>
                     {line.quantity} × {line.name} {line.variant}
+                    {line.note && <small className="kitchen-note">{line.note}</small>}
                   </span>
                   <strong>{asRupees(Math.round(line.price * line.quantity))}</strong>
                   <button
@@ -368,6 +354,8 @@ export function Vendors({ revision }) {
 }
 
 export function Menu({ menu, onMenu }) {
+  const [dictating, setDictating] = useState(false);
+  const [menuQuestion, setMenuQuestion] = useState(null);
   const [draft, setDraft] = useState([]);
   const [active, setActive] = useState(null);
   const op = useOperation();
@@ -382,8 +370,8 @@ export function Menu({ menu, onMenu }) {
       <section className="menu-import">
         <img src="/folded-menu.webp" alt="" />
         <div>
-          <h2>Import a printed menu</h2>
-          <p>Photograph each page, then review the dishes and prices.</p>
+          <h2>Add dishes</h2>
+          <p>Photograph a menu page or speak the dishes and prices.</p>
           <label className="file-field">
             <ImagePlus size={18} aria-hidden="true" /> Choose menu photos
             <input
@@ -391,7 +379,7 @@ export function Menu({ menu, onMenu }) {
               type="file"
               accept="image/*"
               multiple
-              disabled={op.busy || !!active}
+              disabled={op.busy || dictating || !!active}
               onChange={(e) => {
                 const files = [...e.target.files];
                 e.target.value = '';
@@ -411,8 +399,22 @@ export function Menu({ menu, onMenu }) {
               }}
             />
           </label>
+          <Voice
+            task="menu"
+            label="Dictate dishes"
+            disabled={op.busy || dictating || !!active}
+            onBusy={setDictating}
+            onError={op.setMessage}
+            context={{ clarificationReply: menuQuestion || undefined }}
+            onResult={({ result, transcript }) => {
+              setMenuQuestion(result.question ? { question: result.question, previous: transcript } : null);
+              if (!result.question) setDraft((prev) => [...prev, ...result.entries.map(editableDish)]);
+              op.setMessage(result.question || '');
+            }}
+          />
         </div>
       </section>
+      <SpecialPhrases menu={menu} />
       <Feedback message={op.message} />
       {draft.length > 0 && (
         <section className="menu-folio">
@@ -437,7 +439,7 @@ export function Menu({ menu, onMenu }) {
             </div>
             <button
               className="publish-menu"
-              disabled={op.busy || !!active}
+              disabled={op.busy || dictating || !!active}
               onClick={() => {
                 if (!remaining.length) {
                   setDraft([]);
