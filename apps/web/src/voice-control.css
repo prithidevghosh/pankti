@@ -16,7 +16,7 @@ button.voice-control {
 }
 .voice-disc::before {border:1px solid var(--voice-edge);transform:scale(var(--halo-size,1));transition:transform 100ms ease-out}
 .voice-disc::after {inset:3px;border:1px solid transparent;border-left-color:#e5c783;transform:rotate(30deg)}
-.voice-caption {display:grid;align-items:center;line-height:1.18}
+.voice-caption {grid-area:1/2;display:grid;align-items:center;line-height:1.18}
 .voice-caption>* {grid-area:1/1}
 .voice-reserve {visibility:hidden}
 .voice-control:hover:not(:disabled) .voice-disc {background:#305648}
