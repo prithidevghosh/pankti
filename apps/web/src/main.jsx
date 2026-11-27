@@ -442,6 +442,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
         {restaurant && <div className="vendor-spread" hidden={view !== 'vendors'}><Vendors revision={revision}/></div>}
         {restaurant && <div hidden={view !== 'bank'}><Bank restaurant={restaurant}
           onSave={restaurant => setState(s => ({...s,restaurant}))}/></div>}
+        <OverviewVoice date={date} days={days} visible={view === 'overview' && !!restaurant}/>
         {!loading && analytics && (
           <>
             {view === 'overview' && <><div className="metrics">
@@ -458,7 +459,6 @@ function Ledger({ onSignOut, onSessionExpired }) {
                 <strong>{asRupees(analytics.average)}</strong>
               </div>
             </div>
-            <OverviewVoice date={date} days={days}/>
             {!analytics.orders && date === today() && <section className="overview-next">
               <div><h2>{state.menu?.length ? 'Take the first order' : 'Bring your menu to the counter'}</h2>
               <p>{state.menu?.length ? 'Your dishes are ready for voice billing.' : 'A photo of the printed menu is enough to get started.'}</p></div>

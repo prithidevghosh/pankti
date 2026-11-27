@@ -1,47 +1,39 @@
-import React, {useEffect,useRef,useState} from 'react';
-import {SignupVoice} from './SignupVoice.jsx';
-import {request} from './api.js';
+import React,{useEffect,useRef,useState} from 'react';
+import {AudioLines,PhoneOff} from 'lucide-react';
+import {ConversationOrb} from './ConversationOrb.jsx';
+import {LiveOverviewCall} from './LiveOverviewCall.js';
 
-export function OverviewVoice({date,days}) {
-  const [answer,setAnswer]=useState(null);
-  const [playback,setPlayback]=useState(null);
-  const [audioLoading,setAudioLoading]=useState(false);
-  const [error,setError]=useState('');
-  const audio=useRef(null);
-  const pending=useRef(null);
-  useEffect(()=>()=>pending.current?.abort(),[]);
-  useEffect(()=>{
-    if(!answer?.voiceId) return;
-    const controller=new AbortController();
-    setAudioLoading(true);
-    request('/overview/'+answer.voiceId+'/speech',{method:'POST',signal:controller.signal})
-      .then(({audio})=>{if(!controller.signal.aborted) setPlayback(audio);})
-      .catch(()=>{})
-      .finally(()=>{if(!controller.signal.aborted) setAudioLoading(false);});
-    return ()=>controller.abort();
-  },[answer]);
-  useEffect(()=>{
-    if(playback) audio.current?.play().catch(()=>{ /* Tap to play on browsers that block autoplay. */ });
-  },[playback]);
-  return <section className="overview-voice" aria-labelledby="overview-voice-title">
-    <header><div><h2 id="overview-voice-title">Ask about your business</h2>
-      <p>What sold most today? How many bills are still unpaid?</p></div>
-      <SignupVoice label="Ask by voice" processing="Checking the ledger…" onBusy={busy=>{
-        if(busy) {audio.current?.pause();setAnswer(null);setPlayback(null);setAudioLoading(false);setError('');}
-      }} onError={setError} onRecording={async recording=>{
-        const body=new FormData();
-        body.append('audio',recording,'question');body.append('date',date);body.append('days',days);
-        const controller=new AbortController(); pending.current=controller;
-        const result=await request('/overview/ask',{body,signal:controller.signal});
-        if(!controller.signal.aborted) setAnswer(result);
-      }}/>
-    </header>
-    {error && <p role="alert">{error}</p>}
-    {answer && <div className="overview-answer" lang={answer.language}>
-      <blockquote>{answer.transcript}</blockquote>
-      <p role="status">{answer.text}</p>
-      {playback ? <audio ref={audio} controls aria-label="Spoken answer" src={'data:audio/wav;base64,'+playback}/>
-        : <small>{audioLoading?'Preparing spoken answer…':'Audio playback unavailable for this answer.'}</small>}
-    </div>}
+export function OverviewVoice({date,days,visible}) {
+  const [phase,setPhase]=useState('Idle'),[error,setError]=useState(''),[reply,setReply]=useState('');
+  const call=useRef(null), period=useRef(null);
+  period.current={date,days};
+  useEffect(()=>()=>{call.current?.close();call.current=null;},[]);
+  const active=phase!=='Idle';
+  function end(){
+    call.current?.close();call.current=null;
+    setPhase('Idle');setError('');setReply('');
+  }
+  async function start(){
+    if(call.current && !call.current.abort.signal.aborted) return;
+    setError('');setReply('');setPhase('Connecting');
+    const session=new LiveOverviewCall({phase:setPhase,message:setError,caption:setReply,period:()=>period.current});
+    call.current=session;
+    try{await session.start();}
+    catch(e){if(call.current===session&&!session.abort.signal.aborted)session.fail(e.name==='NotAllowedError'?'Allow microphone access to start a conversation.':e.message);}
+  }
+  if(!visible&&!active) return null;
+  return <section data-active={active} className={'conversation-panel'+(!visible?' conversation-compact':'')} aria-label="Business conversation">
+    <div className="conversation-visual"><ConversationOrb phase={phase} call={call}/></div>
+    <div className="conversation-copy">
+      <h2>{active?'In conversation':'Talk to Pankti'}</h2>
+      {active ? <p className="conversation-state" role="status"><i/>{phase}</p>
+        : <p>Ask about your business, then follow up in your own words.</p>}
+      {reply && <p className="conversation-reply" aria-live="polite">{reply}</p>}
+      {error && <p role="alert" className="conversation-error">{error}</p>}
+      <button type="button" className="conversation-control" onClick={active?end:start}>
+        {active?<PhoneOff size={16}/>:<AudioLines size={17}/>}
+        {active?'End conversation':'Start conversation'}
+      </button>
+    </div>
   </section>;
 }
