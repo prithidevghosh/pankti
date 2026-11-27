@@ -50,13 +50,17 @@ export function Orders({ menu, onBill }) {
   return (
     <section className="work-sheet order-desk">
       <div className="record-side">
-        <img className="station-print" src="/order-taker.webp" alt="" loading="lazy" />
-        <h2>Take an order</h2>
-        <p className="subtle">
-          {menu.length
-            ? 'Speak the order. Review the items before issuing the bill.'
-            : 'Add your dishes and prices in Menu to start billing.'}
-        </p>
+        <header className="entry-intro">
+          <div>
+            <h2>Take an order</h2>
+            <p className="subtle">
+              {menu.length
+                ? 'Speak the order. Review the items before issuing the bill.'
+                : 'Add your dishes and prices in Menu to start billing.'}
+            </p>
+          </div>
+          <img src="/order-taker.webp" alt="" />
+        </header>
         <Voice
           task="order"
           label="Speak order"
@@ -198,8 +202,13 @@ export function Vendors({ revision }) {
   return (
     <>
       <section className="work-sheet vendor-write">
-        <h2>Record a vendor entry</h2>
-        <p className="subtle">Say who supplied the goods, what you bought and how much you paid.</p>
+        <header className="entry-intro">
+          <div>
+            <h2>Record a vendor entry</h2>
+            <p className="subtle">Say who supplied the goods, what you bought and how much you paid.</p>
+          </div>
+          <img src="/crate-delivery.webp" alt="" />
+        </header>
         <Voice
           task="vendor"
           context={{ clarificationReply: question ? { previous: heard, question } : undefined }}
@@ -277,7 +286,6 @@ export function Vendors({ revision }) {
             <p>Outstanding dues</p>
             <strong>{asRupees(ledger.balances.reduce((sum, v) => sum + Math.max(0, v.due), 0))}</strong>
           </div>
-          <img src="/crate-delivery.webp" alt="" loading="lazy" />
         </div>
         {!ledger.balances.length && (
           <p className="subtle">Your first confirmed entry opens a vendor account.</p>

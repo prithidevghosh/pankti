@@ -366,8 +366,6 @@
   margin: 14px 20px;
 }
 .balance-cover {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 48%;
   background: var(--mount);
   color: var(--ink);
 }
@@ -381,10 +379,25 @@
 .balance-cover strong {
   font-size: clamp(1.85rem, 3vw, 3.25rem);
 }
-.balance-cover img {
+.entry-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 46%);
+  align-items: center;
+  gap: clamp(12px, 2vw, 24px);
+  margin-bottom: 16px;
+}
+.entry-intro img {
+  display: block;
   width: 100%;
+  max-width: 275px;
   height: auto;
-  align-self: center;
+  justify-self: end;
+}
+.entry-intro .subtle { margin-bottom: 0; }
+.vendor-spread .vendor-write {
+  padding: clamp(18px, 2.4vw, 32px);
+  background: var(--clay-wash);
+  border: 0;
 }
 /* Scan cover and facing price list */
 .menu-spread {
@@ -626,17 +639,15 @@
   .ledger .restaurant-name {margin-bottom:8px}
   .work-sheet .subtle {line-height:1.5}
   .order-desk {padding:0;background:transparent;gap:20px}
-  .order-desk .record-side {padding:0 0 18px;background:var(--clay-wash)}
-  .record-side > :not(.station-print) {margin-inline:18px}
-  .order-desk .station-print,.bank-desk .station-print {height:auto;display:block;width:100%;margin-bottom:18px}
+  .order-desk .record-side {padding:18px 0;background:var(--clay-wash)}
+  .record-side > * {margin-inline:18px}
+  .bank-desk .station-print {height:auto;display:block;width:100%;margin-bottom:18px}
   .vendor-spread,.bank-desk {gap:24px}
-  .vendor-spread .balance-cover img {height:auto;min-height:0;max-height:none;align-self:center}
   .bank-desk {border-top:0;padding-top:0}
   .bank-desk .placard-mount:has(.placard-empty) {min-height:96px;padding:18px}
   .ledger .report-grid {gap:30px}
 }
 @media (max-width:680px) {
-  .vendor-spread .vendor-write {padding-top:0;border-top:0}
   .ledger .metrics > div {align-content:start;grid-template-rows:minmax(2.5em,auto) auto}
 }
 
