@@ -553,7 +553,7 @@ export function Bank({ restaurant, onSave }) {
   return (
     <section className="work-sheet bank-desk">
       <div>
-        <img className="station-print" src="/settlement-stamp.webp" alt="" loading="lazy" />
+        <img className="station-print" src="/payment-stand.webp" alt="" loading="lazy" />
         <h2>Store payment QR</h2>
         <p className="subtle">
           Upload the QR card from your counter. Check the recipient before adding it to bills.
