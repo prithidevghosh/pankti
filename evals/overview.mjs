@@ -43,3 +43,12 @@ for (const [question,key,expected] of [
     {uid:'owner',shop:{name:'Corner Kitchen',qr:'upi://pay?pa=counter%40upi'}});
   assert.equal(answer.facts.find(f=>f.key===key)?.value,expected,question);
 }
+
+for(const [question,expected] of [
+  ['Thank you!', 'You’re welcome.'],
+  ['आवाज़ आ रही है?', 'जी, मैं सुन रही हूँ। दुकान के बारे में क्या देखना चाहेंगे?'],
+]){
+  const result=await overviewAnswer({},interpret,'test',question,{start:'2026-11-28',end:'2026-11-28'},'2026-11-28');
+  assert.deepEqual(result.facts,[]);
+  assert.equal(result.text,expected);
+}
