@@ -134,7 +134,7 @@ export async function openStore(database) {
     async pendingBill(restaurant) {
       return view(await bills.findOne({ restaurant, paid: null }, { sort: { number: -1 } }));
     },
-    createBill(restaurant, request, basket, prices, expectedGst) {
+    createBill(restaurant, request, basket, prices, expectedGst, orderNote) {
       return transaction(async (session) => {
         const existing = await bills.findOne({ restaurant, request }, { session });
         if (existing) return view(existing);
@@ -163,6 +163,7 @@ export async function openStore(database) {
           paid: null,
           method: null,
           ...billTotals(lines, gstBps),
+          ...(orderNote && { orderNote }),
           lines,
         };
         await bills.insertOne(doc, { session });

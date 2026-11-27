@@ -34,7 +34,10 @@ export async function interpretRecording({ store, speech, understand, owner }, t
         variant,
       }));
       context.basket = basketSchema.parse(supplied.basket ?? []);
-      if (task === 'order') context.phrases = await store.phrasesFor(restaurant.id);
+      if (task === 'order') {
+        context.phrases = await store.phrasesFor(restaurant.id);
+        context.orderNote = z.string().trim().max(600).nullish().parse(supplied.orderNote) ?? null;
+      }
       if (task === 'phrase' && supplied.previous)
         context.previous = z
           .object({ name: z.string().max(96).nullable(), lines: basketSchema })

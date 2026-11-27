@@ -21,7 +21,32 @@ const context = {
     },
   ],
 };
+const paneer = { id: '00000000-0000-4000-8000-000000000003', name: 'Paneer Butter Masala', variant: '' };
+const onion = { id: '00000000-0000-4000-8000-000000000004', name: 'Extra Onion', variant: '' };
+const counterOrder = 'एक पनीर बटर मसाला दो बटर रोटी और एक्स्ट्रा प्याज़';
 const cases = [
+  ['order-side', 'order', counterOrder, { ...context, menu: [...menu, paneer] }, r => {
+    assert.equal(r.question, null);
+    assert.equal(r.lines.length, 2);
+    assert.equal(r.lines.find(l => l.item === paneer.id)?.quantity, 1);
+    assert.equal(r.lines.find(l => l.item === menu[0].id)?.quantity, 2);
+    assert.match(r.orderNote, /onion|प्या[ज़ज]|pya+a?z/i);
+  }],
+  ['revise-count', 'order', 'नहीं तीन बटर रोटी', {
+    ...context, menu: [...menu, paneer], orderNote: 'Extra onion on the side',
+    basket: [{ item: paneer.id, quantity: 1 }, { item: menu[0].id, quantity: 2 }],
+  }, r => {
+    assert.equal(r.question, null);
+    assert.equal(r.lines.length, 2);
+    assert.equal(r.lines.find(l => l.item === menu[0].id)?.quantity, 3);
+    assert.equal(r.lines.find(l => l.item === paneer.id)?.quantity, 1);
+    assert.match(r.orderNote, /onion|प्या[ज़ज]|pya+a?z/i);
+  }],
+  ['priced-side', 'order', counterOrder, { ...context, menu: [...menu, paneer, onion] }, r => {
+    assert.equal(r.question, null);
+    assert.equal(r.lines.length, 3);
+    assert.equal(r.lines.find(l => l.item === onion.id)?.quantity, 1);
+  }],
   [
     'kitchen',
     'order',
