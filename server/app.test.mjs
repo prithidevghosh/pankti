@@ -224,3 +224,27 @@ test('supplier invoice check compares a scoped upload and spoken delivery withou
   assert.deepEqual((await call('/vendor-invoices')).invoices[0].check,saved.check);
   assert.equal((await call('/vendors')).events.length,0);
 });
+
+test('overview speaks only server-rendered answers saved for the signed-in shop', async t => {
+  const spoken = [];
+  const call = await start(t, {
+    understand: async () => ({
+      period:'selected', days:1, start:null, end:null, language:'en-IN', metrics:[],
+      empty:'New Delhi', clarification:'The capital is New Delhi.',
+    }),
+    readAloud: async text => { spoken.push(text); return 'audio'; },
+  });
+  await call('/workspace',{method:'POST',body:restaurant,status:200});
+  await call('/workspace',{token:'other',method:'POST',body:restaurant,status:200});
+  const answer=await call('/overview/live/report',{method:'POST',body:{
+    question:'What is the capital of India?',date:'2026-11-28',days:'7',
+  }});
+  assert.deepEqual(answer.facts,[]);
+  assert.match(answer.text,/your Pankti/);
+  assert.doesNotMatch(answer.text,/Delhi/);
+  await call('/overview/live/say',{method:'POST',body:{text:'four',language:'en-IN'},status:404});
+  const path='/overview/'+answer.voiceId+'/speech';
+  await call(path,{token:'other',method:'POST',status:404});
+  await call(path,{method:'POST',body:{text:'four'}});
+  assert.deepEqual(spoken,[answer.text]);
+});

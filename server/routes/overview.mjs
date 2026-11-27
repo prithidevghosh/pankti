@@ -11,17 +11,14 @@ export function registerOverview(app,{store,requireRestaurant,upload,speech,unde
   });
   app.post('/api/overview/live/report',async(req,res)=>{
     const shop=requireRestaurant(req);
-    const {question,date,days}=z.object({question:z.string().trim().min(1).max(1200),date:z.iso.date(),days:z.enum(['1','7','14','30'])}).parse(req.body);
+    const {question,date,days,previousId}=z.object({question:z.string().trim().min(1).max(1200),date:z.iso.date(),days:z.enum(['1','7','14','30']),previousId:z.uuid().optional()}).parse(req.body);
     const start=new Date(Date.parse(date+'T00:00:00Z')-(Number(days)-1)*86400000).toISOString().slice(0,10);
-    const answer=await overviewAnswer(store,understand,shop.id,question,{start,end:date});
-    await store.recordOverview(req.uid,shop.id,question,answer);
-    res.json(answer);
-  });
-  app.post('/api/overview/live/say',async(req,res)=>{
-    requireRestaurant(req);
-    const {text,language}=z.object({text:z.string().trim().min(1).max(2500),language:z.string().max(12)}).parse(req.body);
-    if(!speechLanguages.has(language)) throw httpError(422,'Spoken playback is unavailable in this language.');
-    res.json({audio:await readAloud(text,language)});
+    const previous=previousId && await store.overviewReply(shop.id,previousId);
+    const answer=await overviewAnswer(store,understand,shop.id,question,{start,end:date},undefined,{
+      shop,uid:req.uid,previousLanguage:previous?.answer?.language,previousFacts:(previous?.answer?.facts || []).map(({key,start,end})=>({key,start,end})),
+    });
+    const {insertedId}=await store.recordOverview(req.uid,shop.id,question,answer);
+    res.json({...answer,voiceId:insertedId});
   });
   app.post('/api/overview/ask',upload.single('audio'),async(req,res)=>{
     const shop=requireRestaurant(req);
@@ -30,7 +27,7 @@ export function registerOverview(app,{store,requireRestaurant,upload,speech,unde
     const days=Number(z.enum(['1','7','14','30']).parse(req.body.days));
     const start=new Date(Date.parse(end+'T00:00:00Z')-(days-1)*86400000).toISOString().slice(0,10);
     const transcript=await speech(req.file);
-    const answer=await overviewAnswer(store,understand,shop.id,transcript,{start,end});
+    const answer=await overviewAnswer(store,understand,shop.id,transcript,{start,end},undefined,{shop,uid:req.uid});
     const {insertedId}=await store.recordOverview(req.uid,shop.id,transcript,answer);
     res.json({transcript,...answer,voiceId:speechLanguages.has(answer.language) && answer.text.length<=2500 ? insertedId : null});
   });
