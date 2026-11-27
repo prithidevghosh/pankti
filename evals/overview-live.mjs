@@ -42,7 +42,9 @@ try{
   await post('/bills',{request:randomUUID(),basket:[{item:menu[0].id,quantity:3}]});
   await page.goto(origin);await page.getByRole('button',{name:'Start conversation'}).click();
   const state=page.locator('.conversation-state');
-  await state.filter({hasText:/^Listening$/}).waitFor({timeout:35000});
+  await state.filter({hasText:/^Speaking$/}).waitFor({timeout:35000});
+  assert.match(await page.locator('.conversation-reply').innerText(),/Pankti/);
+  // Start the owner's first question during the opening greeting.
   let firstDay;
   for(const [index,wav] of wavs.entries()) {
     const reported=page.waitForResponse(r=>r.url().endsWith('/live/report'),{timeout:30000});

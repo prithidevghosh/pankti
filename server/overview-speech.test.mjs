@@ -61,3 +61,27 @@ test('a mixed off-topic request cannot use an attached identity or ledger metric
   assert.deepEqual(answer.facts,[]);
   assert.equal(answer.text,scopeReply('en-IN'));
 });
+
+test('ambiguous menu references ask for a portion and never guess another shop’s item',async()=>{
+  const {menuAction}=await import('./services/overview-operations.mjs');
+  const menu=[{id:'small',name:'Tea',variant:'Small'},{id:'large',name:'Tea',variant:'Large'}];
+  const store={menuFor:async shop=>{assert.equal(shop,'local');return menu;},
+    setAvailability:()=>assert.fail('ambiguous item changed')};
+  for(const [target,prior] of [['Tea',[]],[null,['small','large']],[null,['foreign']]]){
+    const reply=await menuAction(store,null,'local','enable it',{kind:'enable',target},prior,'en-IN');
+    assert.match(reply.text,/Which menu item/);
+    assert.ok(!reply.menuChanged);
+  }
+});
+
+test('the greeting uses the device language and shares only fixed spoken copy',async()=>{
+  const {greetingFor}=await import('./services/overview-greeting.mjs');
+  const played=[];
+  const greeting=greetingFor(async(text,lang)=>{played.push(lang);return 'wave';});
+  const [first,second]=await Promise.all([greeting('bn-IN'),greeting('bn-IN')]);
+  assert.equal(first.audio,'wave');
+  assert.equal(first.text,second.text);assert.match(first.text,/পংক্তি/);
+  assert.deepEqual(played,['bn-IN']);
+  assert.equal((await greeting('ur-IN')).audio,undefined);
+  assert.match((await greeting('en-US')).text,/I’m Pankti/);
+});
