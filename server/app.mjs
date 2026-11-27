@@ -1,3 +1,4 @@
+import { basketSchema } from './schemas.mjs';
 import { registerBillsRoutes } from './routes/bills.mjs';
 import { registerVendorsRoutes } from './routes/vendors.mjs';
 import { interpretRecording } from './services/voice.mjs';
@@ -112,9 +113,24 @@ export async function createApp({
       throw httpError(404, 'Menu item not found.');
     res.json({ menu: await store.menuFor(restaurant.id) });
   });
+  app.get('/api/phrases', async (req, res) =>
+    res.json({ phrases: await store.phrasesFor(requireRestaurant(req).id) }),
+  );
+  const phraseBody = z.object({ name: shortText, lines: basketSchema.refine((lines) => lines.length > 0) });
+  async function savePhrase(req, res) {
+    const { name, lines } = phraseBody.parse(req.body);
+    res.json({ phrases: await store.savePhrase(requireRestaurant(req).id, req.params.id, name, lines) });
+  }
+  app.post('/api/phrases', savePhrase);
+  app.put('/api/phrases/:id', savePhrase);
+  app.delete('/api/phrases/:id', async (req, res) =>
+    res.json({ phrases: await store.forgetPhrase(requireRestaurant(req).id, req.params.id) }),
+  );
   registerVendorsRoutes(app, { store, requireRestaurant });
   app.post('/api/voice/:task', upload.single('audio'), async (req, res) => {
-    const task = z.enum(['onboarding', 'menu', 'order', 'vendor', 'vendorEdit']).parse(req.params.task);
+    const task = z
+      .enum(['onboarding', 'menu', 'order', 'phrase', 'vendor', 'vendorEdit'])
+      .parse(req.params.task);
     if (!req.file?.size) throw httpError(400, 'Record a voice note first.');
     if (!/^(audio\/|video\/mp4$)/.test(req.file.mimetype))
       throw httpError(400, 'This recording format is unavailable.');

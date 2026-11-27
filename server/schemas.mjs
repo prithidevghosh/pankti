@@ -10,7 +10,11 @@ export const entrySchema = z
   })
   .strict();
 export const lineSchema = z
-  .object({ item: z.uuid(), quantity: z.number().multipleOf(0.25).min(0.25).max(99) })
+  .object({
+    item: z.uuid(),
+    note: z.string().trim().max(400).optional(),
+    quantity: z.number().multipleOf(0.25).min(0.25).max(99),
+  })
   .strict();
 export const basketSchema = z
   .array(lineSchema)

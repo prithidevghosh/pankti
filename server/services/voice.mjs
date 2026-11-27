@@ -1,10 +1,11 @@
+import { paymentDraft } from '../payment.mjs';
 import { z } from 'zod';
 import { entrySchema, basketSchema, vendorCorrection, vendorEntries } from '../schemas.mjs';
 import { httpError } from '../errors.mjs';
 
 export async function interpretRecording({ store, speech, understand }, task, file, supplied, restaurant) {
   const context = {};
-  if (['order', 'vendor'].includes(task) && supplied.clarificationReply) {
+  if (['order', 'vendor', 'phrase', 'menu'].includes(task) && supplied.clarificationReply) {
     context.clarificationReply = z
       .object({ previous: z.string().max(3000), question: z.string().max(600) })
       .parse(supplied.clarificationReply);
@@ -33,7 +34,15 @@ export async function interpretRecording({ store, speech, understand }, task, fi
         variant,
       }));
       context.basket = basketSchema.parse(supplied.basket ?? []);
-      keyterms = [...new Set(context.menu.map((item) => item.name))];
+      if (task === 'order') context.phrases = await store.phrasesFor(restaurant.id);
+      if (task === 'phrase' && supplied.previous)
+        context.previous = z
+          .object({ name: z.string().max(96).nullable(), lines: basketSchema })
+          .parse(supplied.previous);
+      keyterms = [
+        ...(context.phrases || []).map((p) => p.name),
+        ...new Set(context.menu.map((item) => item.name)),
+      ];
     }
   } else {
     context.previous = z
@@ -58,8 +67,32 @@ export async function interpretRecording({ store, speech, understand }, task, fi
         result.edit = { id: entry.id, revision: context.revision, details: vendorCorrection.parse(change) };
     }
   }
-  if (task === 'order' && result.lines.some((line) => !context.menu.some((item) => item.id === line.item))) {
+  if (
+    ['order', 'phrase'].includes(task) &&
+    result.lines.some((line) => !context.menu.some((item) => item.id === line.item))
+  ) {
     throw httpError(422, 'One of those items could not be matched to the menu. Try the full dish name.');
+  }
+  if (task === 'order' && result.question && result.payment) {
+    result.payment = null;
+    result.lines = context.basket;
+    result.readyToBill = false;
+  }
+  if (task === 'order' && result.payment) {
+    const intent = z
+      .object({
+        number: z.number().int().positive(),
+        method: z.enum(['cash', 'upi']).nullable(),
+        due: z.number().int().nonnegative().nullable(),
+        received: z.number().int().nonnegative().nullable(),
+        additional: z.number().int().nonnegative().nullable(),
+      })
+      .parse(result.payment);
+    const bill = await store.billByNumber(restaurant.id, intent.number);
+    if (!bill) throw httpError(404, 'That bill number was not found in your restaurant.');
+    result.payment = { bill, ...paymentDraft(bill, intent) };
+    result.lines = context.basket;
+    result.readyToBill = false;
   }
   return { transcript, result };
 }

@@ -27,19 +27,63 @@ test('concurrent duplicate bills share one number and malformed documents are re
   );
 });
 
-test('photo imports skip matches across pages and concurrent uploads while protecting changed prices', async t => {
+test('photo imports skip matches across pages and concurrent uploads while protecting changed prices', async (t) => {
   const { name } = await testDatabase(t);
   const store = await openStore(name);
   t.after(() => store.close());
   const restaurant = await store.createRestaurant('owner', 'Kitchen', 'Pune');
-  const dish = { name:'Butter Naan', variant:'Full', category:'Breads', price:3500 };
-  const repeat = { ...dish, name:'BUTTER-NAN', category:' breads ' };
-  const results = await Promise.all([1,2].map(() => store.importMenu(restaurant.id,[dish,repeat])));
-  assert.equal(results.reduce((n,r)=>n+r.added,0),1);
-  assert.ok(results.some(r=>r.review[1].duplicate === 'Repeated on upload'));
-  assert.ok(results.some(r=>r.review[0].duplicate === 'Already on menu'));
-  const next = await store.importMenu(restaurant.id,[{...dish,price:4000},{...dish,variant:'Half',price:2000}]);
-  assert.equal(next.review[0].conflict,true);
-  assert.equal(next.added,1);
-  assert.equal(next.menu.find(row=>row.variant==='Full').price,3500);
+  const dish = { name: 'Butter Naan', variant: 'Full', category: 'Breads', price: 3500 };
+  const repeat = { ...dish, name: 'BUTTER-NAN', category: ' breads ' };
+  const results = await Promise.all([1, 2].map(() => store.importMenu(restaurant.id, [dish, repeat])));
+  assert.equal(
+    results.reduce((n, r) => n + r.added, 0),
+    1,
+  );
+  assert.ok(results.some((r) => r.review[1].duplicate === 'Repeated on upload'));
+  assert.ok(results.some((r) => r.review[0].duplicate === 'Already on menu'));
+  const next = await store.importMenu(restaurant.id, [
+    { ...dish, price: 4000 },
+    { ...dish, variant: 'Half', price: 2000 },
+  ]);
+  assert.equal(next.review[0].conflict, true);
+  assert.equal(next.added, 1);
+  assert.equal(next.menu.find((row) => row.variant === 'Full').price, 3500);
+});
+
+test('shop phrases, kitchen notes and partial payments stay scoped and retry safely', async (t) => {
+  const { name } = await testDatabase(t);
+  const store = await openStore(name);
+  t.after(() => store.close());
+  const r = await store.createRestaurant('a', 'A', 'Delhi'),
+    other = await store.createRestaurant('b', 'B', 'Delhi');
+  const [chole] = await store.saveMenu(r.id, [
+    { name: 'Chole', variant: '', category: 'Mains', price: 30000 },
+  ]);
+  const lines = [{ item: chole.id, quantity: 1, note: 'Less onion. Extra chilli on the side.' }];
+  const [phrase] = await store.savePhrase(r.id, null, 'Office set', lines);
+  assert.equal((await store.phrasesFor(other.id)).length, 0);
+  await assert.rejects(store.savePhrase(other.id, null, 'Office set', lines), { status: 422 });
+  await store.savePhrase(r.id, phrase.id, 'Lunch set', lines);
+  const bill = await store.createBill(r.id, randomUUID(), lines);
+  assert.equal((await store.billFor(r.id, bill.id)).lines[0].note, lines[0].note);
+  assert.equal(await store.billByNumber(other.id, bill.number), null);
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', dateStyle: 'short' }).format(
+    new Date(),
+  );
+  const part = { received: 10000, revision: 0 };
+  const settled = await Promise.all([1, 2].map(() => store.recordPayment(r.id, bill.id, 'cash', part)));
+  assert.ok(settled.every((b) => !b.paid && b.received === 10000 && b.movements.length === 1));
+  assert.equal((await store.analytics(r.id, day)).revenue, 10000);
+  await assert.rejects(store.recordPayment(r.id, bill.id, 'cash', { received: 20000, revision: 0 }), {
+    status: 409,
+  });
+  await assert.rejects(store.recordPayment(r.id, bill.id, 'cash', { received: 40000, revision: 1 }), {
+    status: 422,
+  });
+  const paid = await store.recordPayment(r.id, bill.id, 'upi', { received: 30000, revision: 1 });
+  assert.ok(paid.paid);
+  assert.equal((await store.analytics(r.id, day)).revenue, 30000);
+  await store.recordPayment(r.id, bill.id, 'upi', { received: 25000, revision: 2 });
+  assert.equal((await store.analytics(r.id, day)).revenue, 25000);
+  assert.deepEqual(await store.forgetPhrase(r.id, phrase.id), []);
 });

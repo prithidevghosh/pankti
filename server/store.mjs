@@ -1,3 +1,4 @@
+import { receivedOn } from './payment.mjs';
 import { reviewMenuImport } from '../shared/menu-import.mjs';
 import { randomUUID } from 'node:crypto';
 import { connect, increment } from './db/mongo.mjs';
@@ -56,12 +57,15 @@ export async function openStore(database) {
       return menuFor(restaurant);
     },
     async importMenu(restaurant, entries) {
-      const result = await transaction(async session => {
+      const result = await transaction(async (session) => {
         await increment(db, session, 'menu-import:' + restaurant);
         const current = await menu.find({ restaurant }, { session }).toArray();
         const review = reviewMenuImport(current, entries);
-        const added = entries.flatMap((entry, i) => review[i].duplicate || review[i].conflict ? [] :
-          [{ ...entry, restaurant, _id: randomUUID(), label_key: labelKey(entry) }]);
+        const added = entries.flatMap((entry, i) =>
+          review[i].duplicate || review[i].conflict
+            ? []
+            : [{ ...entry, restaurant, _id: randomUUID(), label_key: labelKey(entry) }],
+        );
         if (added.length) await menu.insertMany(added, { session });
         return { added: added.length, review };
       });
@@ -130,11 +134,11 @@ export async function openStore(database) {
           .toArray();
         const byId = new Map(items.map((item) => [item._id, item]));
         if (basket.some((line) => !byId.has(line.item))) return null;
-        const lines = basket.map(({ item, quantity }) => {
+        const lines = basket.map(({ item, quantity, note }) => {
           const { name, variant, price } = byId.get(item);
           if (prices && prices[item] !== price)
             throw httpError(409, 'A menu price changed. Refresh the ledger and review the bill total.');
-          return { item, quantity, name, variant, price };
+          return { item, quantity, name, variant, price, ...(note ? { note } : {}) };
         });
         const number = await increment(db, session, 'bill:' + restaurant);
         const doc = {
@@ -152,12 +156,60 @@ export async function openStore(database) {
         return view(doc);
       });
     },
-    async markPaid(restaurant, id, method) {
-      await bills.updateOne(
-        { restaurant, _id: id, paid: null },
-        { $set: { method, paid: new Date().toISOString() } },
-      );
-      return view(await bills.findOne({ restaurant, _id: id }));
+    async billByNumber(restaurant, number) {
+      return view(await bills.findOne({ restaurant, number }));
+    },
+    recordPayment(restaurant, id, method, change) {
+      return transaction(async (session) => {
+        const bill = await bills.findOne({ restaurant, _id: id }, { session });
+        if (!bill) return null;
+        const previous = receivedOn(bill);
+        const received = change?.received ?? bill.total;
+        if (received > bill.total) throw httpError(422, 'Payment exceeds the bill total.');
+        if (previous === received && (!received || method === bill.method)) return view(bill);
+        if (change ? change.revision !== (bill.paymentRevision ?? 0) : !!bill.paid)
+          throw httpError(409, 'This bill already has a different payment. Reopen it to review.');
+        const now = new Date().toISOString();
+        const movements =
+          bill.movements ?? (bill.paid ? [{ at: bill.paid, amount: bill.total, method: bill.method }] : []);
+        const next = {
+          received,
+          method: received ? method : null,
+          paid: received === bill.total ? bill.paid || now : null,
+          paymentRevision: (bill.paymentRevision ?? 0) + 1,
+          movements: [...movements, { at: now, amount: received - previous, method }],
+        };
+        await bills.updateOne({ _id: id, restaurant }, { $set: next }, { session });
+        return view({ ...bill, ...next });
+      });
+    },
+    markPaid(restaurant, id, method) {
+      return this.recordPayment(restaurant, id, method);
+    },
+    phrasesFor: (restaurant) =>
+      db.collection('phrases').find({ restaurant }).sort({ name: 1 }).map(view).toArray(),
+    async savePhrase(restaurant, id, name, lines) {
+      const ids = lines.map((row) => row.item);
+      if ((await menu.countDocuments({ restaurant, _id: { $in: ids } })) !== ids.length)
+        throw httpError(422, 'Choose dishes from your saved menu.');
+      const values = { name, key: normalize(name.trim()), lines };
+      try {
+        if (id) {
+          if (
+            !(await db.collection('phrases').updateOne({ restaurant, _id: id }, { $set: values }))
+              .matchedCount
+          )
+            throw httpError(404, 'Phrase no longer exists.');
+        } else await db.collection('phrases').insertOne({ _id: randomUUID(), restaurant, ...values });
+      } catch (e) {
+        if (e.code === 11000) throw httpError(409, 'This phrase already exists. Edit it instead.');
+        throw e;
+      }
+      return this.phrasesFor(restaurant);
+    },
+    async forgetPhrase(restaurant, id) {
+      await db.collection('phrases').deleteOne({ restaurant, _id: id });
+      return this.phrasesFor(restaurant);
     },
     async analytics(restaurant, date) {
       const from = Date.parse(date + 'T00:00:00+05:30');
@@ -171,12 +223,23 @@ export async function openStore(database) {
           .limit(100)
           .toArray();
         const hourly = Array(24).fill(0);
-        let revenue = 0,
+        let settledTotal = 0,
+          revenue = 0,
           paidCount = 0;
         const totals = new Map();
-        for await (const bill of bills.find({ restaurant, paid: range }, { session })) {
-          hourly[Math.floor((Date.parse(bill.paid) - from) / 3600000)] += bill.total;
-          revenue += bill.total;
+        for await (const bill of bills.find(
+          { restaurant, $or: [{ paid: range }, { 'movements.at': range }] },
+          { session },
+        )) {
+          for (const movement of bill.movements ?? [{ at: bill.paid, amount: bill.total }]) {
+            if (movement.at >= range.$gte && movement.at < range.$lt) {
+              hourly[Math.floor((Date.parse(movement.at) - from) / 3600000)] += movement.amount;
+              revenue += movement.amount;
+            }
+          }
+          if (!bill.paid || bill.paid < range.$gte || bill.paid >= range.$lt) continue;
+          settledTotal += bill.total;
+
           paidCount++;
           for (const line of bill.lines) {
             const key = JSON.stringify([line.item, line.name, line.variant]);
@@ -199,7 +262,7 @@ export async function openStore(database) {
           orders,
           paidCount,
           revenue,
-          average: paidCount ? Math.round(revenue / paidCount) : 0,
+          average: paidCount ? Math.round(settledTotal / paidCount) : 0,
           hourly,
           items,
           bills: recent.map(view),

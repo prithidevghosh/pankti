@@ -75,14 +75,36 @@ const collections = {
   phone_sessions: object({ _id: string, uid: string, expiresAt: { bsonType: 'date' } }),
   counters: object({ _id: string, value: integer }),
 };
+line.properties.note = { ...string, maxLength: 400 };
+Object.assign(collections.bills.properties, {
+  received: amount,
+  paymentRevision: amount,
+  movements: {
+    bsonType: 'array',
+    items: object({ at: string, amount: integer, method: { enum: ['cash', 'upi'] } }),
+  },
+});
+collections.phrases = object({
+  _id: string,
+  restaurant: string,
+  key: string,
+  name: string,
+  lines: {
+    bsonType: 'array',
+    minItems: 1,
+    items: object({ item: string, quantity: line.properties.quantity }),
+  },
+});
 const unique = { unique: true };
 const indexes = {
+  phrases: [[{ restaurant: 1, key: 1 }, unique]],
   restaurants: [[{ owner: 1 }, unique]],
   menu: [[{ restaurant: 1, label_key: 1 }, unique]],
   bills: [
     [{ restaurant: 1, number: 1 }, unique],
     [{ restaurant: 1, request: 1 }, unique],
     [{ restaurant: 1, paid: 1 }],
+    [{ restaurant: 1, 'movements.at': 1 }],
     [{ restaurant: 1, created: 1 }],
   ],
   vendor_events: [
@@ -102,8 +124,8 @@ const indexes = {
 export async function ensureSchema(db) {
   const history = db.collection('schema_versions');
   const latest = await history.find().sort({ _id: -1 }).limit(1).next();
-  if (latest?._id > 1) throw Error('This database requires a newer Pankti server.');
-  if (latest?._id === 1) return;
+  if (latest?._id > 2) throw Error('This database requires a newer Pankti server.');
+  if (latest?._id === 2) return;
   for (const [name, schema] of Object.entries(collections)) {
     try {
       await db.createCollection(name, { validator: { $jsonSchema: schema } });
@@ -114,4 +136,5 @@ export async function ensureSchema(db) {
     for (const [keys, options] of indexes[name] || []) await db.collection(name).createIndex(keys, options);
   }
   await history.updateOne({ _id: 1 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
+  await history.updateOne({ _id: 2 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
 }

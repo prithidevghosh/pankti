@@ -27,10 +27,14 @@ export function registerBillsRoutes(app, { store, requireRestaurant }) {
   app.post('/api/bills/:id/payment', async (req, res) => {
     const restaurant = requireRestaurant(req);
     const method = z.enum(['cash', 'upi']).parse(req.body?.method);
-    const bill = await store.markPaid(restaurant.id, req.params.id, method);
+    const change =
+      req.body.received === undefined
+        ? undefined
+        : z
+            .object({ received: z.number().int().nonnegative(), revision: z.number().int().nonnegative() })
+            .parse(req.body);
+    const bill = await store.recordPayment(restaurant.id, req.params.id, method, change);
     if (!bill) throw httpError(404, 'Bill not found.');
-    if (bill.method !== method)
-      throw httpError(409, 'A different payment method is already recorded for this bill.');
     res.json({ bill });
   });
   app.get('/api/analytics', async (req, res) => {
