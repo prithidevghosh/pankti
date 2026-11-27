@@ -4,15 +4,14 @@ Pankti is the product name. The visual reference is the printed counter ledger a
 
 | Color | Usage |
 | --- | --- |
-| #38252F | Plum ink for website navigation |
-| #702D40 | Deep lac red for actions and the sales masthead |
-| #312821 | Warm carbon ink for text |
-| #F7F0E3 | Paper ground |
-| #D7CAB8 | Ledger rules |
-| #E3BF77 | Ochre on small details |
-| #BD553E | Vermilion edge on the selected tab |
+| #FAF9F5 | Pearl paper for the dashboard and sign-in |
+| #E7ECEC | Light grey-blue navigation |
+| #E2EBEF | Mist blue sales panel |
+| #475F72 | Slate blue controls and chart marks |
+| #303B40 | Dark ink for labels and amounts |
+| #EDDFD8 | Shell pink vendor balance panel |
 
-These screen colours interpret a historical pigment palette. The restrained navigation border takes its cue from the narrow red border of an Aurangabad Ragamala folio. The full-colour prints retain their own palettes. [Met collection](https://www.metmuseum.org/art/collection/search/662718) · [Pigment analysis of the Dispersed Bhagavata Purana](https://www.nature.com/articles/s40494-026-02491-x)
+Keep broad surfaces pale and give the prints the strongest colour on each page. Use dark slate for small controls and text, with a blue edge on the selected tab.
 
 Set the Pankti wordmark in Instrument Serif. Use Bricolage Grotesque for headings and system sans for functional text and numbers. Open with “Say the order. Get the bill.” and rotate the word order across Indian scripts on the website. Left-align descriptions and right-align monetary columns. Keep the main mic control centered on mobile, with order and check total stacked underneath.
 
@@ -58,7 +57,7 @@ Built-in ImageGen prompt:
 
 Keep the overview as a daily statement. Put paid sales with the date and the closing-time print. At the counter, place the recording control beside a running paper ticket, with the payable total beside the issue action. For vendors, bind the balance list to a print of market scales and keep the running journal below it. Treat Menu as a book, with a cobalt scanner cover and a cream price list. Set the actual payment code on a free-standing white merchant placard. On phones bring the controls and document into one reading column and keep the five destinations within reach.
 
-Use plum ink #38252f, paper #f7f0e3, ticket white #fffcf6, cobalt #182e72 and claret #643d48. Instrument Serif carries titles and totals. System sans carries editable details. Align names left and amounts right. Keep the quiet zone around each payment code clear. Use the two new built-in ImageGen prints once each.
+Use slate ink #303b40, paper #faf9f5, ticket white #fffcf6, cobalt #182e72 and claret #643d48. Instrument Serif carries titles and totals. System sans carries editable details. Align names left and amounts right. Keep the quiet zone around each payment code clear. Use the two new built-in ImageGen prints once each.
 
 The built-in ImageGen prompts for the supplier and menu prints are below.
 

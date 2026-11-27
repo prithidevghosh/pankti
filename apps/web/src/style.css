@@ -12,17 +12,17 @@
     -apple-system,
     sans-serif;
   font-synthesis: none;
-  --lac: #702d40;
-  --lac-deep: #482032;
-  --plum-ink: #38252f;
-  --ink: #312821;
-  --soft: #62564b;
-  --paper: #f7f0e3;
-  --clay-wash: #f1e2cc;
-  --indigo-wash: #e4e3eb;
-  --rule: #d7cab8;
+  --accent: #475f72;
+  --accent-pressed: #344d60;
+  --nav-paper: #e7ecec;
+  --ink: #303b40;
+  --soft: #586368;
+  --paper: #faf9f5;
+  --clay-wash: #f3ecdF;
+  --indigo-wash: #e7ecf1;
+  --rule: #d2d6d2;
   --ochre: #e3bf77;
-  --vermilion: #bd553e;
+  --selection-edge: #68859a;
   --display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
 }
 *,
@@ -84,7 +84,7 @@ p {
   letter-spacing: -0.028em;
 }
 .login {
-  --sheet: #f6efdf;
+  --sheet: var(--paper);
   --line: #b7af9b;
   min-height: 100svh;
   display: grid;
@@ -176,7 +176,7 @@ p {
 }
 .rotating-word {
   display: inline-grid;
-  color: var(--lac);
+  color: var(--accent);
 }
 .rotating-word > span {
   grid-area: 1 / 1;
@@ -213,8 +213,8 @@ p {
   border-bottom: 1px solid var(--line);
 }
 .entry-line:focus-within {
-  border-color: var(--lac);
-  box-shadow: inset 0 -1px var(--lac);
+  border-color: var(--accent);
+  box-shadow: inset 0 -1px var(--accent);
   background: #eee7d7;
 }
 .entry-line label {
@@ -248,13 +248,13 @@ p {
   align-items: center;
   justify-content: space-between;
   padding: 8px 15px 8px 20px;
-  background: var(--lac);
+  background: var(--accent);
   color: var(--sheet);
   border: 0;
   font-weight: 600;
 }
 .account-submit svg { color: var(--ochre); }
-.account-submit:hover:not(:disabled) { background: var(--lac-deep); }
+.account-submit:hover:not(:disabled) { background: var(--accent-pressed); }
 .login-form .feedback, .login-form .account-hint:not(:empty) { margin-top: 12px; }
 .plain {
   background: transparent;
@@ -320,7 +320,7 @@ p {
 }
 .sidebar a:hover,
 .signout:hover {
-  background: var(--lac-deep);
+  background: #d6dfe3;
 }
 .signout {
   width: 100%;
@@ -410,7 +410,7 @@ p {
   overflow-wrap: anywhere;
 }
 .metrics .revenue {
-  background: var(--lac);
+  background: var(--accent);
   color: white;
 }
 .revenue span {
@@ -454,7 +454,7 @@ p {
 }
 .bar {
   width: 100%;
-  background: var(--lac);
+  background: var(--accent);
 }
 .empty-bar {
   background: var(--rule);
@@ -529,7 +529,7 @@ th:last-child {
   border: 0;
   background: none;
   padding: 0;
-  color: var(--lac);
+  color: var(--accent);
   font-weight: 650;
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -543,7 +543,7 @@ th:last-child {
   padding: 22px;
 }
 .bill-dialog::backdrop {
-  background: #31282180;
+  background: #303b4080;
 }
 .bill-heading,
 .receipt-total,

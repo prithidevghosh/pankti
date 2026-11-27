@@ -1,5 +1,5 @@
 button.voice-control {
-  --voice-ink: var(--lac);
+  --voice-ink: var(--accent);
   --voice-edge: #bda7a0;
   display:inline-grid;grid-template-columns:42px minmax(0,auto);align-items:center;
   gap:12px;min-height:52px;max-width:100%;padding:4px 12px 4px 4px;
@@ -19,7 +19,7 @@ button.voice-control {
 .voice-caption {grid-area:1/2;display:grid;align-items:center;line-height:1.18}
 .voice-caption>* {grid-area:1/1}
 .voice-reserve {visibility:hidden}
-.voice-control:hover:not(:disabled) .voice-disc {background:var(--lac-deep)}
+.voice-control:hover:not(:disabled) .voice-disc {background:var(--accent-pressed)}
 .voice-control:focus-visible {outline:2px solid currentColor;outline-offset:4px}
 .voice-control:disabled[data-phase=idle] {opacity:.46;cursor:default}
 .voice-control[data-phase=recording] {--voice-ink:#783b30;--voice-edge:#b36a4d}
@@ -28,9 +28,5 @@ button.voice-control {
 .voice-time {grid-area:1/2;align-self:end;padding-bottom:4px;font-size:.7rem;line-height:1;font-weight:500;font-variant-numeric:tabular-nums}
 .voice-control:is([data-phase=reading],[data-phase=opening]) {cursor:progress}
 .voice-control:is([data-phase=reading],[data-phase=opening]) svg {animation:voice-turn 1.3s linear infinite}
-.menu-import .voice-control {color:#fff9e9;--voice-edge:#c8c4d3}
-.menu-import .voice-disc {background:#fff7e1;color:var(--ink)}
-.menu-import .voice-control:hover:not(:disabled) .voice-disc {background:#eadbb2}
-.menu-import .voice-control[data-phase=recording] .voice-disc {background:#ffdfc3;color:#783b30}
 @keyframes voice-turn {to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.voice-control .voice-disc svg{animation:none}.voice-disc::before{transition:none}}

@@ -3,7 +3,8 @@
   color: var(--ink);
 }
 .layout .sidebar {
-  background: var(--plum-ink);
+  color: var(--ink);
+  background: var(--nav-paper);
 }
 @media (min-width: 681px) {
   .layout .sidebar {
@@ -16,7 +17,7 @@
   }
 }
 .sidebar nav a[aria-current='page'] {
-  background: #f5ebd6;
+  background: #fcfcfa;
   color: var(--ink);
 }
 .layout .ledger {
@@ -153,7 +154,7 @@
 }
 .work-sheet .action,
 .bill-dialog .action {
-  background: var(--lac) !important;
+  background: var(--accent) !important;
   color: white;
   margin: 6px 6px 6px 0;
 }
@@ -196,7 +197,7 @@
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0;
-    background: var(--plum-ink);
+    background: var(--nav-paper);
     padding-bottom: env(safe-area-inset-bottom);
   }
   .layout .sidebar nav a {
@@ -252,11 +253,11 @@
 
 /* Daily statement */
 .ledger[data-view='overview'] .ledger-header {
-  background: var(--lac);
-  color: #fff7e9;
+  background: #e2ebef;
+  color: var(--ink);
 }
 .ledger[data-view='overview'] .restaurant-name span {
-  color: #ecdbd3;
+  color: var(--soft);
 }
 .ledger[data-view='overview'] .ledger-header h1 {
   font-size: clamp(2rem, 3vw, 3.5rem);
@@ -268,7 +269,7 @@
 }
 .daily-sales span {
   font-size: 0.85rem;
-  color: #f1dbcb;
+  color: var(--soft);
 }
 .daily-sales strong,
 .balance-cover strong {
@@ -339,7 +340,7 @@
 }
 .vendor-book {
   border: 0;
-  background: #f1e4d8;
+  background: #f7f0ea;
   padding: 0 0 12px;
 }
 .vendor-book > p,
@@ -349,8 +350,8 @@
 .balance-cover {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 38%;
-  background: #593845;
-  color: #fff7eb;
+  background: #eddfd8;
+  color: var(--ink);
 }
 .balance-cover div {
   padding: 18px;
@@ -449,8 +450,8 @@
 }
 .placard-name {
   padding: 14px 8px;
-  background: var(--lac);
-  color: white;
+  background: var(--indigo-wash);
+  color: var(--ink);
   font-size: 1.2rem;
   overflow-wrap: anywhere;
 }
@@ -567,8 +568,8 @@
   overflow:hidden;animation:sheet-arrive 220ms ease-out both;}
 .journal-layout[data-open="false"] .vendor-editor {animation:sheet-leave 180ms ease-in both;}
 .correction-header {display:flex;align-items:start;justify-content:space-between;gap:12px;
-  padding:18px 20px;background:#593845;color:#fff8ed;border-bottom:3px solid #bb9065;}
-.correction-header p,.correction-header span {font-size:.8rem;color:#f1dfd8;}
+  padding:18px 20px;background:#eddfd8;color:var(--ink);border-bottom:3px solid #bb9065;}
+.correction-header p,.correction-header span {font-size:.8rem;color:var(--soft);}
 .correction-header span {white-space:nowrap;}
 .correction-header h3 {overflow-wrap:anywhere;margin:5px 0 0;font:400 clamp(1.6rem,2.5vw,2.4rem)/1.2 'Pankti Wordmark',Georgia,serif;}
 .correction-body {padding:0 20px 16px;}
@@ -624,7 +625,7 @@
 }
 
 /* A painted edge marks the current folio in either navigation layout. */
-.sidebar nav a[aria-current='page'] {box-shadow:inset 3px 0 var(--vermilion)}
+.sidebar nav a[aria-current='page'] {box-shadow:inset 3px 0 var(--selection-edge)}
 @media (max-width:680px) {
-  .sidebar nav a[aria-current='page'] {box-shadow:inset 0 3px var(--vermilion)}
+  .sidebar nav a[aria-current='page'] {box-shadow:inset 0 3px var(--selection-edge)}
 }
