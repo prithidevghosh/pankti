@@ -9,11 +9,13 @@ let action;
 const { app, close } = await createApp({
   database: name,
   localPhoneOnly: true,
+  readInvoice: async () => ({ vendor:'Shyam Dairy', number:'834', lines:[{name:'Paneer',quantity:10,unit:'kg',ratePaise:32000}] }),
   speech: async (file) => {
     assert.ok(file.size);
     return 'browser test';
   },
   understand: async (task, t, ctx) => {
+    if (task === 'deliveryClaim') return {claims:[{line:0,name:'Paneer',ordered:{quantity:10,unit:'kg'},received:{quantity:9,unit:'kg'}}]};
     if (task === 'menu') return { entries: [], question: null, availability: [{ item: ctx.menu[0].id, available: false }] };
     if (task === 'phrase')
       return { name: 'Office set', lines: [{ item: ctx.menu[0].id, quantity: 1 }], question: action === 'clarify' ? 'Should this include the half portion?' : null };
@@ -132,6 +134,23 @@ try {
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '#0001', exact: true }).click();
     await dialog.getByText(/Partially paid.*150/).waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('link',{name:'Vendors',exact:true}).click();
+    const source = Buffer.from('89504e470d0a1a0a','hex');
+    await page.getByLabel('Vendor invoice',{exact:true}).setInputFiles({name:'dairy.png',mimeType:'image/png',buffer:source});
+    await speak('Speak delivery details');
+    const desk = page.getByRole('region',{name:'Check a delivery'});
+    await desk.getByText(/1 kg short of invoice/).waitFor();
+    await desk.getByText(/320.00 at the printed unit rate/).waitFor();
+    const original = await page.request.get(origin + await desk.getByRole('link',{name:'Original bill'}).getAttribute('href'));
+    assert.deepEqual(await original.body(),source);
+    assert.ok(await desk.evaluate(el=>el.scrollWidth<=el.clientWidth));
+    await page.reload();
+    await desk.getByText(/1 kg short of invoice/).waitFor();
+    if (process.env.PANKTI_QA_SCREENSHOTS) {
+      await desk.evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
+      await desk.screenshot({path:process.env.PANKTI_QA_SCREENSHOTS+'/delivery-'+width+'.png'});
+    }
     await page.close();
     console.log(width, 'voice controls, phrase, note, partial payment, persistence passed');
   }

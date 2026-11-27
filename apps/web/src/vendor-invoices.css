@@ -1,0 +1,26 @@
+.invoice-desk {grid-column:1/-1;border-block:1px solid var(--rule);padding:clamp(18px,3vw,36px) 0;color:var(--ink);}
+.invoice-heading,.delivery-meta,.delivery-meta>div,.invoice-upload,.delivery-meta a,.delivery-voice {display:flex;align-items:center;gap:10px;}
+.invoice-heading,.delivery-meta,.delivery-voice {justify-content:space-between;flex-wrap:wrap;gap:14px;}
+.invoice-heading h2 {font:400 clamp(2rem,3.5vw,3rem)/1.05 'Pankti Wordmark',Georgia,serif;}
+.invoice-heading p,.delivery-voice details {font-size:.9rem;color:var(--soft);margin-top:6px;}
+.invoice-upload {background:var(--ink);color:var(--paper);border:0;padding:10px 16px;min-height:44px;font-weight:600;}
+.delivery-paper {margin-top:20px;background:#fffbf3;padding:clamp(14px,3vw,32px);border-top:3px double var(--rule);}
+.delivery-meta {padding-bottom:14px;border-bottom:1px solid var(--rule);}
+.delivery-meta>div {min-width:0;overflow-wrap:anywhere;}
+.delivery-meta a {font-size:.85rem;text-underline-offset:3px;}
+.delivery-voice {margin:16px 0;}
+.delivery-voice details p {max-width:55ch;margin-top:8px;}
+.delivery-voice summary {cursor:pointer;}
+.invoice-select {display:grid;gap:4px;font-size:.8rem;margin-top:14px;}
+.invoice-select select {max-width:100%;padding:9px;background:var(--paper);color:var(--ink);border:1px solid var(--rule);}
+.delivery-lines {margin:0;padding:0;list-style:none;}
+.delivery-lines li {padding:16px 0;border-top:1px solid var(--rule);display:grid;grid-template-columns:minmax(110px,1fr) 2fr;gap:8px 20px;}
+.delivery-lines h3 {font:600 1rem/1.4 var(--display);margin:0;overflow-wrap:anywhere;}
+.delivery-lines dl {margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(68px,1fr));gap:8px;}
+.delivery-lines dd {margin:3px 0 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+.delivery-lines dt,.delivery-finding small {color:var(--soft);font-size:.78rem;}
+.delivery-finding {grid-column:1/-1;font-size:.88rem;}
+.delivery-finding small {display:block;margin-top:3px;}
+.delivery-lines li[data-state=difference] .delivery-finding {color:#884322;font-weight:600;}
+.invoice-message {margin:12px 0;font-size:.9rem;}
+@media(max-width:680px){.delivery-lines li {grid-template-columns:1fr;}.invoice-heading {align-items:flex-start;}.delivery-lines dl{gap:8px 4px;}}

@@ -4,6 +4,7 @@ import { reviewMenuImport } from '../../../shared/menu-import.mjs';
 import { MenuPages, editableDish, menuEntry, needsPrice } from './MenuPages.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Pencil } from 'lucide-react';
+import { VendorInvoices } from './VendorInvoices.jsx';
 import { VendorEditor } from './VendorEditor.jsx';
 import { TicketEditor } from './TicketEditor.jsx';
 import { Voice } from './Voice.jsx';
@@ -303,6 +304,7 @@ export function Vendors({ revision }) {
         )}
         <Feedback message={op.message} />
       </section>
+      <VendorInvoices />
       <section className="work-sheet vendor-book">
         <div className="balance-cover">
           <div>
