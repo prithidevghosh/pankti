@@ -59,3 +59,5 @@ The workspace returns the authenticated owner's profile alongside the restaurant
 Restaurant settings use `gstBps` (basis points, default 0). When issuing a bill the server sums the rounded line amounts, rounds GST once to the nearest paise, and saves `subtotal`, `gstBps`, `gstAmount`, and the tax-inclusive `total` together. Older bills without tax fields retain their original totals.
 
 Menu items may have a `soldOutDay` (YYYY-MM-DD in Asia/Kolkata). Only a match with the current business date disables ordering. Restocking clears the field. Manual and voice changes use the same restaurant-scoped transaction, and bill creation rechecks availability.
+
+Supplier invoices are stored in `vendor_invoices`, scoped by restaurant, with the source attachment, extracted rows, and latest spoken delivery check. Re-uploading the same bytes reopens the invoice. Each check records its transcript and compares ordered, received and billed measurements; a revision check protects simultaneous reviews. Checking a delivery does not post a purchase or change vendor balances.

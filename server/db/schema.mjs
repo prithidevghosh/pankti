@@ -150,34 +150,44 @@ async function installCoreCollections(db) {
 export async function ensureSchema(db) {
   const history = db.collection('schema_versions');
   const latest = await history.find().sort({ _id: -1 }).limit(1).next();
-  if (latest?._id > 4) throw Error('This database requires a newer Pankti server.');
-  if (latest?._id === 4) return;
-  if (latest && latest._id >= 2) {
-    for (const name of ['restaurants', 'bills']) {
-      try {
-        await db.command({ collMod: name, validator: { $jsonSchema: collections[name] } });
-      } catch (error) {
-        // Older validators allow these optional fields on Atlas tiers without collMod.
-        if (error.code !== 8000 || !error.message.includes('not allowed to do action [collMod]')) throw error;
+  if (latest?._id > 5) throw Error('This database requires a newer Pankti server.');
+  if (latest?._id === 5) return;
+  if (!latest || latest._id < 4) {
+    if (latest && latest._id >= 2) {
+      for (const name of ['restaurants', 'bills']) {
+        try {
+          await db.command({ collMod: name, validator: { $jsonSchema: collections[name] } });
+        } catch (error) {
+          // Older validators allow these optional fields on Atlas tiers without collMod.
+          if (error.code !== 8000 || !error.message.includes('not allowed to do action [collMod]')) throw error;
+        }
       }
     }
+    if (!latest || latest._id < 2) await installCoreCollections(db);
+    await history.updateOne({ _id: 1 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
+    await history.updateOne({ _id: 2 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
+    const transcript = object({
+      _id: string, owner: optionalText, restaurant: optionalText,
+      task: { enum: ['signup', 'onboarding', 'menu', 'order', 'phrase', 'vendor', 'vendorEdit'] },
+      transcript: string, createdAt: { bsonType: 'date' },
+    });
+    try {
+      await db.createCollection('voice_transcripts', { validator: { $jsonSchema: transcript } });
+    } catch (error) {
+      if (error.code !== 48) throw error;
+    }
+    const archive = db.collection('voice_transcripts');
+    await archive.createIndex({ owner: 1, createdAt: -1 });
+    await archive.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+    await history.updateOne({ _id: 3 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
+    await history.updateOne({ _id: 4 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
   }
-  if (!latest || latest._id < 2) await installCoreCollections(db);
-  await history.updateOne({ _id: 1 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
-  await history.updateOne({ _id: 2 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
-  const transcript = object({
-    _id: string, owner: optionalText, restaurant: optionalText,
-    task: { enum: ['signup', 'onboarding', 'menu', 'order', 'phrase', 'vendor', 'vendorEdit'] },
-    transcript: string, createdAt: { bsonType: 'date' },
-  });
   try {
-    await db.createCollection('voice_transcripts', { validator: { $jsonSchema: transcript } });
-  } catch (error) {
-    if (error.code !== 48) throw error;
-  }
-  const archive = db.collection('voice_transcripts');
-  await archive.createIndex({ owner: 1, createdAt: -1 });
-  await archive.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-  await history.updateOne({ _id: 3 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
-  await history.updateOne({ _id: 4 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
+    await db.createCollection('vendor_invoices', {validator: {$jsonSchema: object({
+      _id:string, restaurant:string, created:string, revision:amount, source:{bsonType:'binData'},
+      mime:string, vendor:optionalText, number:optionalText, lines:{bsonType:'array',minItems:1},
+    })}});
+  } catch (error) { if (error.code !== 48) throw error; }
+  await db.collection('vendor_invoices').createIndex({restaurant:1,created:-1});
+  await history.updateOne({_id:5},{$setOnInsert:{appliedAt:new Date()}},{upsert:true});
 }

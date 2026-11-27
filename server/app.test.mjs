@@ -200,3 +200,27 @@ test('vendor corrections preview and replay balances without double charging or 
   });
   assert.equal(replay.balances[0].due, 5000);
 });
+
+test('supplier invoice check compares a scoped upload and spoken delivery without posting a payable', async t => {
+  const call = await start(t, {
+    readInvoice: async () => ({vendor:'Dairy',number:'D12',lines:[{name:'Paneer',unit:'kg',quantity:10,ratePaise:32000}]}),
+    speech: async ()=>'दस किलो ऑर्डर किया था, नौ किलो आया',
+    understand: async ()=>({claims:[{line:0,name:'Paneer',ordered:{quantity:10,unit:'kg'},received:{quantity:9000,unit:'g'}}]}),
+  });
+  for (const token of ['owner','other']) await call('/workspace',{token,method:'POST',body:restaurant});
+  const photo=new FormData();photo.append('bill',new Blob(['sample'],{type:'image/png'}),'invoice.png');
+  const invoice=await call('/vendor-invoices',{method:'POST',body:photo});
+  assert.equal((await call('/vendor-invoices',{method:'POST',body:photo}))._id,invoice._id);
+  assert.equal((await call('/vendor-invoices',{token:'other'})).invoices.length,0);
+  const audio=new FormData();audio.append('audio',new Blob(['speech'],{type:'audio/webm'}),'delivery.webm');audio.append('revision','0');
+  const path='/vendor-invoices/'+invoice._id+'/check';
+  await call(path,{method:'POST',body:audio,token:'other',status:404});
+  const saved=await call(path,{method:'POST',body:audio});
+  assert.equal(saved.check.rows[0].shortage,1);
+  assert.equal(saved.check.rows[0].differencePaise,32000);
+  assert.equal(saved.check.rows[0].orderDifference,0);
+  assert.equal(saved.check.rows[0].status,'difference');
+  await call(path,{method:'POST',body:audio,status:409});
+  assert.deepEqual((await call('/vendor-invoices')).invoices[0].check,saved.check);
+  assert.equal((await call('/vendors')).events.length,0);
+});

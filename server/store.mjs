@@ -21,6 +21,8 @@ export async function openStore(database) {
   const restaurants = db.collection('restaurants');
   const menu = db.collection('menu');
   const bills = db.collection('bills');
+  const invoices = db.collection('vendor_invoices');
+  const invoice = (restaurant, id) => invoices.findOne({ restaurant, _id:id }, {projection:{source:0,restaurant:0}});
   const events = db.collection('vendor_events');
   const edits = db.collection('vendor_edits');
   const restaurantFor = async (owner) => view(await restaurants.findOne({ owner }));
@@ -101,6 +103,22 @@ export async function openStore(database) {
         if (error.code === 11000) throw httpError(409, 'A menu item already has this name and portion.');
         throw error;
       }
+    },
+    invoice,
+    listInvoices: restaurant => invoices.find({restaurant},{projection:{source:0,restaurant:0}}).sort({created:-1}).limit(30).toArray(),
+    invoiceSource: (restaurant,id) => invoices.findOne({restaurant,_id:id},{projection:{source:1,mime:1}}),
+    async addInvoice(restaurant,id,fields,file) {
+      try {
+        await invoices.insertOne({_id:id,restaurant,...fields,source:file.buffer,mime:file.mimetype,
+          revision:0,created:new Date().toISOString()});
+      } catch (error) { if (error.code !== 11000) throw error; }
+      return invoice(restaurant,id);
+    },
+    async saveInvoiceCheck(restaurant,id,revision,check) {
+      const saved = await invoices.findOneAndUpdate({restaurant,_id:id,revision},
+        {$set:{check},$inc:{revision:1}}, {returnDocument:'after',projection:{source:0,restaurant:0}});
+      if (!saved) throw httpError(409,'This check has changed. Reload before recording.');
+      return saved;
     },
     vendors: (restaurant) => transaction((session) => ledger(restaurant, session)),
     correctVendor(restaurant, correction, commit) {
