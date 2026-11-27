@@ -1,4 +1,5 @@
 import { openPhoneVerification } from './phone-email.js';
+import { ReportingPeriod } from './ReportingPeriod.jsx';
 import { Profile } from './Profile.jsx';
 import { Wordmark } from './Wordmark.jsx';
 import { BillReceipt } from './BillReceipt.jsx';
@@ -396,27 +397,12 @@ function Ledger({ onSignOut, onSessionExpired }) {
         </header>
         <div className="ledger-tools">
           <div className="ledger-controls">
-            {(view === 'overview' || view === 'orders') && <>
-              <select className="date-field" aria-label="Reporting period" value={period}
-                onChange={event => setPeriod(event.target.value)}>
-                <option value="7">Last 7 days</option>
-                <option value="14">Last 14 days</option>
-                <option value="30">Last 30 days</option>
-                <option value="custom">Custom date</option>
-              </select>
-              {period === 'custom' && <label className="date-field">
-                <input aria-label="Business date" type="date" value={customDate} max={today()}
-                  onChange={event => {
-                    if (event.target.value && event.target.validity.valid) setCustomDate(event.target.value);
-                  }} />
-              </label>}
-            </>}
-            <button
-              className="refresh"
-              aria-label="Refresh ledger"
-              onClick={() => setRevision((value) => value + 1)}
-            >
-              <RefreshCw size={17} />
+            {(view === 'overview' || view === 'orders') && <ReportingPeriod
+              key={view} period={period} date={customDate} max={today()} onPeriod={setPeriod} onDate={setCustomDate}
+            />}
+            <button className="ledger-refresh" aria-label="Refresh ledger" disabled={loading}
+              onClick={() => setRevision(value => value + 1)}>
+              <RefreshCw size={15} aria-hidden="true" /><span>Refresh</span>
             </button>
           </div>
         </div>

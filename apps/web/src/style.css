@@ -370,35 +370,6 @@ p {
   color: var(--soft);
   margin-left: 8px;
 }
-.ledger-controls {
-  display: flex;
-  gap: 8px;
-}
-.date-field,
-.refresh {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  border: 1px solid var(--rule);
-  background: #fff;
-  border-radius: 3px;
-  padding: 6px 11px;
-}
-.date-field input {
-  border: 0;
-  background: transparent;
-  width: auto;
-  min-width: 0;
-  font-size: 0.92rem;
-}
-.refresh {
-  justify-content: center;
-  width: 44px;
-}
-.refresh:hover {
-  background: var(--clay-wash);
-}
 .metrics {
   display: grid;
   grid-template-columns: 1.4fr repeat(3, 1fr);
