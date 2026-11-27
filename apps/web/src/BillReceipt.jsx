@@ -68,6 +68,7 @@ export function BillReceipt({ openBill, restaurant, onPayment }) {
                 ))}
               </tbody>
             </table>
+            {bill.orderNote && <p className="kitchen-note"><strong>Kitchen note</strong> · {bill.orderNote}</p>}
             {bill.gstBps > 0 && <div className="receipt-tax">
               <div><span>Subtotal</span><span>{asRupees(bill.subtotal)}</span></div>
               <div><span>GST ({bill.gstBps / 100}%)</span><span>{asRupees(bill.gstAmount)}</span></div>

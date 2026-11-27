@@ -421,6 +421,7 @@ function Counter({
   const [tab, setTab] = useState<'order' | 'menu' | 'setup' | 'vendors'>('order');
   const [setup, setSetup] = useState<{ name: string | null; city: string | null }>();
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [orderNote, setOrderNote] = useState<string | null>(null);
   const [basket, setBasket] = useState<Line[]>([]);
   const [bill, setBill] = useState<Bill | null>(null);
   const [qr, setQr] = useState<Qr | null>(null);
@@ -497,11 +498,12 @@ function Counter({
       setQuestion(response.result.question || '');
     } else {
       const response = await client.voice('order', uri, {
-        basket,
+        basket, orderNote,
         clarificationReply: question ? { previous: text, question } : undefined,
       });
       requestId.current = undefined;
       setBasket(response.result.lines);
+      setOrderNote(response.result.orderNote ?? null);
       setText(response.transcript);
       setQuestion(response.result.question || '');
       setReady(response.result.readyToBill && !response.result.question);
@@ -565,7 +567,7 @@ function Counter({
           requestId.current ??= randomUUID();
           try {
             const prices = Object.fromEntries(draftLines.map((line) => [line.id, line.price]));
-            setBill((await api(token, onSessionExpired).bill(requestId.current, basket, prices, restaurant?.gstBps ?? 0)).bill);
+            setBill((await api(token, onSessionExpired).bill(requestId.current, basket, prices, restaurant?.gstBps ?? 0, orderNote)).bill);
           } catch (e) {
             if ((e as { status?: number }).status === 409) {
               const current = await api(token, onSessionExpired).workspace();
@@ -580,6 +582,7 @@ function Counter({
           setReady(false);
           requestId.current = undefined;
           setBasket([]);
+          setOrderNote(null);
         })
       }
     />
@@ -674,6 +677,7 @@ function Counter({
               </Text>
               <View style={styles.ticket}>
                 <Text style={styles.billAmount}>{formatMoney(bill.total)}</Text>
+                {!!bill.orderNote && <Text>Kitchen note · {bill.orderNote}</Text>}
                 {!!bill.gstBps && <Text>Includes GST ({bill.gstBps / 100}%) · {formatMoney(bill.gstAmount ?? 0)}</Text>}
                 {bill.lines.map((line) => (
                   <View key={line.item} style={styles.row}>
@@ -777,6 +781,7 @@ function Counter({
               {task === 'order' && draftLines.length > 0 && (
                 <View style={styles.ticket}>
                   <Text style={styles.sectionTitle}>{ready ? 'Confirm the bill' : 'Current order'}</Text>
+                  {!!orderNote && <Text>Kitchen note · {orderNote}</Text>}
                   {draftLines.map((line) => (
                     <View key={line.id} style={styles.row}>
                       <Text style={styles.rowName}>
@@ -791,6 +796,7 @@ function Counter({
                         style={styles.remove}
                         disabled={saving || voiceBusy}
                         onPress={() => {
+                          if (basket.length === 1) setOrderNote(null);
                           setBasket((old) => old.filter((x) => x.item !== line.id));
                           requestId.current = undefined;
                           setReady(false);

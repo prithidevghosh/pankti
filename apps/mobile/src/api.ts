@@ -3,7 +3,7 @@ const origin = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://10
 export type Restaurant = { id: string; name: string; city: string; gstBps?: number; qr: string | null; payee: string | null };
 export type Entry = { name: string; variant: string; category: string; price: number };
 export type Item = Entry & { id: string };
-export type Line = { item: string; quantity: number };
+export type Line = { item: string; quantity: number; note?: string };
 export type Bill = {
   id: string;
   number: number;
@@ -11,6 +11,7 @@ export type Bill = {
   total: number;
   gstBps?: number;
   gstAmount?: number;
+  orderNote?: string;
   paid: string | null;
   method: 'cash' | 'upi' | null;
   lines: (Line & Pick<Entry, 'name' | 'variant' | 'price'>)[];
@@ -36,7 +37,7 @@ export type Results = {
     edit?: { id: number; revision: string; details: VendorFields };
   };
   vendorEdit: VendorFields & { question: string | null };
-  order: { lines: Line[]; question: string | null; readyToBill: boolean };
+  order: { lines: Line[]; orderNote?: string | null; question: string | null; readyToBill: boolean };
 };
 export const formatMoney = (paise: number) =>
   new Intl.NumberFormat('en-IN', {
@@ -128,8 +129,8 @@ export function api(token: string, onSessionExpired: () => void) {
       return call<Qr>('/qr/preview', 'POST', form);
     },
     saveQr: (uri: string) => call<{ restaurant: Restaurant }>('/qr', 'PUT', { uri }),
-    bill: (request: string, basket: Line[], prices: Record<string, number>, gstBps: number) =>
-      call<{ bill: Bill }>('/bills', 'POST', { request, basket, prices, gstBps }),
+    bill: (request: string, basket: Line[], prices: Record<string, number>, gstBps: number, orderNote?: string | null) =>
+      call<{ bill: Bill }>('/bills', 'POST', { request, basket, prices, gstBps, orderNote }),
     payment: (id: string, method: 'cash' | 'upi') =>
       call<{ bill: Bill }>('/bills/' + id + '/payment', 'POST', { method }),
   };

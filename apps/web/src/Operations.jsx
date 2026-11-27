@@ -4,6 +4,7 @@ import { MenuPages, editableDish, menuEntry, needsPrice } from './MenuPages.jsx'
 import React, { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Pencil } from 'lucide-react';
 import { VendorEditor } from './VendorEditor.jsx';
+import { TicketEditor } from './TicketEditor.jsx';
 import { Voice } from './Voice.jsx';
 import { SpecialPhrases } from './SpecialPhrases.jsx';
 import { request, asRupees } from './api.js';
@@ -44,12 +45,31 @@ export function Orders({ menu, gstBps, onBill }) {
   const [question, setQuestion] = useState('');
   const key = useRef(crypto.randomUUID());
   const op = useOperation();
+  const [orderNote, setOrderNote] = useState(null);
+  const [editingDraft, setEditingDraft] = useState(false);
   const rows = basket.map((line) => ({ ...menu.find((item) => item.id === line.item), ...line }));
   const totals = billTotals(rows, gstBps);
   function update(lines) {
     key.current = crypto.randomUUID();
     setBasket(lines);
+    if (!lines.length) setOrderNote(null);
   }
+  const voiceProps = {
+    task: 'order', disabled: op.busy || speechBusy || editingDraft,
+    context: { basket, orderNote, clarificationReply: question ? { previous: heard, question } : undefined },
+    onBusy: setSpeechBusy, onError: op.setMessage,
+    onResult: ({ transcript, result }) => {
+      if (result.payment) {
+        setQuestion('');
+        onBill(result.payment.bill, result.payment);
+        return;
+      }
+      setHeard(transcript);
+      setQuestion(result.question || '');
+      update(result.lines);
+      if (result.lines.length) setOrderNote(result.orderNote ?? null);
+    },
+  };
   return (
     <section className="work-sheet order-desk">
       <div className="record-side">
@@ -62,24 +82,7 @@ export function Orders({ menu, gstBps, onBill }) {
                 ? 'Speak the order. Review the items before issuing the bill.'
                 : 'Add your dishes and prices in Menu to start billing.'}
             </p>
-            <Voice
-              task="order"
-              label="Speak order"
-              disabled={op.busy}
-              context={{ basket, clarificationReply: question ? { previous: heard, question } : undefined }}
-              onBusy={setSpeechBusy}
-              onError={op.setMessage}
-              onResult={({ transcript, result }) => {
-                if (result.payment) {
-                  setQuestion('');
-                  onBill(result.payment.bill, result.payment);
-                  return;
-                }
-                setHeard(transcript);
-                setQuestion(result.question || '');
-                update(result.lines);
-              }}
-            />
+            <Voice {...voiceProps} label="Speak order" />
           </div>
         </div>
         {heard && <blockquote>{heard}</blockquote>}
@@ -89,7 +92,19 @@ export function Orders({ menu, gstBps, onBill }) {
       <section className="order-ticket">
         <h3>Current ticket</h3>
         {!rows.length && <p className="ticket-empty">Items appear here as you speak.</p>}
-        {rows.length > 0 && (
+        {rows.length > 0 && !editingDraft && <div className="ticket-revisions">
+          <Voice {...voiceProps} label="Revise by voice" />
+          <button type="button" className="plain" disabled={op.busy || speechBusy}
+            onClick={() => setEditingDraft(true)}><Pencil size={15} /> Edit ticket</button>
+        </div>}
+        {editingDraft && <TicketEditor basket={basket} menu={menu} orderNote={orderNote}
+          onCancel={() => setEditingDraft(false)} onSave={(lines, note) => {
+            update(lines);
+            setOrderNote(lines.length ? note || null : null);
+            setQuestion('');
+            setEditingDraft(false);
+          }} />}
+        {rows.length > 0 && !editingDraft && (
           <>
             <ul className="work-lines">
               {rows.map((line) => (
@@ -110,6 +125,7 @@ export function Orders({ menu, gstBps, onBill }) {
                 </li>
               ))}
             </ul>
+            {orderNote && <p className="kitchen-note"><strong>Kitchen note</strong> · {orderNote}</p>}
             {gstBps > 0 && <p>GST ({gstBps / 100}%) · {asRupees(totals.gstAmount)}</p>}
             <button
               className="action"
@@ -118,7 +134,7 @@ export function Orders({ menu, gstBps, onBill }) {
                 op.run(async () => {
                   const prices = Object.fromEntries(rows.map((row) => [row.item, row.price]));
                   const { bill } = await request('/bills', {
-                    body: { request: key.current, basket, prices, gstBps },
+                    body: { request: key.current, basket, prices, gstBps, orderNote },
                   });
                   update([]);
                   setHeard('');
@@ -131,7 +147,7 @@ export function Orders({ menu, gstBps, onBill }) {
             </button>
           </>
         )}
-        {(heard || basket.length > 0) && (
+        {!editingDraft && (heard || basket.length > 0) && (
           <button
             className="plain"
             disabled={op.busy || speechBusy}

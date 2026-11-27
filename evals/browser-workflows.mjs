@@ -16,6 +16,11 @@ const { app, close } = await createApp({
   understand: async (task, t, ctx) => {
     if (task === 'phrase')
       return { name: 'Office set', lines: [{ item: ctx.menu[0].id, quantity: 1 }], question: action === 'clarify' ? 'Should this include the half portion?' : null };
+    if (action === 'revise') {
+      assert.equal(ctx.basket[0].quantity, 1);
+      assert.equal(ctx.orderNote, 'Extra onion on the side');
+      return { lines: [{ ...ctx.basket[0], quantity: 3 }], orderNote: ctx.orderNote, question: null };
+    }
     if (action === 'pay')
       return {
         lines: [],
@@ -23,6 +28,7 @@ const { app, close } = await createApp({
       };
     assert.equal(ctx.phrases[0].name, 'Office set');
     return {
+      orderNote: 'Extra onion on the side',
       lines: [{ ...ctx.phrases[0].lines[0], note: 'Less onion; chilli on the side.' }],
       question: null,
     };
@@ -89,9 +95,16 @@ try {
     await page.getByRole('link', { name: 'Orders' }).click();
     await speak('Speak order');
     await page.getByText('Less onion; chilli on the side.').waitFor();
-    await page.getByRole('button', { name: /Create bill/ }).click();
+    action = 'revise';
+    await speak('Revise by voice');
+    await page.getByRole('button', { name: /Create bill.*945/ }).waitFor();
+    await page.getByRole('button', {name: 'Edit ticket'}).click();
+    await page.getByLabel('Quantity for Chole').fill('1');
+    await page.getByRole('button', {name: 'Apply changes'}).click();
+    await page.getByRole('button', { name: /Create bill.*315/ }).click();
     const dialog = page.locator('dialog');
     await dialog.getByText('Less onion; chilli on the side.').waitFor();
+    await dialog.getByText(/Extra onion on the side/).waitFor();
     await dialog.getByText('GST (5%)', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Close bill' }).click();
     action = 'pay';
