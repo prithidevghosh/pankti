@@ -1,0 +1,32 @@
+import { chromium } from 'playwright-core';
+import express from 'express';
+import assert from 'node:assert/strict';
+import { createApp } from '../server/app.mjs';
+import { testDatabase } from '../server/test-database.mjs';
+const cleanup=[];
+const {name}=await testDatabase({after:f=>cleanup.push(f)});
+const {app,close}=await createApp({database:name,localPhoneOnly:true,phoneEmailClientId:'fixture',receiptLookup:async()=>'+919000000012'});
+app.use(express.static('apps/web/dist'));
+const server=app.listen(0,'127.0.0.1');
+await new Promise(resolve=>server.once('listening',resolve));
+const origin='http://localhost:'+server.address().port;
+const b=await chromium.launch({channel:'chrome'});
+try{
+ const ctx=await b.newContext();
+ await ctx.route('https://auth.phone.email/log-in?**',route=>route.fulfill({contentType:'text/html',body:'<label>Test code<input></label><button>Complete</button>'}));
+ const page=await ctx.newPage();await page.goto(origin);
+ await page.getByRole('button',{name:'Create an account'}).click();
+ await page.getByLabel('Your name').fill('Mira');
+ await page.getByLabel('Business name').fill('Corner Kitchen');
+ await page.getByLabel('Mobile number').fill('9000000012');
+ const handle=page.waitForEvent('popup');
+ await page.locator('.account-submit').click();
+ const popup=await handle;await popup.waitForLoadState();
+ await popup.evaluate(target=>window.opener.postMessage({flag_phone:'1',user_json_url:'https://user.phone.email/user_browser.json'},target),origin);
+ await page.getByRole('link',{name:'Profile',exact:true}).waitFor();
+ await page.reload();await page.getByRole('link',{name:'Profile',exact:true}).click();
+ await page.locator('.account-details').getByText('Mira').waitFor();
+ const cookie=(await ctx.cookies()).find(c=>c.name==='pankti_session');
+ assert.ok(cookie.httpOnly && cookie.expires*1000>Date.now()+29.99*86400000);
+ console.log('Browser popup callback, signup, cookie persistence, and profile passed.');
+} finally {await b.close();await new Promise(r=>server.close(r));await close();for(const f of cleanup)await f();}

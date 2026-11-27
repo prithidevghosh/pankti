@@ -1,3 +1,4 @@
+import { openPhoneVerification } from './phone-email.js';
 import { Profile } from './Profile.jsx';
 import { Wordmark } from './Wordmark.jsx';
 import { BillReceipt } from './BillReceipt.jsx';
@@ -66,8 +67,11 @@ function CounterHeadline() {
   );
 }
 
-function Login({ onSignIn, mode }) {
+function Login({ onSignIn, mode, phoneEmailClientId }) {
   const localPhoneOnly = mode === 'phone-only';
+  const allowSignup = localPhoneOnly || Boolean(phoneEmailClientId);
+  const verification = useRef(null);
+  useEffect(() => () => verification.current?.abort(), []);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [businessName, setBusinessName] = useState('');
@@ -88,7 +92,13 @@ function Login({ onSignIn, mode }) {
     setBusy(true);
     setError('');
     try {
-      if (localPhoneOnly) {
+      if (phoneEmailClientId) {
+        verification.current = new AbortController();
+        const receipt = await openPhoneVerification(phoneEmailClientId, phone, verification.current.signal);
+        await request('/auth/phone-email', { body: { receipt, phone: '+91' + phone,
+          ...(creating && { signup: { name, businessName, signupNotes: signupNotes.current } }) } });
+        await onSignIn();
+      } else if (localPhoneOnly) {
         const form = { phone: '+91' + phone, client: 'web' };
         const body = creating ? { ...form, name, businessName, signupNotes: signupNotes.current } : form;
         await request(creating ? '/auth/signup' : '/auth/login', { body });
@@ -109,7 +119,7 @@ function Login({ onSignIn, mode }) {
   }
 
   const status = busy
-    ? localPhoneOnly ? (creating ? 'Creating your account…' : 'Signing in…')
+    ? phoneEmailClientId ? 'Complete verification in the open window.' : localPhoneOnly ? (creating ? 'Creating your account…' : 'Signing in…')
       : confirmation ? 'Checking your code…' : 'Sending your code…'
     : voiceStatus;
   const locked = busy || voiceBusy;
@@ -141,7 +151,7 @@ function Login({ onSignIn, mode }) {
       <section className="login-content">
         <header className="account-header">
           <Wordmark />
-          {localPhoneOnly && (
+          {allowSignup && (
             <button className="account-switch" type="button" disabled={locked}
               onClick={() => {
                 setCreating(!creating);
@@ -193,7 +203,7 @@ function Login({ onSignIn, mode }) {
             </div>
             {confirmation && <p className="account-hint" role="status">Code sent to +91 {phone}.</p>}
             <button className="account-submit" disabled={locked} aria-busy={busy}>
-              {creating ? 'Create account' : localPhoneOnly ? 'Sign in' : confirmation ? 'Verify code' : 'Send code'}
+              {creating ? 'Create account' : allowSignup ? 'Sign in' : confirmation ? 'Verify code' : 'Send code'}
               <ArrowRight size={22} aria-hidden="true" />
             </button>
             {confirmation && (
@@ -517,18 +527,36 @@ function App() {
   const [signedIn, setSignedIn] = useState(undefined);
   const [sessionError, setSessionError] = useState('');
   const [mode, setMode] = useState('otp');
+  const [phoneEmailClientId, setPhoneEmailClientId] = useState('');
+  const [expiresAt, setExpiresAt] = useState(null);
   const sessionExpired = React.useCallback(() => setSignedIn(false), []);
   const loadSession = React.useCallback(async () => {
     setSessionError('');
     try {
       const session = await request('/auth/session');
       setMode(session.mode);
+      setPhoneEmailClientId(session.phoneEmailClientId || '');
+      setExpiresAt(session.expiresAt || null);
       setSignedIn(session.authenticated);
     } catch (error) {
       setSessionError(error.message);
     }
   }, []);
   useEffect(() => { void loadSession(); }, [loadSession]);
+
+  useEffect(() => {
+    if (!signedIn || !expiresAt) return;
+    let timer;
+    function checkExpiry() {
+      clearTimeout(timer);
+      const remaining = Date.parse(expiresAt) - Date.now();
+      if (remaining <= 0) setSignedIn(false);
+      else timer = setTimeout(checkExpiry, Math.min(remaining, 2147483647));
+    }
+    checkExpiry();
+    document.addEventListener('visibilitychange', checkExpiry);
+    return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', checkExpiry); };
+  }, [signedIn, expiresAt]);
 
   async function signOut() {
     await request('/auth/logout', { body: {} });
@@ -549,7 +577,7 @@ function App() {
     );
   return signedIn
     ? <Ledger onSignOut={signOut} onSessionExpired={sessionExpired} />
-    : <Login mode={mode} onSignIn={() => setSignedIn(true)} />;
+    : <Login mode={mode} phoneEmailClientId={phoneEmailClientId} onSignIn={loadSession} />;
 }
 
 createRoot(document.getElementById('root')).render(<App />);
