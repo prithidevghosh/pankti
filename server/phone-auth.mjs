@@ -121,7 +121,7 @@ export function registerPhoneAuth(app, store, { otp, requireLegacyImport, localP
     app.post('/api/auth/phone-email', async (req, res) => {
       const { phone, receipt, signup } = exchange.parse(req.body);
       const verified = await receiptLookup(receipt, phoneEmailClientId);
-      if (verified !== phone) throw httpError(401, 'Verify the same number you entered on Pankti.');
+      if (verified !== phone) throw httpError(401, `Phone.Email returned a different number. Try again, choose “Use Other Phone”, and verify the number ending in ${phone.slice(-4)}.`);
       const token = await store.redeemPhoneEmail(verified, receipt, signup, requireLegacyImport);
       respondWithSession(req, res, token, 'web');
     });

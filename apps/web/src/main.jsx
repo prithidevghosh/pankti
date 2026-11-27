@@ -119,7 +119,7 @@ function Login({ onSignIn, mode, phoneEmailClientId }) {
   }
 
   const status = busy
-    ? phoneEmailClientId ? 'Complete verification in the open window.' : localPhoneOnly ? (creating ? 'Creating your account…' : 'Signing in…')
+    ? phoneEmailClientId ? `In the verification window, use the number ending in ${phone.slice(-4)}. If another number appears, choose “Use Other Phone”.` : localPhoneOnly ? (creating ? 'Creating your account…' : 'Signing in…')
       : confirmation ? 'Checking your code…' : 'Sending your code…'
     : voiceStatus;
   const locked = busy || voiceBusy;
