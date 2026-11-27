@@ -48,34 +48,73 @@ export function SpecialPhrases({ menu }) {
       setBusy(false);
     }
   }
+  const microphone = (
+    <Voice
+      task="phrase"
+      label={question ? 'Answer by voice' : draft ? 'Revise phrase' : 'Teach a phrase'}
+      disabled={!menu.length || busy}
+      onBusy={setRecording}
+      onError={setMessage}
+      context={{
+        previous: draft ? { name: draft.name, lines: draft.lines } : undefined,
+        clarificationReply: question,
+      }}
+      onResult={({ result, transcript }) => {
+        setDraft({ ...result, id: draft?.id });
+        setQuestion(result.question ? { question: result.question, previous: transcript } : null);
+        setMessage('');
+      }}
+    />
+  );
   return (
     <section className="menu-folio phrase-book">
       <header className="folio-heading">
         <div>
           <h2>Special phrases</h2>
-          <p>
-            {menu.length
-              ? 'Teach the counter what your shorthand means.'
-              : 'Add dishes to your menu to teach a phrase.'}
-          </p>
+          <p>{menu.length ? 'Save a spoken shortcut for dishes often ordered together.' : 'Add dishes to your menu to teach a phrase.'}</p>
         </div>
-        <Voice
-          task="phrase"
-          label={draft ? 'Revise phrase' : 'Teach a phrase'}
-          disabled={!menu.length || busy}
-          onBusy={setRecording}
-          onError={setMessage}
-          context={{
-            previous: draft ? { name: draft.name, lines: draft.lines } : undefined,
-            clarificationReply: question,
-          }}
-          onResult={({ result, transcript }) => {
-            setDraft({ ...result, id: draft?.id });
-            setQuestion(result.question ? { question: result.question, previous: transcript } : null);
-            setMessage('');
-          }}
-        />
+        {!draft && microphone}
       </header>
+      {draft && (
+        <div className="phrase-review">
+          <div className="phrase-spread">
+            <label className="phrase-name">
+              Phrase name
+              <input value={draft.name || ''} maxLength={96}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+            </label>
+            <div>
+              <h3>Included dishes</h3>
+              <ul className="phrase-dishes">
+                {draft.lines.map((line, index) => {
+                  const item = menu.find(i => i.id === line.item);
+                  return (
+                    <li key={index}>
+                      <div>
+                        <strong>{item?.name || 'Unavailable dish'}</strong>
+                        {item?.variant && item.variant !== item.name && <small>{item.variant}</small>}
+                        {line.note && <small>{line.note}</small>}
+                      </div>
+                      <span aria-label={`Quantity ${line.quantity}`}>× {line.quantity}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              {!draft.lines.length && <p>No dishes captured yet.</p>}
+            </div>
+          </div>
+          <div className="phrase-voice" data-question={!!question}>
+            {question && <p role="status">{question.question}</p>}
+            {microphone}
+          </div>
+          <footer className="phrase-actions">
+            <button className="phrase-save" disabled={busy || recording || !draft.name?.trim() || !draft.lines.length || !!question}
+              onClick={() => save()}>Save phrase</button>
+            <button disabled={busy || recording} onClick={() => { setDraft(null); setQuestion(null); }}>Cancel</button>
+            {draft.id && <button className="phrase-forget" disabled={busy || recording} onClick={() => save(true)}>Forget phrase</button>}
+          </footer>
+        </div>
+      )}
       {phrases.map((p) => (
         <button
           className="phrase-line"
@@ -91,40 +130,6 @@ export function SpecialPhrases({ menu }) {
           <span>{describe(p.lines)}</span>
         </button>
       ))}
-      {draft && (
-        <div className="phrase-review">
-          <label>
-            Phrase name
-            <input
-              value={draft.name || ''}
-              maxLength={96}
-              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-            />
-          </label>
-          <p>{describe(draft.lines)}</p>
-          {question && <p role="status">{question.question}</p>}
-          <button
-            disabled={busy || recording || !draft.name?.trim() || !draft.lines.length || !!question}
-            onClick={() => save()}
-          >
-            Save phrase
-          </button>
-          <button
-            disabled={busy || recording}
-            onClick={() => {
-              setDraft(null);
-              setQuestion(null);
-            }}
-          >
-            Cancel
-          </button>
-          {draft.id && (
-            <button disabled={busy || recording} onClick={() => save(true)}>
-              Forget phrase
-            </button>
-          )}
-        </div>
-      )}
       {message && <p role="status">{message}</p>}
     </section>
   );
