@@ -1,3 +1,4 @@
+import { Wordmark } from './Wordmark.jsx';
 import { BillReceipt } from './BillReceipt.jsx';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -17,10 +18,6 @@ const time = new Intl.DateTimeFormat('en-IN', {
   minute: '2-digit',
 });
 const today = () => day.format(new Date());
-
-function Wordmark() {
-  return <span className="wordmark">Pankti</span>;
-}
 
 const orderWords = [
   ['en', 'order.'],

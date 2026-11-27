@@ -77,23 +77,26 @@ p {
   line-height: 1.55;
 }
 .wordmark {
-  display: inline-block;
-  font-family: 'Pankti Wordmark', Georgia, serif;
-  font-size: 2.65rem;
-  line-height: 1;
+  display: inline-grid;
+  align-items: center;
+  justify-items: start;
+  align-self: center;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: 2.65rem/1.16 'Pankti Wordmark', Georgia, serif;
   letter-spacing: -0.028em;
 }
-/* A slow calligraphic lean keeps the name legible throughout the cycle. */
-@media (prefers-reduced-motion: no-preference) {
-  .wordmark {
-    transform-origin: left 85%;
-    animation: wordmark-lean 7s ease-in-out infinite;
-  }
-  @keyframes wordmark-lean {
-    0%, 100% { transform: skewX(0deg) scaleX(1); }
-    50% { transform: skewX(-7deg) scaleX(1.035); }
-  }
+.sidebar .wordmark { align-self: flex-start; }
+.wordmark span { grid-area: 1/1; white-space: nowrap; }
+.wordmark .wordmark-measure { visibility: hidden; }
+.wordmark [lang]:not([lang=en]) {
+  font-family: 'Noto Serif Devanagari', 'Noto Serif Bengali', 'Noto Serif Gujarati', serif;
+  font-size: .84em;
+  letter-spacing: normal;
 }
+.wordmark:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .login {
   --sheet: var(--paper);
   --line: #b7af9b;
