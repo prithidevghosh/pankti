@@ -8,7 +8,7 @@ const localPhoneOnly = process.env.APP_AUTH_MODE === 'phone-only';
 const { app, close } = await createApp({
   localPhoneOnly,
   otp: twilioVerify(),
-  phoneEmailClientId: process.env.PHONE_EMAIL_CLIENT_ID?.trim(),
+  phoneEmailClientId: localPhoneOnly ? undefined : process.env.PHONE_EMAIL_CLIENT_ID?.trim(),
   requireLegacyImport: Boolean(process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID),
 });
 const web = resolve('apps/web/dist');

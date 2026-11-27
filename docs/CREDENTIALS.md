@@ -8,7 +8,7 @@ Sign in to [Sarvam](https://indus.sarvam.ai/) and generate one API key. Set `SAR
 
 ## Phone.Email on the website
 
-Set `PHONE_EMAIL_CLIENT_ID` in the server environment and restart the API. The current sign-in button opens Phone.Email’s hosted OTP screen. The backend fetches and redeems the provider receipt once, then issues a fixed 30-day browser session. The existing database selection stays in effect. Configuring Phone.Email disables passwordless, number-only entry points on that backend for all clients. Android integration with Phone.Email is deferred.
+To enable Phone.Email later, select `APP_AUTH_MODE=otp`, configure the intended workspace database, set `PHONE_EMAIL_CLIENT_ID`, and restart the API. In `phone-only` mode, saved provider credentials are ignored. The current sign-in button opens Phone.Email’s hosted OTP screen. The backend fetches and redeems the provider receipt once, then issues a fixed 30-day browser session. The existing database selection stays in effect. Enabling Phone.Email disables passwordless, number-only entry points on that backend for all clients. Android integration with Phone.Email is deferred.
 
 ## Twilio Verify
 
