@@ -19,6 +19,7 @@ app.use(async (req, res, next) => {
   api ??= createApp({
     database: databaseName(localPhoneOnly),
     otp: twilioVerify(),
+    phoneEmailClientId: process.env.PHONE_EMAIL_CLIENT_ID?.trim(),
     localPhoneOnly,
     allowHostedPhoneOnly: localPhoneOnly,
   }).then(({ app: application }) => {

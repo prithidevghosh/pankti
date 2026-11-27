@@ -34,6 +34,25 @@ export function openPhoneStore(db, transaction) {
     );
     return token;
   }
+  async function activeSession(token, requireVerified) {
+    if (!/^[A-Za-z0-9_-]{43}$/.test(token || '')) return null;
+    const active = await sessions.findOne({ _id: hash(token), ...(requireVerified && { verified: true }), expiresAt: { $gt: new Date() } });
+    return active && (await accounts.findOne({ uid: active.uid, disabled: false })) ? active : null;
+  }
+  async function createOwner({ phone, name, businessName, signupNotes = [] }, session) {
+    const uid = randomUUID();
+    await accounts.insertOne({ _id: phone, uid, disabled: false }, { session });
+    await profiles.insertOne({ _id: uid, name }, { session });
+    await restaurants.insertOne(
+      { _id: randomUUID(), owner: uid, name: businessName, city: '', qr: null, payee: null },
+      { session },
+    );
+    if (signupNotes.length) await db.collection('voice_transcripts').updateMany(
+      { _id: { $in: signupNotes }, owner: null, task: 'signup', expiresAt: { $gt: new Date() } },
+      { $set: { owner: uid }, $unset: { expiresAt: '' } }, { session },
+    );
+    return uid;
+  }
   return {
     async accountDetails(uid) {
       const [account, profile] = await Promise.all([accounts.findOne({ uid }), profiles.findOne({ _id: uid })]);
@@ -54,22 +73,29 @@ export function openPhoneStore(db, transaction) {
     async registerLocalPhone({ phone, name, businessName, signupNotes = [] }) {
       try {
         return await transaction(async (session) => {
-          const uid = randomUUID();
-          await accounts.insertOne({ _id: phone, uid, disabled: false }, { session });
-          await profiles.insertOne({ _id: uid, name }, { session });
-          await restaurants.insertOne(
-            { _id: randomUUID(), owner: uid, name: businessName, city: '', qr: null, payee: null },
-            { session },
-          );
-          if (signupNotes.length) await db.collection('voice_transcripts').updateMany(
-            { _id: { $in: signupNotes }, owner: null, task: 'signup', expiresAt: { $gt: new Date() } },
-            { $set: { owner: uid }, $unset: { expiresAt: '' } }, { session },
-          );
+          const uid = await createOwner({ phone, name, businessName, signupNotes }, session);
           return issue(uid, session);
         });
       } catch (error) {
         if (error.code === 11000)
           throw httpError(409, 'That number already has an account. Sign in with it.');
+        throw error;
+      }
+    },
+    async redeemPhoneEmail(phone, receipt, signup, requireImport) {
+      try {
+        return await transaction(async session => {
+          await assertImported(session, requireImport);
+          const account = await accounts.findOne({ _id: phone }, { session });
+          if (account?.disabled) throw httpError(403, 'This account is disabled.');
+          if (!account && !signup) throw httpError(404, 'Create an account with this number first.');
+          if (account && signup) throw httpError(409, 'This number already has an account. Sign in instead.');
+          await config.insertOne({ _id: 'phone-email:' + hash(receipt) }, { session });
+          const uid = account?.uid || await createOwner({ phone, ...signup }, session);
+          return issue(uid, session, true);
+        });
+      } catch (error) {
+        if (error.code === 11000) throw httpError(409, 'Verification already used. Start a new sign-in.');
         throw error;
       }
     },
@@ -162,10 +188,9 @@ export function openPhoneStore(db, transaction) {
       });
     },
     async phoneSessionOwner(token, requireVerified) {
-      if (!/^[A-Za-z0-9_-]{43}$/.test(token || '')) return null;
-      const active = await sessions.findOne({ _id: hash(token), ...(requireVerified && { verified: true }), expiresAt: { $gt: new Date() } });
-      return active && (await accounts.findOne({ uid: active.uid, disabled: false })) ? active.uid : null;
+      return (await activeSession(token, requireVerified))?.uid ?? null;
     },
+    activeSession,
     revokePhoneSession: (token) => token && sessions.deleteOne({ _id: hash(token) }),
   };
 }

@@ -6,6 +6,10 @@ Copy the repository root `.env.example` to `.env`. The API and the web dev serve
 
 Sign in to [Sarvam](https://indus.sarvam.ai/) and generate one API key. Set `SARVAM_API_KEY` in the root `.env`. The app sends audio through our backend. This key can also support menu OCR when photo import is added.
 
+## Phone.Email on the website
+
+Set `PHONE_EMAIL_CLIENT_ID` in the server environment and restart the API. The current sign-in button opens Phone.Email’s hosted OTP screen. The backend fetches and redeems the provider receipt once, then issues a fixed 30-day browser session. The existing database selection stays in effect. Configuring Phone.Email disables passwordless, number-only entry points on that backend for all clients. Android integration with Phone.Email is deferred.
+
 ## Twilio Verify
 
 1. Sign up for Twilio using a +91 phone number. Under **Verify → Overview → Try out Verify**, copy the service SID from the example API request. On an upgraded account, you can also create a service in **Verify → Services** and set it to six-digit codes. Put the SID starting with `VA` in `TWILIO_VERIFY_SERVICE_SID`. [Verify trial](https://www.twilio.com/docs/usage/trials/try-out-verify) · [Verify Services](https://console.twilio.com/us1/develop/verify/services)

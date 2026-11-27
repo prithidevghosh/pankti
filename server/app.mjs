@@ -30,6 +30,8 @@ export async function createApp({
   verify,
   database,
   otp,
+  phoneEmailClientId,
+  receiptLookup,
   requireLegacyImport = false,
   localPhoneOnly = false,
   allowHostedPhoneOnly = false,
@@ -52,6 +54,8 @@ export async function createApp({
         throw httpError(403, 'This workspace is available only on this device.');
       next();
     });
+  }
+  if (localPhoneOnly || phoneEmailClientId) {
     app.post('/api/signup/voice', upload.single('audio'), async (req, res) => {
       if (!req.file?.size) throw httpError(400, 'Record your signup details first.');
       if (!/^(audio\/|video\/mp4$)/.test(req.file.mimetype))
@@ -69,11 +73,12 @@ export async function createApp({
       });
     });
   }
-  registerPhoneAuth(app, store, { otp, requireLegacyImport, localPhoneOnly });
+  const allowUnverifiedLogin = localPhoneOnly && !phoneEmailClientId;
+  registerPhoneAuth(app, store, { otp, phoneEmailClientId, receiptLookup, requireLegacyImport: requireLegacyImport && !localPhoneOnly, localPhoneOnly: allowUnverifiedLogin });
   app.use('/api', async (req, _res, next) => {
     const token = requestToken(req);
     if (!token) throw httpError(401, 'Sign in to continue.');
-    req.uid = verify ? await verify(token) : await store.phoneSessionOwner(token, !localPhoneOnly);
+    req.uid = verify ? await verify(token) : await store.phoneSessionOwner(token, !allowUnverifiedLogin);
     if (!req.uid) throw httpError(401, 'Your session expired. Sign in again.');
     req.restaurant = await store.restaurantFor(req.uid);
     next();

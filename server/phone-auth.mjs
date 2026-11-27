@@ -1,3 +1,4 @@
+import { phoneEmailNumber } from './phone-email.mjs';
 import { z } from 'zod';
 import { httpError } from './errors.mjs';
 import { shortText } from './schemas.mjs';
@@ -85,7 +86,7 @@ function respondWithSession(req, res, token, client) {
   res.json({ authenticated: true });
 }
 
-export function registerPhoneAuth(app, store, { otp, requireLegacyImport, localPhoneOnly }) {
+export function registerPhoneAuth(app, store, { otp, requireLegacyImport, localPhoneOnly, phoneEmailClientId, receiptLookup = phoneEmailNumber }) {
   app.use('/api/auth', (req, _res, next) => {
     if (
       req.method === 'POST' &&
@@ -112,6 +113,19 @@ export function registerPhoneAuth(app, store, { otp, requireLegacyImport, localP
     });
   }
 
+  if (phoneEmailClientId) {
+    const exchange = phoneBody.extend({
+      receipt: z.string().max(2048),
+      signup: z.object({ name: shortText, businessName: shortText, signupNotes: z.array(z.uuid()).max(100).optional() }).optional(),
+    }).strict();
+    app.post('/api/auth/phone-email', async (req, res) => {
+      const { phone, receipt, signup } = exchange.parse(req.body);
+      const verified = await receiptLookup(receipt, phoneEmailClientId);
+      if (verified !== phone) throw httpError(401, 'Verify the same number you entered on Pankti.');
+      const token = await store.redeemPhoneEmail(verified, receipt, signup, requireLegacyImport);
+      respondWithSession(req, res, token, 'web');
+    });
+  }
   app.post('/api/auth/send', async (req, res) => {
     const { phone } = phoneBody.parse(req.body);
     const challenge = await store.reservePhoneChallenge(phone, req.ip, requireLegacyImport);
@@ -134,8 +148,11 @@ export function registerPhoneAuth(app, store, { otp, requireLegacyImport, localP
     respondWithSession(req, res, token, client);
   });
   app.get('/api/auth/session', async (req, res) => {
+    const session = await store.activeSession(requestToken(req), !localPhoneOnly);
     res.json({
-      authenticated: Boolean(await store.phoneSessionOwner(requestToken(req), !localPhoneOnly)),
+      authenticated: Boolean(session),
+      ...(session && { expiresAt: session.expiresAt }),
+      ...(phoneEmailClientId && { phoneEmailClientId }),
       mode: localPhoneOnly ? 'phone-only' : 'otp',
     });
   });
