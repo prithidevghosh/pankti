@@ -30,6 +30,7 @@ import {
   formatMoney,
   phoneAuth,
   type AuthMode,
+  type SupplierInvoice,
   type VendorEvent,
   type VendorFields,
   type VendorLedger,
@@ -957,6 +958,14 @@ function VendorCounter({
   const [entries, setEntries] = useState<VendorEntry[]>([]);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
+  const [invoiceId, setInvoiceId] = useState('');
+  const [checking, setChecking] = useState(false);
+  const invoice = invoices.find(i=>i._id===invoiceId);
+  function showInvoice(saved:SupplierInvoice) {
+    setInvoices(all=>[saved,...all.filter(i=>i._id!==saved._id)]);
+    setInvoiceId(saved._id);
+  }
   const [listening, setListening] = useState(false);
   const requestKey = useRef(randomUUID());
   const lock = useRef(false);
@@ -978,6 +987,12 @@ function VendorCounter({
   }
   useEffect(() => {
     let alive = true;
+    client.invoices().then(data=>{
+      if (alive) {
+        setInvoices(all=>[...all,...data.invoices.filter(i=>!all.some(old=>old._id===i._id))]);
+        setInvoiceId(id=>id || data.invoices[0]?._id || '');
+      }
+    }).catch(e=>{if(alive)setMessage(errorText(e));});
     client
       .vendors()
       .then((data) => {
@@ -1008,7 +1023,7 @@ function VendorCounter({
     amount: total,
     paid: status === 'Paid' ? total : status === 'Unpaid' ? 0 : Math.round(Number(paid) * 100),
   };
-  const locked = busy || listening;
+  const locked = busy || checking || listening;
   async function record(uri: string) {
     if (!ledger) return;
     if (selected) {
@@ -1058,7 +1073,7 @@ function VendorCounter({
       <Text style={styles.title}>{selected ? 'Edit entry' : 'Vendors'}</Text>
       {ledger && (
         <VoiceButton
-          disabled={busy}
+          disabled={busy || checking}
           onBusy={(v) => {
             setListening(v);
             onBusy(v);
@@ -1164,6 +1179,37 @@ function VendorCounter({
               <Button label="Discard" quiet disabled={locked} onPress={() => setEntries([])} />
             </View>
           )}
+          <View style={styles.receipt}>
+            <Text style={styles.sectionTitle}>Check a delivery</Text>
+            <Text style={styles.body}>Add a bill photo, then say what you ordered and what arrived.</Text>
+            <Button quiet label="Add vendor bill" disabled={locked || checking} onPress={()=>void run(async()=>{
+              const pick=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],quality:.9});
+              if (!pick.canceled) showInvoice(await client.addInvoice(pick.assets[0].uri,pick.assets[0].mimeType || 'image/jpeg'));
+            })}/>
+            {invoices.length>1 && invoices.map(i=><Button key={i._id} quiet disabled={locked || checking || i._id===invoiceId}
+              label={[i.vendor || 'Supplier invoice',i.number].filter(Boolean).join(' · ')} onPress={()=>setInvoiceId(i._id)}/>)}
+            {invoice && <>
+              <Text style={styles.voiceLabel}>{[invoice.vendor || 'Supplier invoice',invoice.number].filter(Boolean).join(' · ')}</Text>
+              <VoiceButton disabled={busy || listening} idleLabel={invoice.check?'Recheck delivery':'Speak delivery details'}
+                onBusy={v=>{setChecking(v);onBusy(v);}} onError={setMessage}
+                onRecording={async uri=>showInvoice(await client.checkInvoice(invoice,uri))}/>
+              {invoice.lines.map((line,i)=>{
+                const row=invoice.check?.rows[i];
+                return <View style={styles.ticket} key={i}>
+                  <Text style={styles.rowName}>{line.name}</Text>
+                  <Text style={styles.body}>Billed {line.quantity ?? '—'} {line.unit} {line.ratePaise!=null && '· '+formatMoney(line.ratePaise)+' per unit'}</Text>
+                  {row && <>
+                    <Text style={styles.body}>Ordered {row.ordered?.quantity ?? '—'} {row.ordered?.unit} · Received {row.received?.quantity ?? '—'} {row.received?.unit}</Text>
+                    {!!row.shortage && <Text>{Math.abs(row.shortage)} {line.unit} {row.shortage>0?'short of invoice':'more than billed'}{row.differencePaise!=null && ' · '+formatMoney(Math.abs(row.differencePaise))+' at unit rate'}</Text>}
+                    {!!row.orderDifference && <Text>Billed {Math.abs(row.orderDifference)} {line.unit} {row.orderDifference>0?'above':'below'} order</Text>}
+                    {row.status==='match' && <Text>Quantities match</Text>}
+                    {(row.shortage==null || row.orderDifference==null) && <Text>Check missing quantities or units</Text>}
+                  </>}
+                </View>;
+              })}
+              {invoice.check?.unmatched.map((c,i)=><Text key={i}>Couldn’t match {c.name} to the invoice</Text>)}
+            </>}
+          </View>
           {ledger && (
             <>
               <Text style={styles.sectionTitle}>Vendor balances</Text>

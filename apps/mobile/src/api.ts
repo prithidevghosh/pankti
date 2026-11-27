@@ -16,6 +16,15 @@ export type Bill = {
   method: 'cash' | 'upi' | null;
   lines: (Line & Pick<Entry, 'name' | 'variant' | 'price'>)[];
 };
+type InvoiceMeasure = { quantity:number; unit:string | null } | null;
+type InvoiceRow = {name:string; quantity:number|null; unit:string|null; ratePaise:number|null};
+export type SupplierInvoice = {
+  _id:string; vendor:string|null; number:string|null; revision:number; lines:InvoiceRow[];
+  check?: { transcript:string; unmatched:{name:string}[]; rows:(InvoiceRow & {
+    ordered:InvoiceMeasure; received:InvoiceMeasure; shortage:number|null; orderDifference:number|null;
+    differencePaise:number|null; status:string;
+  })[] };
+};
 export type VendorKind = 'order' | 'purchase' | 'payment' | 'balance';
 export type VendorFields = { vendor: string; note: string; amount: number; paid: number };
 export type VendorEntry = Omit<VendorFields, 'paid'> & { kind: VendorKind };
@@ -108,6 +117,18 @@ export function api(token: string, onSessionExpired: () => void) {
     workspace: () => call<Workspace>('/workspace'),
     setup: (name: string, city: string) =>
       call<{ restaurant: Restaurant }>('/workspace', 'POST', { name, city }),
+    invoices: () => call<{invoices:SupplierInvoice[]}>('/vendor-invoices'),
+    addInvoice(uri:string,type:string) {
+      const body = new FormData();
+      appendFile(body,'bill',{uri,type,name:'supplier-invoice'});
+      return call<SupplierInvoice>('/vendor-invoices','POST',body);
+    },
+    checkInvoice(invoice:SupplierInvoice,uri:string) {
+      const body = new FormData();
+      appendFile(body,'audio',{uri,name:'delivery.m4a',type:'audio/mp4'});
+      body.append('revision',String(invoice.revision));
+      return call<SupplierInvoice>('/vendor-invoices/'+invoice._id+'/check','POST',body);
+    },
     availability: (item: string, available: boolean) =>
       call<{ menu: Item[] }>('/menu/availability', 'PUT', [{ item, available }]),
     menu: (entries: Entry[]) => call<{ menu: Item[] }>('/menu', 'POST', entries),
