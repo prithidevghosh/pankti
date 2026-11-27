@@ -15,7 +15,7 @@ const { app, close } = await createApp({
   },
   understand: async (task, t, ctx) => {
     if (task === 'phrase')
-      return { name: 'Office set', lines: [{ item: ctx.menu[0].id, quantity: 1 }], question: null };
+      return { name: 'Office set', lines: [{ item: ctx.menu[0].id, quantity: 1 }], question: action === 'clarify' ? 'Should this include the half portion?' : null };
     if (action === 'pay')
       return {
         lines: [],
@@ -59,7 +59,14 @@ try {
       await finish.click();
     }
     await page.goto(origin + '/#menu');
+    action = 'clarify';
     await speak('Teach a phrase');
+    const review = page.locator('.phrase-review');
+    await review.getByText('Should this include the half portion?').waitFor();
+    assert.equal(await review.getByRole('button', { name: 'Save phrase' }).isEnabled(), false);
+    assert.ok(await review.evaluate(el => el.scrollWidth <= el.clientWidth));
+    action = 'order';
+    await speak('Answer by voice');
     await page.getByRole('button', { name: 'Save phrase' }).click();
     await page.getByText('Phrase saved.').waitFor();
     await page.getByRole('link', { name: 'Orders' }).click();
