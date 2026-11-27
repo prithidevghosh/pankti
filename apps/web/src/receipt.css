@@ -1,0 +1,39 @@
+dialog.bill-dialog {
+  width:min(540px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 32px);
+  margin:auto;padding:0;border:0;border-radius:5px;background:#fffaf0;color:#20362d;
+  box-shadow:0 16px 70px #15241e45;overscroll-behavior:contain;
+  --receipt-gutter:clamp(18px,4vw,32px);
+}
+dialog.bill-dialog::backdrop {background:#16261fc2}
+.receipt-bar {display:flex;align-items:center;justify-content:space-between;background:#fffaf0;padding:0 10px 0 var(--receipt-gutter);position:sticky;top:0;z-index:1}
+.receipt-bar h2 {margin:0;font-family:inherit;font-size:.91rem;font-weight:600;font-variant-numeric:tabular-nums}
+.receipt-bar button {display:grid;place-items:center;width:44px;height:44px;background:transparent;border:0;color:inherit;cursor:pointer}
+.bill-dialog button:focus-visible {outline:2px solid #a45c28;outline-offset:-4px}
+.receipt-mast {display:grid;grid-template-columns:minmax(0,1fr) 24%;background:#1e4136;color:#fff8e9}
+.receipt-mast>div {padding:22px var(--receipt-gutter);align-self:center}
+.receipt-mast h3 {margin:0;font:400 clamp(2rem,5vw,3.1rem)/1.02 'Pankti Wordmark',Georgia,serif;overflow-wrap:anywhere}
+.receipt-mast p {margin:10px 0 0;color:#ecebd7;font-size:.81rem}
+.receipt-mast img {width:100%;height:100%;min-height:0;object-fit:cover;object-position:60% center}
+.receipt-paper {padding:16px var(--receipt-gutter) 20px}
+.receipt-paper table {width:100%;min-width:0;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.receipt-paper th,.receipt-paper td {background:transparent;color:inherit;text-transform:none;letter-spacing:normal;text-align:left;border:none;padding:11px 0;vertical-align:top}
+.receipt-paper thead th {border-bottom:1px solid #aaa995;font-size:.78rem;font-weight:500;color:#535d50}
+.receipt-paper tbody th {font-weight:600;overflow-wrap:anywhere}
+.receipt-paper small {display:block;font-size:.78rem;font-weight:400;color:#596459;margin-top:3px}
+.receipt-paper :is(th,td):nth-child(2){width:12%;text-align:center;padding-inline:5px}
+.receipt-paper :is(th,td):last-child {text-align:right;white-space:nowrap}
+.receipt-sum {border-top:2px solid #284537;display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding-top:12px}
+.receipt-sum span,.receipt-payee figcaption {font:400 1.6rem/1.1 'Pankti Wordmark',Georgia,serif}
+.receipt-sum strong {font-size:clamp(1.6rem,5vw,2.15rem);letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.receipt-payment {padding:16px var(--receipt-gutter) 20px;border-top:1px dashed #a3a58d;background:#e9ecdf}
+.receipt-payment p {font-size:.9rem;margin:0 0 10px}
+.receipt-payment>div {display:flex;gap:10px}
+.receipt-payment button {flex:1;display:flex;justify-content:center;align-items:center;gap:8px;min-height:44px;border:1px solid #788c79;color:#1e4136;background:#fafbf1;font:inherit;font-weight:600;cursor:pointer;border-radius:3px}
+.receipt-payment button:hover {background:#dce7d7}
+.receipt-payment button:disabled {opacity:.6;cursor:wait}
+.receipt-payment .receipt-paid {display:flex;align-items:center;gap:8px;font-weight:600;margin:0}
+.receipt-payee {display:flex;align-items:center;gap:16px;margin:18px 0 0}
+.receipt-payee img {width:128px;height:128px;object-fit:contain;background:white;padding:6px}
+.receipt-payee figcaption {font-size:1.35rem;overflow-wrap:anywhere;min-width:0}
+.receipt-error,.receipt-loading {padding:10px var(--receipt-gutter)}
+@media(max-width:420px){.receipt-payment button{font-size:.85rem}.receipt-paper td,.receipt-paper tbody th{font-size:.91rem}}

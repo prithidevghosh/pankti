@@ -1,3 +1,4 @@
+import { BillReceipt } from './BillReceipt.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Banknote, BookOpen, Truck, ArrowRight, ArrowUpRight, ChartNoAxesColumn, LogOut, ReceiptText, RefreshCw, Utensils } from 'lucide-react';
@@ -477,46 +478,14 @@ function Ledger({ onSignOut, onSessionExpired }) {
           onClose={() => setOpenBill(null)}
           aria-labelledby="bill-title"
         >
-          <div className="bill-heading">
-            <h2 id="bill-title">
-              {openBill?.bill ? 'Bill #' + String(openBill.bill.number).padStart(4, '0') : 'Bill details'}
-            </h2>
-            <form method="dialog">
-              <button className="plain">Close</button>
-            </form>
-          </div>
-          {openBill?.error && <p className="feedback">{openBill.error}</p>}
-          {openBill?.bill ? (
-            <>
-              <ul className="receipt-lines">
-                {openBill.bill.lines.map((line) => (
-                  <li key={line.item}>
-                    <span>
-                      {line.quantity} × {line.name} {line.variant}
-                    </span>
-                    <strong>{asRupees(Math.round(line.price * line.quantity))}</strong>
-                  </li>
-                ))}
-              </ul>
-              <p className="receipt-total">
-                Total <strong>{asRupees(openBill.bill.total)}</strong>
-              </p>
-              {openBill.bill.paid ? <p>Payment recorded · {openBill.bill.method.toUpperCase()}</p> : <>
-                {restaurant?.qr && <img className="receipt-qr" src={restaurant.qr} alt="Scan to pay the store by UPI"/>}
-                <p>Record payment once received.</p>
-                {['cash','upi'].map(method => <button key={method} className="action" disabled={openBill.saving} onClick={async () => {
+          <BillReceipt openBill={openBill} restaurant={restaurant} onPayment={async method => {
                   const id = openBill.bill.id;
                   setOpenBill(b => ({...b,saving:true,error:null}));
                   try {
                     const {bill} = await request('/bills/'+id+'/payment',{body:{method}});
                     setOpenBill(b => b?.id === id ? {id,bill} : b); setRevision(v => v+1);
                   } catch(e) {setOpenBill(b => b?.id === id ? {...b,error:e.message,saving:false} : b);}
-                }}>Received · {method.toUpperCase()}</button>)}
-              </>}
-            </>
-          ) : (
-            openBill && !openBill.error && <p role="status">Loading bill…</p>
-          )}
+                }}/>
         </dialog>
       </main>
     </div>
