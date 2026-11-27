@@ -5,19 +5,24 @@
 }
 
 :root {
-  color: #1d2724;
-  background: #f5f5ed;
+  color: var(--ink);
+  background: var(--paper);
   font-family:
     system-ui,
     -apple-system,
     sans-serif;
   font-synthesis: none;
-  --ink: #1d2724;
-  --paper: #f5f5ed;
-  --rule: #d5dcd0;
-  --green: #234c40;
-  --soft: #566560;
-  --yellow: #f2d777;
+  --lac: #702d40;
+  --lac-deep: #482032;
+  --plum-ink: #38252f;
+  --ink: #312821;
+  --soft: #62564b;
+  --paper: #f7f0e3;
+  --clay-wash: #f1e2cc;
+  --indigo-wash: #e4e3eb;
+  --rule: #d7cab8;
+  --ochre: #e3bf77;
+  --vermilion: #bd553e;
   --display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
 }
 *,
@@ -85,7 +90,7 @@ p {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(410px, 1fr);
   background: var(--sheet);
-  color: #20382f;
+  color: var(--ink);
 }
 .login-visual {
   position: relative;
@@ -107,7 +112,7 @@ p {
   align-items: center;
   gap: 12px;
   padding: 9px 20px;
-  color: #20382f;
+  color: var(--ink);
   background: var(--sheet);
   font: 1.12rem 'Pankti Wordmark', Georgia, serif;
 }
@@ -171,7 +176,7 @@ p {
 }
 .rotating-word {
   display: inline-grid;
-  color: var(--green);
+  color: var(--lac);
 }
 .rotating-word > span {
   grid-area: 1 / 1;
@@ -197,7 +202,7 @@ p {
 }
 .account-intro {
   margin: 18px 0 32px;
-  color: #4d584d;
+  color: var(--soft);
   max-width: 37ch;
 }
 .entry-line {
@@ -208,8 +213,8 @@ p {
   border-bottom: 1px solid var(--line);
 }
 .entry-line:focus-within {
-  border-color: var(--green);
-  box-shadow: inset 0 -1px var(--green);
+  border-color: var(--lac);
+  box-shadow: inset 0 -1px var(--lac);
   background: #eee7d7;
 }
 .entry-line label {
@@ -243,13 +248,13 @@ p {
   align-items: center;
   justify-content: space-between;
   padding: 8px 15px 8px 20px;
-  background: #213e32;
+  background: var(--lac);
   color: var(--sheet);
   border: 0;
   font-weight: 600;
 }
-.account-submit svg { color: #f2c668; }
-.account-submit:hover:not(:disabled) { background: #152f24; }
+.account-submit svg { color: var(--ochre); }
+.account-submit:hover:not(:disabled) { background: var(--lac-deep); }
 .login-form .feedback, .login-form .account-hint:not(:empty) { margin-top: 12px; }
 .plain {
   background: transparent;
@@ -291,7 +296,7 @@ p {
 }
 .sidebar {
   background: var(--ink);
-  color: #f5f5ed;
+  color: var(--paper);
   padding: 32px 23px;
   display: flex;
   flex-direction: column;
@@ -315,7 +320,7 @@ p {
 }
 .sidebar a:hover,
 .signout:hover {
-  background: #2e3b36;
+  background: var(--lac-deep);
 }
 .signout {
   width: 100%;
@@ -377,7 +382,7 @@ p {
   width: 44px;
 }
 .refresh:hover {
-  background: #e6ebde;
+  background: var(--clay-wash);
 }
 .metrics {
   display: grid;
@@ -405,7 +410,7 @@ p {
   overflow-wrap: anywhere;
 }
 .metrics .revenue {
-  background: var(--green);
+  background: var(--lac);
   color: white;
 }
 .revenue span {
@@ -449,7 +454,7 @@ p {
 }
 .bar {
   width: 100%;
-  background: var(--green);
+  background: var(--lac);
 }
 .empty-bar {
   background: var(--rule);
@@ -524,7 +529,7 @@ th:last-child {
   border: 0;
   background: none;
   padding: 0;
-  color: var(--green);
+  color: var(--lac);
   font-weight: 650;
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -538,7 +543,7 @@ th:last-child {
   padding: 22px;
 }
 .bill-dialog::backdrop {
-  background: #1d272480;
+  background: #31282180;
 }
 .bill-heading,
 .receipt-total,

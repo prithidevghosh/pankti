@@ -1,9 +1,9 @@
 .layout {
-  background: #f7f1e4;
-  color: #243a30;
+  background: var(--paper);
+  color: var(--ink);
 }
 .layout .sidebar {
-  background: #203d31;
+  background: var(--plum-ink);
 }
 @media (min-width: 681px) {
   .layout .sidebar {
@@ -17,7 +17,7 @@
 }
 .sidebar nav a[aria-current='page'] {
   background: #f5ebd6;
-  color: #233e31;
+  color: var(--ink);
 }
 .layout .ledger {
   padding: clamp(18px, 4vw, 64px);
@@ -113,7 +113,7 @@
 .work-lines small,
 .qr-print small {
   display: block;
-  color: #526055;
+  color: var(--soft);
 }
 .work-sheet fieldset {
   border: none;
@@ -153,7 +153,7 @@
 }
 .work-sheet .action,
 .bill-dialog .action {
-  background: #234638 !important;
+  background: var(--lac) !important;
   color: white;
   margin: 6px 6px 6px 0;
 }
@@ -196,7 +196,7 @@
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0;
-    background: #203d31;
+    background: var(--plum-ink);
     padding-bottom: env(safe-area-inset-bottom);
   }
   .layout .sidebar nav a {
@@ -239,7 +239,7 @@
     serif;
 }
 .overview-next p {
-  color: #526055;
+  color: var(--soft);
   margin-top: 4px;
 }
 .overview-next a {
@@ -252,11 +252,11 @@
 
 /* Daily statement */
 .ledger[data-view='overview'] .ledger-header {
-  background: #203d31;
+  background: var(--lac);
   color: #fff7e9;
 }
 .ledger[data-view='overview'] .restaurant-name span {
-  color: #e1e5d8;
+  color: #ecdbd3;
 }
 .ledger[data-view='overview'] .ledger-header h1 {
   font-size: clamp(2rem, 3vw, 3.5rem);
@@ -268,7 +268,7 @@
 }
 .daily-sales span {
   font-size: 0.85rem;
-  color: #dbe2cd;
+  color: #f1dbcb;
 }
 .daily-sales strong,
 .balance-cover strong {
@@ -298,7 +298,7 @@
   gap: clamp(16px, 3vw, 48px);
 }
 .order-desk {
-  background: #e3e5d6;
+  background: var(--clay-wash);
   padding: clamp(16px, 3vw, 42px);
   border: 0;
   margin: 0 0 24px;
@@ -322,7 +322,7 @@
   border-bottom: 1px dashed #aea28b;
 }
 .ticket-empty {
-  color: #5e6457;
+  color: var(--soft);
   padding: 18px 0;
 }
 .order-ticket .work-lines strong,
@@ -401,7 +401,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  border-bottom: 2px solid #243a30;
+  border-bottom: 2px solid var(--ink);
 }
 .menu-title span {
   font-size: 0.85rem;
@@ -417,7 +417,7 @@
 }
 .file-field input::file-selector-button {
   background: #fffaf0;
-  color: #23392e;
+  color: var(--ink);
   border: 1px solid #777f70;
   padding: 10px 12px;
   margin-right: 8px;
@@ -428,7 +428,7 @@
   padding: 24px 0;
 }
 .placard-mount {
-  background: #d8e0d7;
+  background: var(--indigo-wash);
   padding: 24px;
   display: grid;
   justify-items: center;
@@ -439,17 +439,17 @@
 .placard-empty {
   max-width: 22ch;
   text-align: center;
-  color: #435649;
+  color: var(--soft);
 }
 .placard-mount .qr-print {
   margin: 0;
   width: min(100%, 260px);
   padding: 0 0 18px;
-  box-shadow: 0 4px 0 #bac4b7;
+  box-shadow: 0 4px 0 #cbc2be;
 }
 .placard-name {
   padding: 14px 8px;
-  background: #264a3e;
+  background: var(--lac);
   color: white;
   font-size: 1.2rem;
   overflow-wrap: anywhere;
@@ -557,13 +557,13 @@
 .journal-list li[data-selected="true"] { border-left-color:#65414b; background:#eee3d6; }
 .journal-item {overflow-wrap:anywhere;}
 .journal-item strong {font-size:1rem;}
-.journal-list small {display:block;color:#546058;font-size:.78rem; margin-top:3px;}
+.journal-list small {display:block;color:var(--soft);font-size:.78rem; margin-top:3px;}
 .journal-item p {font-size:.85rem;line-height:1.45;margin:5px 0 0;}
 .journal-value {text-align:right;font-variant-numeric:tabular-nums;}
 .work-sheet .journal-edit {display:flex;gap:6px;align-items:center;min-height:44px;min-width:44px;justify-content:center;
-  padding:4px 8px;border:0;color:#344c40;}
+  padding:4px 8px;border:0;color:var(--ink);}
 .editor-slot {min-width:0;overflow:hidden;}
-.vendor-editor {background:#fffbf2;color:#293b30;border:1px solid #cec2ad;border-radius:3px;
+.vendor-editor {background:#fffbf2;color:var(--ink);border:1px solid #cec2ad;border-radius:3px;
   overflow:hidden;animation:sheet-arrive 220ms ease-out both;}
 .journal-layout[data-open="false"] .vendor-editor {animation:sheet-leave 180ms ease-in both;}
 .correction-header {display:flex;align-items:start;justify-content:space-between;gap:12px;
@@ -574,12 +574,12 @@
 .correction-body {padding:0 20px 16px;}
 .vendor-editor .voice-control {margin:14px 0 16px;}
 .vendor-editor fieldset {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
-.vendor-editor label {color:#495548;font-weight:560;gap:6px;}
+.vendor-editor label {color:var(--soft);font-weight:560;gap:6px;}
 .vendor-editor .full-line {grid-column:1/-1;}
 .vendor-editor :is(input,select,textarea) {width:100%;min-width:0;box-sizing:border-box;min-height:44px;
-  background:#fffdf7;color:#20392f;font:400 1rem/1.45 system-ui,sans-serif;border:1px solid #b9b4a4;border-radius:3px;padding:8px 10px;}
+  background:#fffdf7;color:var(--ink);font:400 1rem/1.45 system-ui,sans-serif;border:1px solid #b9b4a4;border-radius:3px;padding:8px 10px;}
 .vendor-editor textarea {resize:vertical;}
-.correction-preview {margin-top:14px;padding:12px;border-left:3px solid #5b7965;background:#eaf0e5;}
+.correction-preview {margin-top:14px;padding:12px;border-left:3px solid #976d4a;background:var(--clay-wash);}
 .correction-actions {display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 20px;background:#f4edde;border-top:1px solid #d7cdbb;}
 .work-sheet .correction-actions button {min-height:44px;margin:0;}
 .work-sheet .correction-actions button[type="button"] {border:0;text-decoration:underline;text-underline-offset:4px;}
@@ -609,7 +609,7 @@
   .ledger .restaurant-name {margin-bottom:8px}
   .work-sheet .subtle {line-height:1.5}
   .order-desk {padding:0;background:transparent;gap:20px}
-  .order-desk .record-side {padding:0 0 18px;background:#e3e5d6}
+  .order-desk .record-side {padding:0 0 18px;background:var(--clay-wash)}
   .record-side > :not(.station-print) {margin-inline:18px}
   .order-desk .station-print,.bank-desk .station-print {height:auto;display:block;width:100%;margin-bottom:18px}
   .vendor-spread,.bank-desk {gap:24px}
@@ -621,4 +621,10 @@
 @media (max-width:680px) {
   .vendor-spread .vendor-write {padding-top:0;border-top:0}
   .ledger .metrics > div {align-content:start;grid-template-rows:minmax(2.5em,auto) auto}
+}
+
+/* A painted edge marks the current folio in either navigation layout. */
+.sidebar nav a[aria-current='page'] {box-shadow:inset 3px 0 var(--vermilion)}
+@media (max-width:680px) {
+  .sidebar nav a[aria-current='page'] {box-shadow:inset 0 3px var(--vermilion)}
 }
