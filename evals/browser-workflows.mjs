@@ -155,9 +155,17 @@ try {
       await desk.screenshot({path:process.env.PANKTI_QA_SCREENSHOTS+'/delivery-'+width+'.png'});
     }
     await page.getByRole('link',{name:'Overview',exact:true}).click();
-    await speak('Ask by voice');
-    await page.locator('.overview-answer').getByText(/Billed sales.*315.*Part-paid bills.*1/).waitFor();
-    await page.getByLabel('Spoken answer').waitFor();
+    const conversation=page.getByRole('region',{name:'Business conversation'});
+    await conversation.getByRole('button',{name:'Start conversation'}).waitFor();
+    assert.ok(await conversation.evaluate(el=>el.scrollWidth<=el.clientWidth));
+    if(process.env.PANKTI_QA_SCREENSHOTS)
+      await conversation.screenshot({path:process.env.PANKTI_QA_SCREENSHOTS+'/conversation-'+width+'.png'});
+    await page.route('**/api/overview/live',route=>route.fulfill({
+      status:503,json:{error:'Voice temporarily unavailable.'}
+    }));
+    await conversation.getByRole('button',{name:'Start conversation'}).click();
+    await conversation.getByRole('alert').waitFor();
+    await conversation.getByRole('button',{name:'Start conversation'}).waitFor();
     await page.close();
     console.log(width, 'voice controls, phrase, note, partial payment, persistence passed');
   }
