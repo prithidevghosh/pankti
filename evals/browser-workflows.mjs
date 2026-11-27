@@ -14,6 +14,7 @@ const { app, close } = await createApp({
     return 'browser test';
   },
   understand: async (task, t, ctx) => {
+    if (task === 'menu') return { entries: [], question: null, availability: [{ item: ctx.menu[0].id, available: false }] };
     if (task === 'phrase')
       return { name: 'Office set', lines: [{ item: ctx.menu[0].id, quantity: 1 }], question: action === 'clarify' ? 'Should this include the half portion?' : null };
     if (action === 'revise') {
@@ -82,6 +83,14 @@ try {
     await page.getByRole('link', {name:'Overview', exact:true}).click();
     await page.locator('.restaurant-name').getByText('Kolkata').waitFor();
     await page.getByRole('link', {name:'Menu',exact:true}).click();
+    const stock = page.getByRole('switch', {name: /Chole.*available today/});
+    await speak('Dictate dishes');
+    await page.getByText('Chole · Sold out today').waitFor();
+    assert.equal(await stock.getAttribute('aria-checked'), 'false');
+    await page.reload();
+    await stock.click();
+    await page.getByText('Chole is available again.').waitFor();
+    assert.equal(await stock.getAttribute('aria-checked'), 'true');
     action = 'clarify';
     await speak('Teach a phrase');
     const review = page.locator('.phrase-review');

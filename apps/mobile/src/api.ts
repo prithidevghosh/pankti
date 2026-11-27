@@ -2,7 +2,7 @@ const origin = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://10
 
 export type Restaurant = { id: string; name: string; city: string; gstBps?: number; qr: string | null; payee: string | null };
 export type Entry = { name: string; variant: string; category: string; price: number };
-export type Item = Entry & { id: string };
+export type Item = Entry & { id: string; soldOutDay?: string };
 export type Line = { item: string; quantity: number; note?: string };
 export type Bill = {
   id: string;
@@ -30,7 +30,7 @@ export type Qr = { uri: string; payee: string; address: string; image: string };
 export type Task = 'onboarding' | 'menu' | 'order';
 export type Results = {
   onboarding: { name: string | null; city: string | null; question: string | null };
-  menu: { entries: Entry[]; question: string | null };
+  menu: { menu?: Item[]; entries: Entry[]; question: string | null };
   vendor: {
     entries: VendorEntry[];
     question: string | null;
@@ -108,6 +108,8 @@ export function api(token: string, onSessionExpired: () => void) {
     workspace: () => call<Workspace>('/workspace'),
     setup: (name: string, city: string) =>
       call<{ restaurant: Restaurant }>('/workspace', 'POST', { name, city }),
+    availability: (item: string, available: boolean) =>
+      call<{ menu: Item[] }>('/menu/availability', 'PUT', [{ item, available }]),
     menu: (entries: Entry[]) => call<{ menu: Item[] }>('/menu', 'POST', entries),
     voice: <T extends keyof Results>(task: T, uri: string, context: object) => {
       const form = new FormData();

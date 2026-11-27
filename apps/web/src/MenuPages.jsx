@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useIndiaDay } from '../../../shared/use-india-day.js';
 import { Pencil } from 'lucide-react';
 import { asRupees } from './api.js';
 import './menu-pages.css';
@@ -68,7 +69,8 @@ function DishEditor({ row, busy, draft, onSave, onClose, onRemove }) {
   );
 }
 
-export function MenuPages({ rows, draft = false, active, setActive, busy, onSave, onRemove }) {
+export function MenuPages({ rows, draft = false, active, setActive, busy, onSave, onRemove, onAvailability }) {
+  const day = useIndiaDay();
   const groups = new Map();
   const triggers = useRef(new Map());
   for (const row of rows) {
@@ -116,6 +118,12 @@ export function MenuPages({ rows, draft = false, active, setActive, busy, onSave
                     </span>
                     {!item.duplicate && <Pencil size={14} aria-hidden="true" />}
                   </button>
+                  {onAvailability && <button type="button" role="switch" className="dish-availability"
+                    aria-label={item.name + ' ' + (item.variant || '') + ' available today'}
+                    aria-checked={item.soldOutDay !== day} disabled={busy || !!active}
+                    onClick={() => onAvailability(item, item.soldOutDay === day)}>
+                    <span aria-hidden="true" />{item.soldOutDay === day ? 'Sold out today' : 'Available'}
+                  </button>}
                   {expanded && (
                     <DishEditor
                       row={draft ? item : editableDish(item)}

@@ -1,9 +1,11 @@
+import { useIndiaDay } from '../../../shared/use-india-day.js';
 import React, { useState } from 'react';
 
 export function TicketEditor({ basket, menu, orderNote, onSave, onCancel }) {
   const [lines, setLines] = useState(basket);
   const [note, setNote] = useState(orderNote || '');
-  const available = menu.filter(item => !lines.some(line => line.item === item.id));
+  const day = useIndiaDay();
+  const available = menu.filter(item => item.soldOutDay !== day && !lines.some(line => line.item === item.id));
   function change(id, values) {
     setLines(lines.map(line => line.item === id ? { ...line, ...values } : line));
   }

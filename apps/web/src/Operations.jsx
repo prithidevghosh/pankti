@@ -1,3 +1,4 @@
+import { useIndiaDay } from '../../../shared/use-india-day.js';
 import { billTotals } from '../../../shared/bill-totals.mjs';
 import { reviewMenuImport } from '../../../shared/menu-import.mjs';
 import { MenuPages, editableDish, menuEntry, needsPrice } from './MenuPages.jsx';
@@ -48,6 +49,8 @@ export function Orders({ menu, gstBps, onBill }) {
   const [orderNote, setOrderNote] = useState(null);
   const [editingDraft, setEditingDraft] = useState(false);
   const rows = basket.map((line) => ({ ...menu.find((item) => item.id === line.item), ...line }));
+  const day = useIndiaDay();
+  const soldOut = rows.some(row => row.soldOutDay === day);
   const totals = billTotals(rows, gstBps);
   function update(lines) {
     key.current = crypto.randomUUID();
@@ -111,6 +114,7 @@ export function Orders({ menu, gstBps, onBill }) {
                 <li key={line.item}>
                   <span>
                     {line.quantity} × {line.name} {line.variant}
+                    {line.soldOutDay === day && <small>Sold out today · remove to bill</small>}
                     {line.note && <small className="kitchen-note">{line.note}</small>}
                   </span>
                   <strong>{asRupees(Math.round(line.price * line.quantity))}</strong>
@@ -129,7 +133,7 @@ export function Orders({ menu, gstBps, onBill }) {
             {gstBps > 0 && <p>GST ({gstBps / 100}%) · {asRupees(totals.gstAmount)}</p>}
             <button
               className="action"
-              disabled={op.busy || speechBusy || Boolean(question)}
+              disabled={op.busy || speechBusy || soldOut || Boolean(question)}
               onClick={() =>
                 op.run(async () => {
                   const prices = Object.fromEntries(rows.map((row) => [row.item, row.price]));
@@ -400,7 +404,7 @@ export function Menu({ menu, onMenu }) {
         <div>
           <div className="menu-import-intro">
           <h2>Add dishes</h2>
-          <p>Photograph a menu page or speak the dishes and prices.</p>
+          <p>Scan a menu, dictate prices, or say which dishes are sold out today.</p>
           </div>
           <div className="menu-import-actions">
           <label className="file-field">
@@ -440,7 +444,12 @@ export function Menu({ menu, onMenu }) {
             onResult={({ result, transcript }) => {
               setMenuQuestion(result.question ? { question: result.question, previous: transcript } : null);
               if (!result.question) setDraft((prev) => [...prev, ...result.entries.map(editableDish)]);
-              op.setMessage(result.question || '');
+              if (result.menu) onMenu(result.menu);
+              const statuses = (result.menu ? result.availability : []).map(change => {
+                const dish = result.menu.find(item => item.id === change.item);
+                return [dish.name, dish.variant].filter(Boolean).join(' ') + (change.available ? ' · Available' : ' · Sold out today');
+              });
+              op.setMessage(result.question || statuses.join(' / '));
             }}
           />
           </div>
@@ -555,9 +564,14 @@ export function Menu({ menu, onMenu }) {
           </header>
           <MenuPages
             rows={menu}
+            onAvailability={(item, available) => op.run(async () => {
+              const result = await request('/menu/availability', { method: 'PUT', body: [{ item: item.id, available }] });
+              onMenu(result.menu);
+              op.setMessage(item.name + (available ? ' is available again.' : ' is sold out for today.'));
+            })}
             active={active}
             setActive={setActive}
-            busy={op.busy}
+            busy={op.busy || dictating}
             onSave={async (row) => {
               let saved = false;
               await op.run(async () => {

@@ -1,3 +1,4 @@
+import { useIndiaDay } from '../../../shared/use-india-day.js';
 import { billTotals } from '../../../shared/bill-totals.mjs';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -8,6 +9,7 @@ import {
   Pressable,
   ScrollView,
   StatusBar,
+  Switch,
   StyleSheet,
   Text,
   TextInput,
@@ -421,6 +423,7 @@ function Counter({
   const [tab, setTab] = useState<'order' | 'menu' | 'setup' | 'vendors'>('order');
   const [setup, setSetup] = useState<{ name: string | null; city: string | null }>();
   const [entries, setEntries] = useState<Entry[]>([]);
+  const day = useIndiaDay();
   const [orderNote, setOrderNote] = useState<string | null>(null);
   const [basket, setBasket] = useState<Line[]>([]);
   const [bill, setBill] = useState<Bill | null>(null);
@@ -493,7 +496,8 @@ function Counter({
       setQuestion(response.result.question || '');
     } else if (tab === 'menu') {
       const response = await client.voice('menu', uri, { previous: entries });
-      setEntries(response.result.entries);
+      if (response.result.menu) setMenu(response.result.menu);
+      if (!response.result.menu || response.result.entries.length) setEntries(response.result.entries);
       setText(response.transcript);
       setQuestion(response.result.question || '');
     } else {
@@ -762,6 +766,11 @@ function Counter({
                             {item.name} {item.variant}
                           </Text>
                           <Text style={styles.rowValue}>{formatMoney(item.price)}</Text>
+                          <Switch accessibilityLabel={item.name + ' ' + item.variant + ' available today'}
+                            disabled={saving || voiceBusy} value={item.soldOutDay !== day}
+                            onValueChange={available => void save(async () => {
+                              setMenu((await api(token, onSessionExpired).availability(item.id, available)).menu);
+                            })} />
                         </View>
                       ))}
                     </View>
