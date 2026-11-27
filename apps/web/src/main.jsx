@@ -1,3 +1,4 @@
+import { Profile } from './Profile.jsx';
 import { Wordmark } from './Wordmark.jsx';
 import { BillReceipt } from './BillReceipt.jsx';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -384,11 +385,10 @@ function Ledger({ onSignOut, onSessionExpired }) {
           </p>
         )}
         {view === 'profile' && state.profile && (
-          <dl className="account-details">
-            {[['Name', state.profile.name], ['Business name', restaurant?.name], ['Mobile number', state.profile.phone], ['City', restaurant?.city]].map(([label, value]) =>
-              <div key={label}><dt>{label}</dt><dd>{value || 'Not provided'}</dd></div>
-            )}
-          </dl>
+          <Profile profile={state.profile} restaurant={restaurant} onSaved={details => {
+            setState(current => ({ ...current, ...details }));
+            setRevision(value => value + 1);
+          }} />
         )}
         {!loading && view !== 'profile' && !restaurant && !error && (
           <div className="notice">

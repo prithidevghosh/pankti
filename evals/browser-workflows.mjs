@@ -62,6 +62,18 @@ try {
     const profile = page.locator('.account-details');
     await profile.getByText('QA Counter', {exact:true}).waitFor();
     assert.ok(await profile.getByText('+91900000' + String(width).padStart(4, '0')).isVisible());
+    await page.getByRole('button', { name: 'Edit details' }).click();
+    await page.getByLabel('Name', {exact:true}).fill('Mira Sen');
+    await page.getByLabel('Business name').fill('Corner Kitchen');
+    await page.getByLabel('City').fill('Kolkata');
+    assert.equal(await profile.locator('input').count(), 3);
+    await page.getByRole('button', { name:'Save changes' }).click();
+    await page.getByText('Profile saved.').waitFor();
+    await page.reload();
+    await profile.getByText('Mira Sen').waitFor();
+    await profile.getByText('Kolkata').waitFor();
+    await page.getByRole('link', {name:'Overview', exact:true}).click();
+    await page.locator('.restaurant-name').getByText('Kolkata').waitFor();
     await page.getByRole('link', {name:'Menu',exact:true}).click();
     action = 'clarify';
     await speak('Teach a phrase');

@@ -1,0 +1,21 @@
+.profile-sheet { display:grid; grid-template-columns:minmax(0,.64fr) minmax(0,1fr); background:#fffcf5; }
+.profile-print { width:100%; height:100%; max-height:620px; object-fit:cover; object-position:52% 60%; }
+.profile-paper { min-width:0; padding:clamp(20px,3.5vw,52px); align-self:center; }
+.profile-paper header,.profile-paper footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.profile-paper h2 { margin:0; font:400 clamp(1.9rem,3vw,3rem)/1.1 'Pankti Wordmark',Georgia,serif; }
+.profile-paper button { min-height:44px; border:0; background:transparent; color:var(--ink); font-weight:600; }
+.profile-edit { display:inline-flex; align-items:center; gap:7px; text-decoration:underline; text-underline-offset:4px; }
+.profile-paper dl { margin:18px 0 0; }
+.profile-paper dl>div { border-top:1px solid var(--rule); padding:12px 0; }
+.profile-paper dt { display:flex; align-items:center; gap:6px; font-size:.84rem; color:var(--soft); }
+.profile-paper dd { margin:4px 0 0; font-size:1.08rem; overflow-wrap:anywhere; }
+.profile-paper input { width:100%; min-width:0; min-height:42px; padding:4px 8px; border:1px solid var(--rule); border-radius:3px; background:white; color:var(--ink); font:inherit; }
+.profile-paper footer { justify-content:flex-start; margin-top:14px; }
+.profile-paper .profile-save { background:var(--ink); color:white; padding:0 18px; border-radius:3px; }
+.profile-save:disabled { opacity:.6; }
+.profile-paper [role=status] { margin:12px 0 0; }
+@media(max-width:760px) {
+  .profile-sheet { grid-template-columns:1fr; }
+  .profile-print { height:clamp(110px,32vw,180px); object-position:50% 37%; }
+  .profile-paper { padding:20px; }
+}
