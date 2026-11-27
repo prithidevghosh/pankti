@@ -139,13 +139,13 @@ function Login({ onSignIn, mode, phoneEmailClientId }) {
 
   return (
     <main className={creating ? "login is-signup" : "login"}>
-      <section className="login-visual" aria-label={creating ? "The handoff artwork" : "Counter rhythm artwork"}>
+      <section className="login-visual" aria-label={creating ? "Across the counter artwork" : "Calling the order artwork"}>
         <img
-          src={creating ? "/bill-handoff.webp" : "/counter-print.jpg"}
-          alt={creating ? "Two ink silhouettes pass a receipt across a counter" : "Abstract monotype with bottle-green arcs, amber ink and a ribbon of paper"}
+          src={creating ? "/across-the-counter.webp" : "/calling-the-order.webp"}
+          alt={creating ? "Two ink silhouettes pass a receipt across a counter" : "Two abstract profiles face each other as one calls an order"}
         />
         <div className="photo-caption">
-          <span className="caption-rule" /> {creating ? "The handoff" : "Counter rhythm"}
+          <span className="caption-rule" /> {creating ? "Across the counter" : "Calling the order"}
         </div>
       </section>
       <section className="login-content">
