@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {AudioLines,PhoneOff} from 'lucide-react';
+import {Mic,PhoneOff} from 'lucide-react';
 import {ConversationOrb} from './ConversationOrb.jsx';
 import {LiveOverviewCall} from './LiveOverviewCall.js';
 
@@ -27,11 +27,11 @@ export function OverviewVoice({date,days,visible}) {
     <div className="conversation-copy">
       <h2>{active?'In conversation':'Talk to Pankti'}</h2>
       {active ? <p className="conversation-state" role="status"><i/>{phase}</p>
-        : <p>Ask about your business, then follow up in your own words.</p>}
+        : <p>Ask about your sales, bills or supplier payments.</p>}
       {reply && <p className="conversation-reply" aria-live="polite">{reply}</p>}
       {error && <p role="alert" className="conversation-error">{error}</p>}
-      <button type="button" className="conversation-control" onClick={active?end:start}>
-        {active?<PhoneOff size={16}/>:<AudioLines size={17}/>}
+      <button type="button" className={'conversation-control'+(active?'':' conversation-start')} onClick={active?end:start}>
+        {active?<PhoneOff size={16}/>:<span className="conversation-start-seal"><Mic size={18} strokeWidth={1.6}/></span>}
         {active?'End conversation':'Start conversation'}
       </button>
     </div>

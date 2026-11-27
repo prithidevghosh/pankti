@@ -43,8 +43,6 @@ export class LiveOverviewCall {
     let sum=0;for(const n of this.samples) sum+=((n-128)/128)**2;
     return Math.min(1,Math.sqrt(sum/this.samples.length)*4);
   }
-  send(event){if(this.channel?.readyState==='open') this.channel.send(JSON.stringify(event));}
-  toolResult(id,data){this.send({type:'conversation.item.create',item:{type:'function_call_output',call_id:id,output:JSON.stringify(data)}});}
   silence(){
     this.turn++;
     this.pending?.abort();
@@ -53,26 +51,23 @@ export class LiveOverviewCall {
   async handle(event) {
     if(this.abort.signal.aborted) return;
     if(event.type==='input_audio_buffer.speech_started') {
-      this.silence();this.message('');this.phase('Listening to you');
+      this.silence();this.item=event.item_id;this.message('');this.phase('Listening to you');
     } else if(event.type==='input_audio_buffer.speech_stopped') this.phase('Thinking');
     else if(event.type==='error') this.recover(new Error(event.error?.message || 'Please say that again.'));
-    else if(event.type==='response.function_call_arguments.done') {
-      const args=JSON.parse(event.arguments);
-      const turn=this.turn;
-      const controller=new AbortController();this.pending=controller;
-      if(event.name==='lookup_ledger'){
-        this.phase('Checking the ledger');
-        let result;
-        try {
-          result=await request('/overview/live/report',{body:{question:args.question,...this.period()},signal:controller.signal});
-        } catch(e){result={error:controller.signal.aborted?'Interrupted':'The lookup failed. Ask the owner to try again.'};}
-        this.toolResult(event.call_id,result);
-        if(turn===this.turn&&!this.abort.signal.aborted) this.send({type:'response.create'});
-      } else if(event.name==='say_to_owner'){
-        this.toolResult(event.call_id,{status:'reply submitted'});
-        this.caption(args.text);
+    else if(event.type==='conversation.item.input_audio_transcription.failed' && this.item===event.item_id){
+      this.recover(new Error('I missed that. Please ask again.'));
+    } else if(event.type==='conversation.item.input_audio_transcription.completed' && this.item===event.item_id){
+        const question=event.transcript?.trim();
+        if(!question){this.phase('Listening');return;}
+        const turn=this.turn;
+        const controller=new AbortController();this.pending=controller;
+        this.phase('Checking your shop');
+        const report=await request('/overview/live/report',{body:{question,previousId:this.previousId,...this.period()},signal:controller.signal});
+        if(turn!==this.turn || this.abort.signal.aborted) return;
+        this.previousId=report.voiceId;
+        this.caption(report.text);
         this.phase('Preparing voice');
-        const {audio}=await request('/overview/live/say',{body:args,signal:controller.signal});
+        const {audio}=await request('/overview/'+report.voiceId+'/speech',{body:{},signal:controller.signal});
         if(turn!==this.turn || this.abort.signal.aborted) return;
         const buffer=await this.context.decodeAudioData(Uint8Array.from(atob(audio),c=>c.charCodeAt(0)).buffer);
         if(turn!==this.turn || this.abort.signal.aborted) return;
@@ -81,9 +76,7 @@ export class LiveOverviewCall {
         this.playing.connect(this.output);
         this.playing.onended=()=>{this.playing?.disconnect();this.playing=null;this.phase('Listening');};
         this.phase('Speaking');this.playing.start();
-      }
-    } else if(event.type==='response.done' && event.response?.status==='failed'){
-      this.recover(new Error('The reply was interrupted. Please ask again.'));
+
     }
   }
   recover(e){if(!this.abort.signal.aborted && e.name!=='AbortError'){this.message(e.message);this.phase('Listening');}}

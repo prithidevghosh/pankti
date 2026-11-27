@@ -785,3 +785,26 @@
   .conversation-panel[data-active=true]:not(.conversation-compact) .conversation-copy {padding:0 18px 20px;}
   .conversation-panel[data-active=true]:not(.conversation-compact) .conversation-state {justify-content:center;}
 }
+
+.conversation-control.conversation-start {
+  padding: 4px 18px 4px 4px;
+  gap: 11px;
+  background: #fcfaf3;
+  color: #293e61;
+  border: 1px solid #adb2b5;
+  border-radius: 24px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background-color 160ms, border-color 160ms;
+}
+.conversation-start-seal {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #334869;
+  color: #fff7e6;
+}
+.conversation-control.conversation-start:hover {background:#fffdf8;border-color:#54677e;}
+.conversation-control.conversation-start:active {background:#e5e7e4;}
