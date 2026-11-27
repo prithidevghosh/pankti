@@ -219,14 +219,15 @@ export async function openStore(database) {
       await db.collection('phrases').deleteOne({ restaurant, _id: id });
       return this.phrasesFor(restaurant);
     },
-    async analytics(restaurant, date) {
-      const from = Date.parse(date + 'T00:00:00+05:30');
-      const range = { $gte: new Date(from).toISOString(), $lt: new Date(from + 86400000).toISOString() };
+    async analytics(restaurant, date, days = 1) {
+      const end = Date.parse(date + 'T00:00:00+05:30') + 86400000;
+      const from = end - days * 86400000;
+      const range = { $gte: new Date(from).toISOString(), $lt: new Date(end).toISOString() };
       return transaction(async (session) => {
-        const today = { restaurant, created: range };
-        const orders = await bills.countDocuments(today, { session });
+        const createdInPeriod = { restaurant, created: range };
+        const orders = await bills.countDocuments(createdInPeriod, { session });
         const recent = await bills
-          .find(today, { session, projection: { lines: 0 } })
+          .find(createdInPeriod, { session, projection: { lines: 0 } })
           .sort({ number: -1 })
           .limit(100)
           .toArray();
@@ -241,7 +242,7 @@ export async function openStore(database) {
         )) {
           for (const movement of bill.movements ?? [{ at: bill.paid, amount: bill.total }]) {
             if (movement.at >= range.$gte && movement.at < range.$lt) {
-              hourly[Math.floor((Date.parse(movement.at) - from) / 3600000)] += movement.amount;
+              hourly[Math.floor((Date.parse(movement.at) - from) / 3600000) % 24] += movement.amount;
               revenue += movement.amount;
             }
           }

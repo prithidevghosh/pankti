@@ -40,6 +40,7 @@ export function registerBillsRoutes(app, { store, requireRestaurant }) {
   app.get('/api/analytics', async (req, res) => {
     const restaurant = requireRestaurant(req);
     const date = daySchema.parse(req.query.date ?? businessDate());
-    res.json(await store.analytics(restaurant.id, date));
+    const days = z.enum(['1', '7', '14', '30']).parse(req.query.days ?? '1');
+    res.json(await store.analytics(restaurant.id, date, Number(days)));
   });
 }

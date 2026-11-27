@@ -133,3 +133,29 @@ test('shop phrases, kitchen notes and partial payments stay scoped and retry saf
   assert.equal((await store.analytics(r.id, day)).revenue, 25000);
   assert.deepEqual(await store.forgetPhrase(r.id, phrase.id), []);
 });
+
+test('reporting periods include both IST boundary days and combine matching hours', async (t) => {
+  const { name, db } = await testDatabase(t);
+  const store = await openStore(name);
+  t.after(() => store.close());
+  const r = await store.createRestaurant('owner', 'Counter', 'Delhi');
+  const [tea] = await store.saveMenu(r.id, [{ name: 'Tea', variant: '', category: '', price: 1500 }]);
+  for (const [index, at] of [
+    '2026-11-21T18:29:59.999Z', '2026-11-21T18:30:00.000Z',
+    '2026-11-27T18:30:00.000Z', '2026-11-28T18:30:00.000Z',
+  ].entries()) {
+    const bill = await store.createBill(r.id, randomUUID(), [{ item: tea.id, quantity: index + 1 }]);
+    await store.recordPayment(r.id, bill.id, 'cash');
+    await db.collection('bills').updateOne({ _id: bill.id }, {
+      $set: { created: at, paid: at, 'movements.0.at': at },
+    });
+  }
+  const week = await store.analytics(r.id, '2026-11-28', 7);
+  assert.equal(week.orders, 2);
+  assert.equal(week.hourly.length, 24);
+  assert.equal(week.hourly[0], 7500);
+  assert.equal(week.revenue, 7500);
+  assert.equal(week.items[0].quantity, 5);
+  assert.equal((await store.analytics(r.id, '2026-11-28', 14)).orders, 3);
+  assert.equal((await store.analytics(r.id, '2026-11-28')).orders, 1);
+});
