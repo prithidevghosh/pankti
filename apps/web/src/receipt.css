@@ -2,6 +2,7 @@ dialog.bill-dialog {
   width:min(540px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 32px);
   margin:auto;padding:0;border:0;border-radius:5px;background:#fffaf0;color:var(--ink);
   box-shadow:0 16px 70px #38232d45;overscroll-behavior:contain;
+  --accent:#6e1615;--clay-wash:#f3e1ca;
   --receipt-gutter:clamp(18px,4vw,32px);
 }
 dialog.bill-dialog::backdrop {background:#2f222ac2}
@@ -9,7 +10,7 @@ dialog.bill-dialog::backdrop {background:#2f222ac2}
 .receipt-bar h2 {margin:0;font-family:inherit;font-size:.91rem;font-weight:600;font-variant-numeric:tabular-nums}
 .receipt-bar button {display:grid;place-items:center;width:44px;height:44px;background:transparent;border:0;color:inherit;cursor:pointer}
 .bill-dialog button:focus-visible {outline:2px solid #a45c28;outline-offset:-4px}
-.receipt-mast {display:grid;grid-template-columns:minmax(0,1fr) 24%;background:var(--indigo-wash);color:var(--ink)}
+.receipt-mast {display:grid;grid-template-columns:minmax(0,1fr) 24%;background:var(--stamp-stock);color:#122b29}
 .receipt-mast>div {padding:22px var(--receipt-gutter);align-self:center}
 .receipt-mast h3 {margin:0;font:400 clamp(2rem,5vw,3.1rem)/1.02 'Pankti Wordmark',Georgia,serif;overflow-wrap:anywhere}
 .receipt-mast p {margin:10px 0 0;color:var(--soft);font-size:.81rem}

@@ -12,17 +12,17 @@
     -apple-system,
     sans-serif;
   font-synthesis: none;
-  --accent: #425968;
-  --accent-pressed: #293e4a;
-  --nav-paper: #4d6572;
-  --ink: #292e30;
+  --accent: #555044;
+  --accent-pressed: #333232;
+  --nav-paper: #555044;
+  --ink: #333232;
   --soft: #565850;
   --paper: #f3ede2;
   --clay-wash: #e8d7b9;
-  --indigo-wash: #c7d2d2;
+  --stamp-stock: #ecc493;
   --rule: #c5bbab;
   --ochre: #e3bf77;
-  --selection-edge: #a56e39;
+  --selection-edge: #a63920;
   --display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
 }
 *,
@@ -84,7 +84,8 @@ p {
   letter-spacing: -0.028em;
 }
 .login {
-  --sheet: var(--paper);
+  --accent: #525447;
+  --sheet: color-mix(in srgb, #e8d4ba 46%, #fffcf5);
   --line: #b7af9b;
   min-height: 100svh;
   display: grid;
@@ -543,7 +544,7 @@ th:last-child {
   padding: 22px;
 }
 .bill-dialog::backdrop {
-  background: #292e3080;
+  background: #33323280;
 }
 .bill-heading,
 .receipt-total,
@@ -664,3 +665,5 @@ th:last-child {
   .login .entry-line { min-height: 44px; }
   .login .account-submit { min-height: 44px; margin-top: 10px; }
 }
+
+.login.is-signup {--sheet:color-mix(in srgb, #eec289 36%, #fffcf5);--accent:#3a4829}

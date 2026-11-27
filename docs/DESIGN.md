@@ -2,16 +2,16 @@
 
 Pankti is the product name. The visual reference is the printed counter ledger and the stainless steel of an Indian lunch service. Use an original, cuisine-neutral monotype on sign-in and as a small mobile crop. Keep the sales ledger quiet and ruler-aligned.
 
-| Color | Usage |
-| --- | --- |
-| #4D6572 | Weathered blue navigation, with ivory lettering |
-| #DFC69E | Sandstone sales panel |
-| #F3EDE2 | Unbleached paper behind the ledger |
-| #292E30 | Charcoal ink for amounts and titles |
-| #C1CEDE | Faded indigo behind menu actions |
-| #DFC2AF | Clay behind vendor balances |
+The ambient colours follow the artwork on screen. The table records representative pixel clusters sampled from the shipped prints. Use a paper tint for broad fields when the original pigment is intense.
 
-Concentrate colour in the navigation and working panels. Keep long lists, receipts and form fields on paper so figures scan easily.
+| Print | Interface pairing |
+| --- | --- |
+| Closing the Counter | Buff #EBC495 joins the paper in the overview print. Its charcoal #555044 anchors the shared navigation. |
+| Folded Menu | The unprinted motif #E7CFB0 fills the import panel. Cobalt #082377 carries headings and actions. |
+| Order Rail | Ticket paper #F6CB8F tints the working surface. Rail ochre #E89A0A rules the current ticket. |
+| Market Balance | Apricot #FCC78D and oxblood #6E1C28 carry the supplier balances and controls. |
+| Settlement Stamp | Paper #ECC493 and sealing-wax red #6E1615 carry the QR placard and bill. |
+| Counter Rhythm and Bill Handoff | Tint the login sheet with #E8D4BA and the signup sheet with #EEC289 respectively. |
 
 Set the Pankti wordmark in Instrument Serif. Use Bricolage Grotesque for headings and system sans for functional text and numbers. Open with “Say the order. Get the bill.” and rotate the word order across Indian scripts on the website. Left-align descriptions and right-align monetary columns. Keep the main mic control centered on mobile, with order and check total stacked underneath.
 
@@ -57,7 +57,7 @@ Built-in ImageGen prompt:
 
 Keep the overview as a daily statement. Put paid sales with the date and the closing-time print. At the counter, place the recording control beside a running paper ticket, with the payable total beside the issue action. For vendors, bind the balance list to a print of market scales and keep the running journal below it. Treat Menu as a book, with a cobalt scanner cover and a cream price list. Set the actual payment code on a free-standing white merchant placard. On phones bring the controls and document into one reading column and keep the five destinations within reach.
 
-Use charcoal ink #292e30, paper #f3ede2, ticket white #fffcf6, cobalt #182e72 and claret #643d48. Instrument Serif carries titles and totals. System sans carries editable details. Align names left and amounts right. Keep the quiet zone around each payment code clear. Use the two new built-in ImageGen prints once each.
+Use charcoal ink #333232, paper #f3ede2, ticket white #fffcf6, cobalt #182e72 and claret #643d48. Instrument Serif carries titles and totals. System sans carries editable details. Align names left and amounts right. Keep the quiet zone around each payment code clear. Use the two new built-in ImageGen prints once each.
 
 The built-in ImageGen prompts for the supplier and menu prints are below.
 

@@ -253,7 +253,7 @@
 
 /* Daily statement */
 .ledger[data-view='overview'] .ledger-header {
-  background: #dfc69e;
+  background: #ebc495;
   color: var(--ink);
 }
 .ledger[data-view='overview'] .restaurant-name span {
@@ -340,7 +340,7 @@
 }
 .vendor-book {
   border: 0;
-  background: #f2e6da;
+  background: #f5e5d3;
   padding: 0 0 12px;
 }
 .vendor-book > p,
@@ -350,7 +350,7 @@
 .balance-cover {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 38%;
-  background: #dfc2af;
+  background: #fcc78d;
   color: var(--ink);
 }
 .balance-cover div {
@@ -429,7 +429,7 @@
   padding: 24px 0;
 }
 .placard-mount {
-  background: var(--indigo-wash);
+  background: var(--stamp-stock);
   padding: 24px;
   display: grid;
   justify-items: center;
@@ -450,8 +450,8 @@
 }
 .placard-name {
   padding: 14px 8px;
-  background: var(--indigo-wash);
-  color: var(--ink);
+  background: #6e1615;
+  color: #fff8eb;
   font-size: 1.2rem;
   overflow-wrap: anywhere;
 }
@@ -568,7 +568,7 @@
   overflow:hidden;animation:sheet-arrive 220ms ease-out both;}
 .journal-layout[data-open="false"] .vendor-editor {animation:sheet-leave 180ms ease-in both;}
 .correction-header {display:flex;align-items:start;justify-content:space-between;gap:12px;
-  padding:18px 20px;background:#dfc2af;color:var(--ink);border-bottom:3px solid #bb9065;}
+  padding:18px 20px;background:#fcc78d;color:var(--ink);border-bottom:3px solid #bb9065;}
 .correction-header p,.correction-header span {font-size:.8rem;color:var(--soft);}
 .correction-header span {white-space:nowrap;}
 .correction-header h3 {overflow-wrap:anywhere;margin:5px 0 0;font:400 clamp(1.6rem,2.5vw,2.4rem)/1.2 'Pankti Wordmark',Georgia,serif;}
@@ -631,3 +631,13 @@
 }
 
 .layout .sidebar :is(a, .signout):hover {background:var(--accent-pressed);color:#fff9ef}
+
+/* Pigments sampled from the print displayed in each workspace. */
+.ledger[data-view='overview'] {--accent:#984227}
+.ledger[data-view='orders'] {--accent:#55452f;--clay-wash:color-mix(in srgb,#f6cb8f 72%,#fffaf0)}
+.ledger[data-view='vendors'] {--accent:#6e1c28}
+.ledger[data-view='menu'] {--accent:#082377}
+.ledger[data-view='bank'] {--accent:#6e1615}
+.order-ticket {border-top-color:#e89a0a}
+.balance-cover {color:#352318}
+.placard-mount {background:color-mix(in srgb,var(--stamp-stock) 55%,#fffaf0)}
