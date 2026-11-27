@@ -166,6 +166,17 @@ try {
     await conversation.getByRole('button',{name:'Start conversation'}).click();
     await conversation.getByRole('alert').waitFor();
     await conversation.getByRole('button',{name:'Start conversation'}).waitFor();
+    if(width===390){
+      await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'instant'}));
+      assert.ok(await page.evaluate(()=>window.scrollY>100),'Overview should have scrolled');
+      const header=page.locator('.layout .sidebar');
+      assert.equal(Math.round((await header.boundingBox()).y),0);
+      const toggle=page.getByRole('button',{name:'Account menu'});
+      await toggle.click();
+      await page.getByRole('link',{name:'Profile',exact:true}).click();
+      await page.getByRole('heading',{name:'Your profile'}).waitFor();
+      assert.equal(Math.round((await header.boundingBox()).y),0);
+    }
     await page.close();
     console.log(width, 'voice controls, phrase, note, partial payment, persistence passed');
   }
