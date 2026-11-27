@@ -1,3 +1,4 @@
+import {locale,voiceLanguages} from '../../shared/overview-languages.mjs';
 import {scopeReply,speakFacts} from './overview-speech.mjs';
 import labels from '../locales/overview.json' with { type: 'json' };
 import { z } from 'zod';
@@ -15,15 +16,19 @@ const planSchema = z.object({
   metrics:z.array(z.object({key:z.enum(overviewMetrics), label:z.string().trim().min(1).max(120)})).max(15),
   empty:z.string().trim().max(100), clarification:z.string().trim().max(300).nullable(),
 });
-export const speechLanguages = new Set('hi bn ta te gu kn ml mr pa od en'.split(' ').map(code=>code+'-IN'));
+export const speechLanguages = new Set(Object.keys(voiceLanguages));
 const money = new Set(['billedSales','collections','paidValue','outstanding','vendorPurchases','vendorPaid','vendorDue']);
 
 export async function overviewAnswer(store, understand, restaurant, transcript, selected, today=indiaDay(), context={}) {
-  const plan = planSchema.parse(await understand('overview',transcript,{today,previousLanguage:context.previousLanguage,previousFacts:context.previousFacts || []}));
-  // A transcript can be code-mixed or normalized into English by ASR.
-  // Only an explicit request changes the established speaking language.
-  const language = [plan.requestedReplyLanguage,context.previousLanguage,plan.language]
-    .find(candidate => speechLanguages.has(candidate)) || 'en-IN';
+  const plan = planSchema.parse(await understand('overview',transcript,{today,inputLanguage:context.inputHint || context.detectedLanguage,previousLanguage:context.previousLanguage,previousFacts:context.previousFacts || []}));
+  const detected=locale(context.detectedLanguage);
+  const previous=locale(context.previousLanguage);
+  const planned=locale(plan.language);
+  // Keep brief code-mixed follow-ups in the established language. Recognize
+  // a change when both the audio detector and transcript planner identify it.
+  const switched=detected && detected!=='en-IN' && detected===planned;
+  const language=locale(plan.requestedReplyLanguage) || locale(context.inputHint) ||
+    (switched && detected) || previous || detected || planned || 'en-IN';
   const copy = labels[language];
   if (plan.scope==='outside') return {language,text:scopeReply(language),facts:[]};
   if (plan.scope==='assistant' || plan.clarification || !plan.metrics.length) return {language,text:scopeReply(language,plan.courtesy),facts:[]};

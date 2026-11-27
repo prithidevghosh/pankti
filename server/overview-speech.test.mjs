@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {scopeReply,speakFacts} from './services/overview-speech.mjs';
-import {overviewMetrics,speechLanguages} from './services/overview-question.mjs';
+import {inputLanguages} from '../shared/overview-languages.mjs';
+import {overviewMetrics} from './services/overview-question.mjs';
 
 const today='2026-11-28';
 const fact=(key,value)=>({key,value,label:key,start:today,end:today});
 
 test('every supported shop field has localized spoken wording',()=>{
-  for(const language of speechLanguages){
+  for(const language of Object.keys(inputLanguages)){
     for(const key of overviewMetrics){
       const raw=key==='topDish'?[{name:'Roti',quantity:2}]:key==='soldOut'?['Chai']:2;
       const text=speakFacts([fact(key,'2')],{[key]:raw},language,today);

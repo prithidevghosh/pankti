@@ -15,7 +15,7 @@ import { restaurantSchema, shortText, entrySchema } from './schemas.mjs';
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024, files: 1, fields: 2, fieldSize: 24576 },
+  limits: { fileSize: 8 * 1024 * 1024, files: 1, fields: 4, fieldSize: 24576 },
 });
 const workspace = async (restaurant) =>
   restaurant
