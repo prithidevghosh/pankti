@@ -305,7 +305,7 @@ export async function renderQr(uri) {
 export async function readOverviewAloud(text,language) {
   const response=await fetch('https://api.sarvam.ai/text-to-speech',{
     method:'POST',headers:{'Content-Type':'application/json','api-subscription-key':process.env.SARVAM_API_KEY},
-    body:JSON.stringify({text,language_code:language,model:'bulbul:v3',speaker:'shubh'}),
+    body:JSON.stringify({text,language_code:language,model:'bulbul:v4-flash',speaker:process.env.SARVAM_OVERVIEW_SPEAKER || 'simran_en_customer'}),
     signal:AbortSignal.timeout(12000),
   });
   if(!response.ok) throw httpError(502,'Audio is unavailable for this answer.');
