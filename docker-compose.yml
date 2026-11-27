@@ -31,7 +31,12 @@ services:
     ports:
       - "127.0.0.1:${PANKTI_PORT:-4180}:4100"
     environment:
-      APP_AUTH_MODE: phone-only
+      APP_AUTH_MODE: ${APP_AUTH_MODE:-phone-only}
+      TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
+      TWILIO_API_KEY_SID: ${TWILIO_API_KEY_SID:-}
+      TWILIO_API_KEY_SECRET: ${TWILIO_API_KEY_SECRET:-}
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-pankti}
+      MONGODB_LOCAL_DATABASE: ${MONGODB_LOCAL_DATABASE:-pankti_local_signup}
       PANKTI_BIND_ADDRESS: 0.0.0.0
       MONGODB_URI: mongodb://mongo:27017/?replicaSet=pankti
       SARVAM_API_KEY: ${SARVAM_API_KEY:-}

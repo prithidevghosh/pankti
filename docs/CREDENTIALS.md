@@ -12,6 +12,8 @@ Sign in to [Sarvam](https://indus.sarvam.ai/) and generate one API key. Set `SAR
 2. In **API keys & tokens**, create a **Standard** API key in the same account and region as the Verify service. Put the SID starting with `SK` in `TWILIO_API_KEY_SID`. Put the secret shown when you create the key in `TWILIO_API_KEY_SECRET`. Put all three in the repository root `.env`, which is read by the server. [Twilio API keys](https://www.twilio.com/docs/usage/requests-to-twilio#use-api-keys)
 3. During the trial, use the phone number you signed up with or add another number to **Verified Caller IDs**. If Twilio blocks delivery to India, check **Verify → Settings → Geo permissions** for SMS to India. [Verify geographic permissions](https://www.twilio.com/docs/verify/verify-countries-and-regions-deliverability)
 
+For a phone-only workspace switching to OTP, set `APP_AUTH_MODE=otp` and point `MONGODB_DATABASE` at that workspace’s current database (normally `pankti_local_signup`). Stop phone-only access to that database before enabling OTP. Existing owner IDs and ledger entries stay in place. Sessions issued before the switch must sign in again. In a local-only database that never contained Firebase accounts, clear obsolete Firebase project settings. For a database with Firebase users, complete the import below first.
+
 Restart the API after adding the Twilio credentials. Both clients use its sign-in endpoints. The Android app stores its session in SecureStore and needs a new native build. Use HTTPS for production traffic. The website expects the API on its own origin under `/api`.
 
 ## Preserve existing Firebase accounts
