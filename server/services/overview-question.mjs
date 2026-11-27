@@ -7,8 +7,9 @@ import { httpError } from '../errors.mjs';
 const shopFields = ['menuCount','businessName','ownerName','phone','city','gst','payee','upi'];
 export const overviewMetrics = ['billedSales','collections','billCount','paidCount','paidValue','unpaidCount','partialCount','outstanding','topDish','vendorPurchases','vendorPaid','vendorDue','soldOut',...shopFields];
 const planSchema = z.object({
-  courtesy:z.enum(['thanks','listening','none']).optional(),
-  period:z.enum(['today','yesterday','lastDays','calendar','selected']), days:z.number().int(),
+  requestedReplyLanguage:z.string().nullable().optional(),
+  courtesy:z.enum(['thanks','listening','identity','none']).optional(),
+  period:z.enum(['today','yesterday','lastDays','calendar','selected','previous']), days:z.number().int(),
   start:z.iso.date().nullable(), end:z.iso.date().nullable(), language:z.string().regex(/^[a-z]{2,3}-IN$/),
   metrics:z.array(z.object({key:z.enum(overviewMetrics), label:z.string().trim().min(1).max(120)})).max(15),
   empty:z.string().trim().max(100), clarification:z.string().trim().max(300).nullable(),
@@ -18,11 +19,19 @@ const money = new Set(['billedSales','collections','paidValue','outstanding','ve
 
 export async function overviewAnswer(store, understand, restaurant, transcript, selected, today=indiaDay(), context={}) {
   const plan = planSchema.parse(await understand('overview',transcript,{today,previousLanguage:context.previousLanguage,previousFacts:context.previousFacts || []}));
-  const language = speechLanguages.has(plan.language) ? plan.language : 'en-IN';
+  // A transcript can be code-mixed or normalized into English by ASR.
+  // Only an explicit request changes the established speaking language.
+  const language = [plan.requestedReplyLanguage,context.previousLanguage,plan.language]
+    .find(candidate => speechLanguages.has(candidate)) || 'en-IN';
   const copy = labels[language];
   if (plan.clarification || !plan.metrics.length) return {language,text:scopeReply(language,plan.courtesy),facts:[]};
   const ago=n=>new Date(Date.parse(today+'T00:00:00Z')-n*86400000).toISOString().slice(0,10);
   let {start,end}=selected;
+  if(plan.period==='previous' && context.previousFacts?.length){
+    const matching=context.previousFacts.find(f=>plan.metrics.some(m=>m.key===f.key));
+    const prior=matching || context.previousFacts[0];
+    ({start,end}=prior);
+  }
   if(plan.period==='today') start=end=today;
   if(plan.period==='yesterday') start=end=ago(1);
   if(plan.period==='lastDays') {
@@ -64,6 +73,7 @@ export async function overviewAnswer(store, understand, restaurant, transcript, 
     const current=key==='soldOut'||key==='vendorDue'||shopFields.includes(key);
     return {key,label:copy[key],value,start:current?today:start,end:current?today:end};
   });
-  const text=speakFacts(facts,values,language,today);
+  const report=speakFacts(facts,values,language,today);
+  const text=plan.courtesy==='identity' ? scopeReply(language,'identity')+' '+report : report;
   return {language,text,facts};
 }

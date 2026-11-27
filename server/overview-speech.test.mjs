@@ -29,3 +29,24 @@ test('one period introduction for sales plus a separate current supplier balance
   const answer=speakFacts(rows,{billedSales:480000,vendorDue:60000},'hi-IN',today);
   assert.equal(answer,'आज आपकी कुल बिक्री ₹4,800 रही। सप्लायरों को अभी ₹600 देना बाकी है।');
 });
+
+test('a paid-bill confirmation keeps the conversation language and report date', async()=>{
+  const {overviewAnswer}=await import('./services/overview-question.mjs');
+  const context={previousLanguage:'hi-IN',previousFacts:[fact('billedSales','₹600'),fact('paidCount','0')]};
+  const selected={start:'2026-11-22',end:today};
+  const plan={language:'en-IN',period:'previous',days:1,start:null,end:null,
+    metrics:[{key:'paidCount',label:'Paid bills'}],empty:'None',clarification:null};
+  let count=0;
+  const store={overviewFigures:async(id,start,end)=>{
+    assert.equal(start,today);assert.equal(end,today);
+    return {paidCount:count};
+  }};
+  const ask=(question,requestedReplyLanguage)=>overviewAnswer(store,async()=>({...plan,requestedReplyLanguage}),
+    'shop',question,selected,today,context);
+  assert.equal((await ask('So no paid bills?',null)).text,'आज एक भी बिल का पूरा भुगतान दर्ज नहीं है।');
+  count=1;
+  const corrected=await ask('तो मतलब एक भी paid bill नहीं है?',null);
+  assert.equal(corrected.language,'hi-IN');
+  assert.equal(corrected.facts[0].value,'1');
+  assert.equal((await ask('Please answer in English. Are any bills paid?','en-IN')).language,'en-IN');
+});

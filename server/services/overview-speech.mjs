@@ -2,12 +2,12 @@ import phrases from '../locales/overview-speech.json' with {type:'json'};
 
 const snapshot = new Set(['vendorDue','soldOut','menuCount','businessName','ownerName','phone','city','gst','payee','upi']);
 const singular = {billCount:'billOne',paidCount:'paidOne',unpaidCount:'unpaidOne',partialCount:'partialOne',menuCount:'menuOne'};
-const zero = {billCount:'noBills',vendorDue:'noDue',outstanding:'noOutstanding',partialCount:'noPartial',unpaidCount:'noUnpaid'};
+const zero = {paidCount:'noPaid',billCount:'noBills',vendorDue:'noDue',outstanding:'noOutstanding',partialCount:'noPartial',unpaidCount:'noUnpaid'};
 const fill = (phrase, slots) => phrase.replace(/\{(\w+)\}/g, (_, key) => slots[key]);
 const dayMs = 86400000;
 
 export function scopeReply(language, courtesy) {
-  const key=courtesy==='thanks' || courtesy==='listening' ? courtesy : 'redirect';
+  const key=['thanks','listening','identity'].includes(courtesy) ? courtesy : 'redirect';
   return phrases[language][key];
 }
 
