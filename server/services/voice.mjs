@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { entrySchema, basketSchema, vendorCorrection, vendorEntries } from '../schemas.mjs';
 import { httpError } from '../errors.mjs';
 
-export async function interpretRecording({ store, speech, understand }, task, file, supplied, restaurant) {
+export async function interpretRecording({ store, speech, understand, owner }, task, file, supplied, restaurant) {
   const context = {};
   if (['order', 'vendor', 'phrase', 'menu'].includes(task) && supplied.clarificationReply) {
     context.clarificationReply = z
@@ -51,6 +51,7 @@ export async function interpretRecording({ store, speech, understand }, task, fi
       .parse(supplied.previous);
   }
   const transcript = await speech(file, keyterms);
+  await store.recordTranscript(owner, restaurant?.id || null, task, transcript);
   const result = await understand(task, transcript, context);
   if (task === 'vendor') {
     result.entries = vendorEntries.parse(result.entries);

@@ -74,13 +74,13 @@ async function request<T>(
 }
 
 export type AuthMode = 'phone-only' | 'otp';
-export type SignupDraft = { name: string | null; businessName: string | null; phone: string | null };
+export type SignupDraft = { noteId?: string; name: string | null; businessName: string | null; phone: string | null };
 
 export const phoneAuth = {
   mode: async () => (await request<{ mode: AuthMode }>('/auth/session')).mode,
   login: (phone: string) => request<{ token: string }>('/auth/login', 'POST', { phone, client: 'android' }),
-  signup: (phone: string, name: string, businessName: string) =>
-    request<{ token: string }>('/auth/signup', 'POST', { phone, name, businessName, client: 'android' }),
+  signup: (phone: string, name: string, businessName: string, signupNotes: string[]) =>
+    request<{ token: string }>('/auth/signup', 'POST', { phone, name, businessName, signupNotes, client: 'android' }),
   signupVoice(uri: string) {
     const form = new FormData();
     appendFile(form, 'audio', { uri, name: 'signup.m4a', type: 'audio/mp4' });

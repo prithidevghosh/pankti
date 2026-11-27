@@ -121,11 +121,7 @@ const indexes = {
   phone_sessions: [[{ expiresAt: 1 }, { expireAfterSeconds: 0 }]],
 };
 
-export async function ensureSchema(db) {
-  const history = db.collection('schema_versions');
-  const latest = await history.find().sort({ _id: -1 }).limit(1).next();
-  if (latest?._id > 2) throw Error('This database requires a newer Pankti server.');
-  if (latest?._id === 2) return;
+async function installCoreCollections(db) {
   for (const [name, schema] of Object.entries(collections)) {
     try {
       await db.createCollection(name, { validator: { $jsonSchema: schema } });
@@ -146,6 +142,28 @@ export async function ensureSchema(db) {
     }
     for (const [keys, options] of indexes[name] || []) await db.collection(name).createIndex(keys, options);
   }
+}
+
+export async function ensureSchema(db) {
+  const history = db.collection('schema_versions');
+  const latest = await history.find().sort({ _id: -1 }).limit(1).next();
+  if (latest?._id > 3) throw Error('This database requires a newer Pankti server.');
+  if (latest?._id === 3) return;
+  if (!latest || latest._id < 2) await installCoreCollections(db);
   await history.updateOne({ _id: 1 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
   await history.updateOne({ _id: 2 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
+  const transcript = object({
+    _id: string, owner: optionalText, restaurant: optionalText,
+    task: { enum: ['signup', 'onboarding', 'menu', 'order', 'phrase', 'vendor', 'vendorEdit'] },
+    transcript: string, createdAt: { bsonType: 'date' },
+  });
+  try {
+    await db.createCollection('voice_transcripts', { validator: { $jsonSchema: transcript } });
+  } catch (error) {
+    if (error.code !== 48) throw error;
+  }
+  const archive = db.collection('voice_transcripts');
+  await archive.createIndex({ owner: 1, createdAt: -1 });
+  await archive.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  await history.updateOne({ _id: 3 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
 }

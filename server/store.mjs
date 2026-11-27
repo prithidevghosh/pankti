@@ -33,6 +33,14 @@ export async function openStore(database) {
   return {
     ...openPhoneStore(db, transaction),
     close: () => client.close(),
+    async recordTranscript(owner, restaurant, task, transcript) {
+      const _id = randomUUID();
+      await db.collection('voice_transcripts').insertOne({
+        _id, owner, restaurant, task, transcript, createdAt: new Date(),
+        ...(!owner && { expiresAt: new Date(Date.now() + 86400000) }),
+      });
+      return _id;
+    },
     restaurantFor,
     menuFor,
     async createRestaurant(owner, name, city) {

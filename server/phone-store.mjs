@@ -26,16 +26,20 @@ export function openPhoneStore(db, transaction) {
     if (missing || (required && !(await config.findOne({ _id: 'firebase-imported' }, { session }))))
       throw httpError(503, 'Sign-in will be available after the existing accounts are migrated.');
   }
-  async function issue(uid, session) {
+  async function issue(uid, session, verified = false) {
     const token = randomBytes(32).toString('base64url');
     await sessions.insertOne(
-      { _id: hash(token), uid, expiresAt: new Date(Date.now() + sessionAge) },
+      { _id: hash(token), uid, verified, expiresAt: new Date(Date.now() + sessionAge) },
       { session },
     );
     return token;
   }
   return {
-    async registerLocalPhone({ phone, name, businessName }) {
+    async accountDetails(uid) {
+      const [account, profile] = await Promise.all([accounts.findOne({ uid }), profiles.findOne({ _id: uid })]);
+      return { name: profile?.name || null, phone: account?._id || null };
+    },
+    async registerLocalPhone({ phone, name, businessName, signupNotes = [] }) {
       try {
         return await transaction(async (session) => {
           const uid = randomUUID();
@@ -44,6 +48,10 @@ export function openPhoneStore(db, transaction) {
           await restaurants.insertOne(
             { _id: randomUUID(), owner: uid, name: businessName, city: '', qr: null, payee: null },
             { session },
+          );
+          if (signupNotes.length) await db.collection('voice_transcripts').updateMany(
+            { _id: { $in: signupNotes }, owner: null, task: 'signup', expiresAt: { $gt: new Date() } },
+            { $set: { owner: uid }, $unset: { expiresAt: '' } }, { session },
           );
           return issue(uid, session);
         });
@@ -138,12 +146,12 @@ export function openPhoneStore(db, transaction) {
           { $setOnInsert: { uid: randomUUID(), disabled: false } },
           { upsert: true, session, returnDocument: 'after' },
         );
-        return account.disabled ? null : issue(account.uid, session);
+        return account.disabled ? null : issue(account.uid, session, true);
       });
     },
-    async phoneSessionOwner(token) {
+    async phoneSessionOwner(token, requireVerified) {
       if (!/^[A-Za-z0-9_-]{43}$/.test(token || '')) return null;
-      const active = await sessions.findOne({ _id: hash(token), expiresAt: { $gt: new Date() } });
+      const active = await sessions.findOne({ _id: hash(token), ...(requireVerified && { verified: true }), expiresAt: { $gt: new Date() } });
       return active && (await accounts.findOne({ uid: active.uid, disabled: false })) ? active.uid : null;
     },
     revokePhoneSession: (token) => token && sessions.deleteOne({ _id: hash(token) }),

@@ -57,10 +57,12 @@ export async function createApp({
       if (!/^(audio\/|video\/mp4$)/.test(req.file.mimetype))
         throw httpError(400, 'This recording format is unavailable.');
       const transcript = await speech(req.file);
+      const noteId = await store.recordTranscript(null, null, 'signup', transcript);
       const draft = await understand('signup', transcript, {});
       const name = shortText.safeParse(draft.name);
       const businessName = shortText.safeParse(draft.businessName);
       res.json({
+        noteId,
         name: name.success ? name.data : null,
         businessName: businessName.success ? businessName.data : null,
         phone: typeof draft.phone === 'string' && indiaPhone.test(draft.phone) ? draft.phone : null,
@@ -71,7 +73,7 @@ export async function createApp({
   app.use('/api', async (req, _res, next) => {
     const token = requestToken(req);
     if (!token) throw httpError(401, 'Sign in to continue.');
-    req.uid = verify ? await verify(token) : await store.phoneSessionOwner(token);
+    req.uid = verify ? await verify(token) : await store.phoneSessionOwner(token, !localPhoneOnly);
     if (!req.uid) throw httpError(401, 'Your session expired. Sign in again.');
     req.restaurant = await store.restaurantFor(req.uid);
     next();
@@ -83,6 +85,7 @@ export async function createApp({
   app.get('/api/workspace', async (req, res) => {
     const id = req.restaurant?.id;
     res.json({
+      profile: await store.accountDetails(req.uid),
       restaurant: await workspace(req.restaurant),
       menu: id ? await store.menuFor(id) : [],
       pendingBill: id ? await store.pendingBill(id) : null,
@@ -143,7 +146,7 @@ export async function createApp({
     const restaurant = task === 'onboarding' ? null : requireRestaurant(req);
     res.json(
       await interpretRecording(
-        { store, speech, understand },
+        { store, speech, understand, owner: req.uid },
         task,
         req.file,
         z.record(z.string(), z.unknown()).parse(supplied),

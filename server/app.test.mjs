@@ -35,7 +35,7 @@ const restaurant = { name: 'The Corner Counter', city: 'Kolkata' };
 const samosa = { name: 'Samosa', category: 'Snacks', variant: '', price: 1900 };
 
 test('voice order goes through billing, records payment once and appears in owner analytics', async (t) => {
-  const { name: database } = await testDatabase(t);
+  const { name: database, db } = await testDatabase(t);
   const call = await start(t, {
     database,
     speech: async (file, terms) => {
@@ -66,6 +66,8 @@ test('voice order goes through billing, records payment once and appears in owne
   const { menu } = await call('/menu', { method: 'POST', body: draftMenu.entries });
   assert.equal(menu[0].price, 1900);
   const { result: draft } = await record('order');
+  assert.equal(await db.collection('voice_transcripts').countDocuments({ owner: 'owner' }), 3);
+  assert.equal((await db.collection('voice_transcripts').findOne({ restaurant: saved.id, task: 'order' })).transcript, 'do samosa, nahi ek samosa');
   const body = { request: randomUUID(), basket: draft.lines };
   const { bill } = await call('/bills', { method: 'POST', status: 201, body });
   assert.equal(bill.lines[0].quantity, 1);

@@ -101,7 +101,7 @@ export function registerPhoneAuth(app, store, { otp, requireLegacyImport, localP
   });
   if (localPhoneOnly) {
     const loginBody = phoneBody.extend({ client: clientType });
-    const signupBody = loginBody.extend({ name: shortText, businessName: shortText });
+    const signupBody = loginBody.extend({ name: shortText, businessName: shortText, signupNotes: z.array(z.uuid()).max(100).optional() });
     app.post('/api/auth/signup', async (req, res) => {
       const details = signupBody.parse(req.body);
       respondWithSession(req, res, await store.registerLocalPhone(details), details.client);
@@ -135,7 +135,7 @@ export function registerPhoneAuth(app, store, { otp, requireLegacyImport, localP
   });
   app.get('/api/auth/session', async (req, res) => {
     res.json({
-      authenticated: Boolean(await store.phoneSessionOwner(requestToken(req))),
+      authenticated: Boolean(await store.phoneSessionOwner(requestToken(req), !localPhoneOnly)),
       mode: localPhoneOnly ? 'phone-only' : 'otp',
     });
   });

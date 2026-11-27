@@ -17,7 +17,7 @@ test('version 1 bills can upgrade when Atlas denies validator changes', async (t
   await db.collection('bills').drop();
   await db.createCollection('bills', { validator });
   await db.collection('phrases').drop();
-  await db.collection('schema_versions').deleteOne({ _id: 2 });
+  await db.collection('schema_versions').deleteMany({ _id: { $gte: 2 } });
 
   const bills = db.collection('bills');
   const receipt = {

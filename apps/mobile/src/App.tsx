@@ -119,8 +119,10 @@ function Login({ onSignIn }: { onSignIn: (token: string) => Promise<void> }) {
     void loadMode();
   }, []);
 
+  const signupNotes = useRef<string[]>([]);
   async function fillSignup(uri: string) {
     const details = await phoneAuth.signupVoice(uri);
+    if (details.noteId) signupNotes.current.push(details.noteId);
     if (details.phone) setPhone(details.phone.slice(3));
     if (details.name) setName(details.name);
     if (details.businessName) setBusinessName(details.businessName);
@@ -135,7 +137,7 @@ function Login({ onSignIn }: { onSignIn: (token: string) => Promise<void> }) {
     try {
       if (mode === 'phone-only') {
         const { token } = creating
-          ? await phoneAuth.signup('+91' + phone, name, businessName)
+          ? await phoneAuth.signup('+91' + phone, name, businessName, signupNotes.current)
           : await phoneAuth.login('+91' + phone);
         await onSignIn(token);
       } else if (pending) {

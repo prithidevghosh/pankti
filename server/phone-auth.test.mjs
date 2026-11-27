@@ -166,13 +166,18 @@ test('local phone signup shares a workspace across clients without exposing veri
     const draftResponse = await fetch(origin + '/signup/voice', { method: 'POST', body: audio });
     assert.equal(draftResponse.status, 200);
     const draft = await draftResponse.json();
-    assert.deepEqual(draft, { phone, name: 'Dev Kumar', businessName: 'Riverside Cafe' });
+    assert.ok(draft.noteId);
+    assert.deepEqual(draft, { noteId: draft.noteId, phone, name: 'Dev Kumar', businessName: 'Riverside Cafe' });
 
-    const created = await post('/auth/signup', { ...draft, client: 'web' });
+    const created = await post('/auth/signup', { ...draft, signupNotes: [draft.noteId], client: 'web' });
     assert.equal(created.status, 200);
     const cookie = created.headers.get('set-cookie').split(';')[0];
     const web = await fetch(origin + '/workspace', { headers: { Cookie: cookie } }).then((res) => res.json());
     assert.equal(web.restaurant.name, 'Riverside Cafe');
+    assert.deepEqual(web.profile, { name: 'Dev Kumar', phone });
+    const storedNote = await db.collection('voice_transcripts').findOne({ _id: draft.noteId });
+    assert.equal(storedNote.owner, (await db.collection('phone_accounts').findOne({ _id: phone })).uid);
+    assert.equal(storedNote.transcript, 'Spoken signup');
 
     const login = await post('/auth/login', { phone, client: 'android' });
     assert.equal(login.status, 200);
@@ -181,6 +186,18 @@ test('local phone signup shares a workspace across clients without exposing veri
       (res) => res.json(),
     );
     assert.equal(mobile.restaurant.id, web.restaurant.id);
+    const verifiedStore = await openStore(database);
+    try {
+      assert.equal(await verifiedStore.phoneSessionOwner(token, true), null);
+      const challenge = await verifiedStore.reservePhoneChallenge(phone, 'cutover-test', false);
+      await verifiedStore.savePhoneChallenge(challenge, 'test-verification');
+      await verifiedStore.claimPhoneChallenge(challenge);
+      const verifiedToken = await verifiedStore.completePhoneChallenge(challenge, phone);
+      const uid = await verifiedStore.phoneSessionOwner(verifiedToken, true);
+      assert.equal((await verifiedStore.restaurantFor(uid)).id, web.restaurant.id);
+    } finally {
+      await verifiedStore.close();
+    }
     assert.equal(
       (await post('/auth/signup', { ...draft, businessName: 'Renamed', client: 'android' })).status,
       409,

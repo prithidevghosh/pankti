@@ -2,7 +2,7 @@ import { Wordmark } from './Wordmark.jsx';
 import { BillReceipt } from './BillReceipt.jsx';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Banknote, BookOpen, Truck, ArrowRight, ArrowUpRight, ChartNoAxesColumn, LogOut, ReceiptText, RefreshCw, Utensils } from 'lucide-react';
+import { UserRound, Banknote, BookOpen, Truck, ArrowRight, ArrowUpRight, ChartNoAxesColumn, LogOut, ReceiptText, RefreshCw, Utensils } from 'lucide-react';
 import '@fontsource-variable/bricolage-grotesque';
 import './style.css';
 import { SignupVoice } from './SignupVoice.jsx';
@@ -78,6 +78,7 @@ function Login({ onSignIn, mode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const requestInFlight = useRef(false);
+  const signupNotes = useRef([]);
 
   async function submit(event) {
     event.preventDefault();
@@ -88,7 +89,7 @@ function Login({ onSignIn, mode }) {
     try {
       if (localPhoneOnly) {
         const form = { phone: '+91' + phone, client: 'web' };
-        const body = creating ? { ...form, name, businessName } : form;
+        const body = creating ? { ...form, name, businessName, signupNotes: signupNotes.current } : form;
         await request(creating ? '/auth/signup' : '/auth/login', { body });
         onSignIn();
       } else if (confirmation) {
@@ -118,6 +119,7 @@ function Login({ onSignIn, mode }) {
       : audio.type.startsWith('audio/ogg') ? 'ogg' : 'webm';
     body.append('audio', audio, 'signup.' + extension);
     const details = await request('/signup/voice', { body });
+    if (details.noteId) signupNotes.current.push(details.noteId);
     if (details.phone) setPhone(details.phone.slice(3));
     if (details.name) setName(details.name);
     if (details.businessName) setBusinessName(details.businessName);
@@ -254,6 +256,7 @@ const destinations = [
 ];
 function currentView() {
   const hash = window.location.hash.slice(1);
+  if (hash === 'profile') return hash;
   if (hash === 'bills') return 'orders';
   return destinations.some(([id]) => id === hash) ? hash : 'overview';
 }
@@ -288,11 +291,11 @@ function Ledger({ onSignOut, onSessionExpired }) {
   useEffect(() => {
     const controller = new AbortController();
     request('/workspace', { signal: controller.signal })
-      .then(async ({ restaurant, menu }) => {
+      .then(async ({ restaurant, menu, profile }) => {
         const analytics = restaurant
           ? await request('/analytics?date=' + date, { signal: controller.signal })
           : null;
-        if (!controller.signal.aborted) setState({ restaurant, menu, analytics, date, revision });
+        if (!controller.signal.aborted) setState({ restaurant, menu, profile, analytics, date, revision });
       })
       .catch((error) => {
         if (controller.signal.aborted) return;
@@ -323,9 +326,12 @@ function Ledger({ onSignOut, onSessionExpired }) {
           {destinations.map(([id,label,Icon]) => <a href={'#'+id} key={id} aria-current={id === view ? 'page' : undefined}>
             <Icon size={19} aria-hidden="true" /><span>{label}</span></a>)}
         </nav>
+        <div className="account-links">
+          <a href="#profile" aria-current={view === 'profile' ? 'page' : undefined}><UserRound size={17} /> Profile</a>
         <button className="signout" onClick={() => void onSignOut().catch((error) => setSignOutError(error.message))}>
           <LogOut size={17} /> Sign out
         </button>
+        </div>
         {signOutError && <p role="alert">{signOutError}</p>}
       </aside>
       <main ref={ledger} className="ledger" data-view={view}>
@@ -336,7 +342,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
                 {restaurant.name} <span>{restaurant.city}</span>
               </p>
             )}
-            <h1>{destinations.find(([id]) => id === view)[1]}</h1>
+            <h1>{view === 'profile' ? 'Your profile' : destinations.find(([id]) => id === view)[1]}</h1>
             {view === 'overview' && !loading && analytics && <div className="daily-sales">
               <span>Paid sales</span><strong>{asRupees(analytics.revenue)}</strong>
             </div>}
@@ -377,7 +383,14 @@ function Ledger({ onSignOut, onSessionExpired }) {
             {error}
           </p>
         )}
-        {!loading && !restaurant && !error && (
+        {view === 'profile' && state.profile && (
+          <dl className="account-details">
+            {[['Name', state.profile.name], ['Business name', restaurant?.name], ['Mobile number', state.profile.phone], ['City', restaurant?.city]].map(([label, value]) =>
+              <div key={label}><dt>{label}</dt><dd>{value || 'Not provided'}</dd></div>
+            )}
+          </dl>
+        )}
+        {!loading && view !== 'profile' && !restaurant && !error && (
           <div className="notice">
             <Utensils size={22} />
             <h2>Set up your restaurant</h2>

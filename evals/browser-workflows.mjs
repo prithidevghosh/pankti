@@ -58,7 +58,11 @@ try {
       await page.waitForTimeout(350);
       await finish.click();
     }
-    await page.goto(origin + '/#menu');
+    await page.goto(origin + '/#profile');
+    const profile = page.locator('.account-details');
+    await profile.getByText('QA Counter', {exact:true}).waitFor();
+    assert.ok(await profile.getByText('+91900000' + String(width).padStart(4, '0')).isVisible());
+    await page.getByRole('link', {name:'Menu',exact:true}).click();
     action = 'clarify';
     await speak('Teach a phrase');
     const review = page.locator('.phrase-review');
