@@ -7,6 +7,7 @@ import { httpError } from '../errors.mjs';
 const shopFields = ['menuCount','businessName','ownerName','phone','city','gst','payee','upi'];
 export const overviewMetrics = ['billedSales','collections','billCount','paidCount','paidValue','unpaidCount','partialCount','outstanding','topDish','vendorPurchases','vendorPaid','vendorDue','soldOut',...shopFields];
 const planSchema = z.object({
+  scope:z.enum(['shop','assistant','outside']).optional(),
   requestedReplyLanguage:z.string().nullable().optional(),
   courtesy:z.enum(['thanks','listening','identity','none']).optional(),
   period:z.enum(['today','yesterday','lastDays','calendar','selected','previous']), days:z.number().int(),
@@ -24,7 +25,8 @@ export async function overviewAnswer(store, understand, restaurant, transcript, 
   const language = [plan.requestedReplyLanguage,context.previousLanguage,plan.language]
     .find(candidate => speechLanguages.has(candidate)) || 'en-IN';
   const copy = labels[language];
-  if (plan.clarification || !plan.metrics.length) return {language,text:scopeReply(language,plan.courtesy),facts:[]};
+  if (plan.scope==='outside') return {language,text:scopeReply(language),facts:[]};
+  if (plan.scope==='assistant' || plan.clarification || !plan.metrics.length) return {language,text:scopeReply(language,plan.courtesy),facts:[]};
   const ago=n=>new Date(Date.parse(today+'T00:00:00Z')-n*86400000).toISOString().slice(0,10);
   let {start,end}=selected;
   if(plan.period==='previous' && context.previousFacts?.length){

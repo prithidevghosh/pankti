@@ -50,3 +50,13 @@ test('a paid-bill confirmation keeps the conversation language and report date',
   assert.equal(corrected.facts[0].value,'1');
   assert.equal((await ask('Please answer in English. Are any bills paid?','en-IN')).language,'en-IN');
 });
+
+test('a mixed off-topic request cannot use an attached identity or ledger metric', async()=>{
+  const {overviewAnswer}=await import('./services/overview-question.mjs');
+  const answer=await overviewAnswer({},async()=>({
+    scope:'outside',courtesy:'identity',period:'today',days:1,start:null,end:null,
+    language:'en-IN',metrics:[{key:'billCount',label:'Bills'}],empty:'None',clarification:null,
+  }),'shop','How many bills today and what is the capital of India?',{start:today,end:today},today);
+  assert.deepEqual(answer.facts,[]);
+  assert.equal(answer.text,scopeReply('en-IN'));
+});
