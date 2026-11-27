@@ -18,6 +18,8 @@ Design review before implementation. A generic dashboard would center a greeting
 
 ## Artwork
 
+Keep the current Menu and Bank Details prints. The November 28 alternatives are comparison studies for a future artwork review.
+
 Counter rhythm is a generated monotype-style illustration. It appears on the web sign-in and the mobile sign-in and onboarding screens.
 
 Prompt used with built-in ImageGen:
