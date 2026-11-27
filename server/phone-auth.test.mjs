@@ -179,6 +179,11 @@ test('local phone signup shares a workspace across clients without exposing veri
     assert.equal(storedNote.owner, (await db.collection('phone_accounts').findOne({ _id: phone })).uid);
     assert.equal(storedNote.transcript, 'Spoken signup');
 
+    const attemptPhoneEdit = await fetch(origin + '/profile', {
+      method: 'PUT', headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: verifiedPhone, name: 'Dev', businessName: 'Cafe', city: '' }),
+    });
+    assert.equal(attemptPhoneEdit.status, 400);
     const login = await post('/auth/login', { phone, client: 'android' });
     assert.equal(login.status, 200);
     const { token } = await login.json();

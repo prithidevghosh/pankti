@@ -91,6 +91,11 @@ export async function createApp({
       pendingBill: id ? await store.pendingBill(id) : null,
     });
   });
+  app.put('/api/profile', async (req, res) => {
+    const values = z.object({ name: shortText, businessName: shortText, city: z.string().trim().max(96) }).strict().parse(req.body);
+    const profile = await store.updateProfile(req.uid, values);
+    res.json({ profile, restaurant: await workspace(await store.restaurantFor(req.uid)) });
+  });
   app.post('/api/workspace', async (req, res) => {
     const { name, city } = restaurantSchema.parse(req.body);
     res.json({ restaurant: await workspace(await store.createRestaurant(req.uid, name, city)) });
