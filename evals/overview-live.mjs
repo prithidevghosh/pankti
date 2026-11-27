@@ -7,8 +7,9 @@ import {createApp} from '../server/app.mjs';
 import {testDatabase} from '../server/test-database.mjs';
 import {randomUUID} from 'node:crypto';
 
+const bengali=process.argv[2]==='--bengali';
 const confirmation=process.argv[2]==='--paid-confirmation';
-const wavs=await Promise.all(process.argv.slice(confirmation?3:2).map(path=>readFile(path)));
+const wavs=await Promise.all(process.argv.slice(confirmation || bengali?3:2).map(path=>readFile(path)));
 assert.ok(wavs.length>=2,'Supply question.wav, follow-up.wav and optionally unrelated questions as WAV files');
 const cleanup=[];
 const {name}=await testDatabase({after:f=>cleanup.push(f)});
@@ -61,6 +62,15 @@ try{
     }
     assert.ok(report.facts?.length,JSON.stringify(report));
     await state.filter({hasText:/^Speaking$/}).waitFor({timeout:35000});
+    if(bengali){
+      assert.equal(report.language,'bn-IN');
+      assert.match(report.text,/\p{Script=Bengali}/u);
+      const fact=report.facts.find(f=>f.key===(index?'paidCount':'billedSales'));
+      assert.ok(fact,JSON.stringify(report));
+      console.log(report.text);
+      await state.filter({hasText:/^Listening$/}).waitFor({timeout:30000});
+      continue;
+    }
     if(confirmation){
       assert.equal(report.language,'hi-IN');
       if(index===0){
