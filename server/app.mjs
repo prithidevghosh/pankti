@@ -21,6 +21,7 @@ const workspace = async (restaurant) =>
         id: restaurant.id,
         name: restaurant.name,
         city: restaurant.city,
+        gstBps: restaurant.gstBps ?? 0,
         qr: await renderQr(restaurant.qr),
         payee: restaurant.payee,
       }
@@ -97,7 +98,7 @@ export async function createApp({
     });
   });
   app.put('/api/profile', async (req, res) => {
-    const values = z.object({ name: shortText, businessName: shortText, city: z.string().trim().max(96) }).strict().parse(req.body);
+    const values = z.object({ name: shortText, businessName: shortText, city: z.string().trim().max(96), gstBps: z.number().int().min(0).max(10000).optional() }).strict().parse(req.body);
     const profile = await store.updateProfile(req.uid, values);
     res.json({ profile, restaurant: await workspace(await store.restaurantFor(req.uid)) });
   });

@@ -7,15 +7,16 @@ const daySchema = z.iso.date();
 export function registerBillsRoutes(app, { store, requireRestaurant }) {
   app.post('/api/bills', async (req, res) => {
     const restaurant = requireRestaurant(req);
-    const { request, basket, prices } = z
+    const { request, basket, prices, gstBps } = z
       .object({
         request: z.uuid(),
         basket: basketSchema,
+        gstBps: z.number().int().min(0).max(10000).optional(),
         prices: z.record(z.uuid(), z.number().int().positive()).optional(),
       })
       .parse(req.body);
     if (!basket.length) throw httpError(422, 'Add an item before making a bill.');
-    const bill = await store.createBill(restaurant.id, request, basket, prices);
+    const bill = await store.createBill(restaurant.id, request, basket, prices, gstBps);
     if (!bill) throw httpError(422, 'One or more items are unavailable.');
     res.status(201).json({ bill });
   });

@@ -75,8 +75,11 @@ const collections = {
   phone_sessions: object({ _id: string, uid: string, expiresAt: { bsonType: 'date' } }),
   counters: object({ _id: string, value: integer }),
 };
+const gstBps = { ...amount, maximum: 10000 };
+collections.restaurants.properties.gstBps = gstBps;
 line.properties.note = { ...string, maxLength: 400 };
 Object.assign(collections.bills.properties, {
+  gstBps, subtotal: amount, gstAmount: amount,
   received: amount,
   paymentRevision: amount,
   movements: {
@@ -147,8 +150,18 @@ async function installCoreCollections(db) {
 export async function ensureSchema(db) {
   const history = db.collection('schema_versions');
   const latest = await history.find().sort({ _id: -1 }).limit(1).next();
-  if (latest?._id > 3) throw Error('This database requires a newer Pankti server.');
-  if (latest?._id === 3) return;
+  if (latest?._id > 4) throw Error('This database requires a newer Pankti server.');
+  if (latest?._id === 4) return;
+  if (latest && latest._id >= 2) {
+    for (const name of ['restaurants', 'bills']) {
+      try {
+        await db.command({ collMod: name, validator: { $jsonSchema: collections[name] } });
+      } catch (error) {
+        // Older validators allow these optional fields on Atlas tiers without collMod.
+        if (error.code !== 8000 || !error.message.includes('not allowed to do action [collMod]')) throw error;
+      }
+    }
+  }
   if (!latest || latest._id < 2) await installCoreCollections(db);
   await history.updateOne({ _id: 1 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
   await history.updateOne({ _id: 2 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
@@ -166,4 +179,5 @@ export async function ensureSchema(db) {
   await archive.createIndex({ owner: 1, createdAt: -1 });
   await archive.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   await history.updateOne({ _id: 3 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
+  await history.updateOne({ _id: 4 }, { $setOnInsert: { appliedAt: new Date() } }, { upsert: true });
 }

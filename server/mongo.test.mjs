@@ -159,3 +159,21 @@ test('reporting periods include both IST boundary days and combine matching hour
   assert.equal((await store.analytics(r.id, '2026-11-28', 14)).orders, 3);
   assert.equal((await store.analytics(r.id, '2026-11-28')).orders, 1);
 });
+
+test('issued bills keep their GST snapshot through rate changes and retries', async (t) => {
+  const { name, db } = await testDatabase(t);
+  const store = await openStore(name);
+  t.after(() => store.close());
+  const shop = await store.createRestaurant('gst-owner', 'Counter', 'Delhi');
+  const [dish] = await store.saveMenu(shop.id, [{ name: 'Tea', variant: '', category: '', price: 1999 }]);
+  const basket = [{ item: dish.id, quantity: 0.5 }];
+  const issue = (request, expected) => store.createBill(shop.id, request, basket, undefined, expected);
+  assert.equal((await issue(randomUUID(), 0)).total, 1000);
+  await db.collection('restaurants').updateOne({ _id: shop.id }, { $set: { gstBps: 725 } });
+  await assert.rejects(issue(randomUUID(), 0), { status: 409 });
+  const request = randomUUID();
+  const bill = await issue(request, 725);
+  assert.deepEqual([bill.subtotal, bill.gstAmount, bill.total], [1000, 73, 1073]);
+  await db.collection('restaurants').updateOne({ _id: shop.id }, { $set: { gstBps: 0 } });
+  assert.deepEqual(await issue(request, 725), bill);
+});

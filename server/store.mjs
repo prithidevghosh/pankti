@@ -1,3 +1,4 @@
+import { billTotals } from '../shared/bill-totals.mjs';
 import { receivedOn } from './payment.mjs';
 import { reviewMenuImport } from '../shared/menu-import.mjs';
 import { randomUUID } from 'node:crypto';
@@ -133,7 +134,7 @@ export async function openStore(database) {
     async pendingBill(restaurant) {
       return view(await bills.findOne({ restaurant, paid: null }, { sort: { number: -1 } }));
     },
-    createBill(restaurant, request, basket, prices) {
+    createBill(restaurant, request, basket, prices, expectedGst) {
       return transaction(async (session) => {
         const existing = await bills.findOne({ restaurant, request }, { session });
         if (existing) return view(existing);
@@ -148,6 +149,10 @@ export async function openStore(database) {
             throw httpError(409, 'A menu price changed. Refresh the ledger and review the bill total.');
           return { item, quantity, name, variant, price, ...(note ? { note } : {}) };
         });
+        const settings = await restaurants.findOne({ _id: restaurant }, { session, projection: { gstBps: 1 } });
+        const gstBps = settings?.gstBps ?? 0;
+        if (expectedGst !== undefined && expectedGst !== gstBps)
+          throw httpError(409, 'GST changed. Refresh the ledger and review the bill total.');
         const number = await increment(db, session, 'bill:' + restaurant);
         const doc = {
           _id: randomUUID(),
@@ -157,7 +162,7 @@ export async function openStore(database) {
           created: new Date().toISOString(),
           paid: null,
           method: null,
-          total: lines.reduce((sum, line) => sum + Math.round(line.price * line.quantity), 0),
+          ...billTotals(lines, gstBps),
           lines,
         };
         await bills.insertOne(doc, { session });

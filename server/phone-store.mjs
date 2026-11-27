@@ -58,13 +58,13 @@ export function openPhoneStore(db, transaction) {
       const [account, profile] = await Promise.all([accounts.findOne({ uid }), profiles.findOne({ _id: uid })]);
       return { name: account?.name || profile?.name || null, phone: account?._id || null };
     },
-    updateProfile(uid, { name, businessName, city }) {
+    updateProfile(uid, { name, businessName, city, gstBps }) {
       return transaction(async (session) => {
         const account = await accounts.findOneAndUpdate({ uid, disabled: false }, { $set: { name } },
           { session, returnDocument: 'after' });
         if (!account) throw httpError(401, 'Sign in to update your profile.');
         await restaurants.updateOne({ owner: uid }, {
-          $set: { name: businessName, city },
+          $set: { name: businessName, city, ...(gstBps !== undefined && { gstBps }) },
           $setOnInsert: { _id: randomUUID(), qr: null, payee: null },
         }, { session, upsert: true });
         return { name, phone: account._id };
