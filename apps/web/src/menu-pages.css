@@ -288,5 +288,40 @@
 .phrase-line {width:100%;display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 18px;text-align:left;padding:14px 0;border:0;border-bottom:1px solid #cfccb7;color:inherit;background:none}
 .phrase-line strong {font:400 1.65rem 'Pankti Wordmark',Georgia,serif}.phrase-line span,.phrase-review p{font-size:.91rem}
 .phrase-review {margin-top:16px;padding:15px;background:#eeebdc}.phrase-review button{min-height:44px;padding-inline:12px;border:1px solid #839485;background:#fffaf0;color:#213b30;margin:0 6px 6px 0}
-.menu-import .voice-control {vertical-align:middle;margin:10px 0 0 10px}
-@media(max-width:600px){.menu-import .voice-control{display:grid;margin:8px 0 0}}
+.menu-import-actions {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:10px 18px;
+  margin-top:16px;
+}
+.menu-import-actions > :is(.file-field, .voice-control) {
+  margin:0;
+  min-height:52px;
+}
+@media(max-width:900px) {
+  .ledger .menu-spread {gap:26px}
+  .menu-import {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(90px,35%);
+    align-items:center;
+    gap:18px 14px;
+    padding:20px;
+  }
+  .menu-import > div {display:contents}
+  .menu-import > img {
+    grid-column:2;grid-row:1;
+    width:100%;height:auto;
+  }
+  .menu-import-intro {grid-area:1/1}
+  .menu-import-actions {
+    grid-column:1/-1;
+    margin:0;
+    padding-top:14px;
+    border-top:1px solid #647398;
+  }
+  .menu-import-actions .file-field {font-size:.88rem;padding:8px 10px}
+  .menu-import-actions .voice-control {gap:8px;padding-right:0}
+  .menu-folio {padding:20px}
+  .phrase-book .folio-heading {row-gap:14px}
+}

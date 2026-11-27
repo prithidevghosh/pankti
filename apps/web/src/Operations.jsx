@@ -370,8 +370,11 @@ export function Menu({ menu, onMenu }) {
       <section className="menu-import">
         <img src="/folded-menu.webp" alt="" />
         <div>
+          <div className="menu-import-intro">
           <h2>Add dishes</h2>
           <p>Photograph a menu page or speak the dishes and prices.</p>
+          </div>
+          <div className="menu-import-actions">
           <label className="file-field">
             <ImagePlus size={18} aria-hidden="true" /> Choose menu photos
             <input
@@ -412,9 +415,9 @@ export function Menu({ menu, onMenu }) {
               op.setMessage(result.question || '');
             }}
           />
+          </div>
         </div>
       </section>
-      <SpecialPhrases menu={menu} />
       <Feedback message={op.message} />
       {draft.length > 0 && (
         <section className="menu-folio">
@@ -509,6 +512,7 @@ export function Menu({ menu, onMenu }) {
           />
         </section>
       )}
+      <SpecialPhrases menu={menu} />
       {(menu.length > 0 || !draft.length) && (
         <section className="menu-folio">
           <header className="folio-heading">

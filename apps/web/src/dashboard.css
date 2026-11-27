@@ -601,3 +601,24 @@
 @media(prefers-reduced-motion:reduce) {
   .journal-layout,.vendor-editor,.journal-layout[data-open="false"] .vendor-editor {transition:none;animation:none;}
 }
+
+@media (max-width:680px) {
+  .layout .ledger {padding-inline:clamp(16px,4.5vw,26px)}
+  .ledger:not([data-view='overview']) .page-heading {align-items:center;row-gap:0;margin-bottom:22px}
+  .ledger:not([data-view='overview']) .ledger-header {padding:6px 0 14px}
+  .ledger .restaurant-name {margin-bottom:8px}
+  .work-sheet .subtle {line-height:1.5}
+  .order-desk {padding:0;background:transparent;gap:20px}
+  .order-desk .record-side {padding:0 0 18px;background:#e3e5d6}
+  .record-side > :not(.station-print) {margin-inline:18px}
+  .order-desk .station-print,.bank-desk .station-print {height:auto;display:block;width:100%;margin-bottom:18px}
+  .vendor-spread,.bank-desk {gap:24px}
+  .vendor-spread .balance-cover img {height:auto;min-height:0;max-height:none;align-self:center}
+  .bank-desk {border-top:0;padding-top:0}
+  .bank-desk .placard-mount:has(.placard-empty) {min-height:96px;padding:18px}
+  .ledger .report-grid {gap:30px}
+}
+@media (max-width:680px) {
+  .vendor-spread .vendor-write {padding-top:0;border-top:0}
+  .ledger .metrics > div {align-content:start;grid-template-rows:minmax(2.5em,auto) auto}
+}
