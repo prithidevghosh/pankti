@@ -253,7 +253,7 @@ test('a text-only voice language keeps its reply and follow-up context', async t
   let previous;
   const call=await start(t,{
     speech:async(_file,_terms,options)=>{
-      assert.equal(options.language,'ur-IN');
+      assert.equal(options.language,undefined);
       return {transcript:'آج کتنی فروخت ہوئی؟',language:'ur-IN'};
     },
     understand:async(_kind,_text,context)=>{
@@ -265,7 +265,7 @@ test('a text-only voice language keeps its reply and follow-up context', async t
   await call('/workspace',{method:'POST',body:restaurant});
   const body=new FormData();
   body.append('audio',new Blob(['fixture'],{type:'audio/wav'}),'question.wav');
-  body.append('date','2026-11-28');body.append('days','7');body.append('language','ur-IN');
+  body.append('date','2026-11-28');body.append('days','7');
   const first=await call('/overview/live/report',{method:'POST',body});
   assert.equal(first.language,'ur-IN');
   assert.match(first.text,/\p{Script=Arabic}/u);

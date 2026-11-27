@@ -20,14 +20,14 @@ export const speechLanguages = new Set(Object.keys(voiceLanguages));
 const money = new Set(['billedSales','collections','paidValue','outstanding','vendorPurchases','vendorPaid','vendorDue']);
 
 export async function overviewAnswer(store, understand, restaurant, transcript, selected, today=indiaDay(), context={}) {
-  const plan = planSchema.parse(await understand('overview',transcript,{today,inputLanguage:context.inputHint || context.detectedLanguage,previousLanguage:context.previousLanguage,previousFacts:context.previousFacts || []}));
+  const plan = planSchema.parse(await understand('overview',transcript,{today,inputLanguage:context.detectedLanguage,previousLanguage:context.previousLanguage,previousFacts:context.previousFacts || []}));
   const detected=locale(context.detectedLanguage);
   const previous=locale(context.previousLanguage);
   const planned=locale(plan.language);
   // Keep brief code-mixed follow-ups in the established language. Recognize
   // a change when both the audio detector and transcript planner identify it.
   const switched=detected && detected!=='en-IN' && detected===planned;
-  const language=locale(plan.requestedReplyLanguage) || locale(context.inputHint) ||
+  const language=locale(plan.requestedReplyLanguage) ||
     (switched && detected) || previous || detected || planned || 'en-IN';
   const copy = labels[language];
   if (plan.scope==='outside') return {language,text:scopeReply(language),facts:[]};

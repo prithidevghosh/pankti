@@ -134,7 +134,7 @@ export async function transcribe(file, keyterms = [], options = {}) {
   form.append('file', new Blob([file.buffer], { type: file.mimetype }), file.originalname);
   form.append('model', 'saaras:v4');
   form.append('mode', options.withLanguage ? 'transcribe' : 'verbatim');
-  form.append('language_code', options.language || 'unknown');
+  form.append('language_code', 'unknown');
   const hints = [
     ...new Set(keyterms.map((term) => term.trim().toLowerCase().slice(0, 64)).filter(Boolean)),
   ].slice(0, 50);

@@ -157,6 +157,7 @@ try {
     await page.getByRole('link',{name:'Overview',exact:true}).click();
     const conversation=page.getByRole('region',{name:'Business conversation'});
     await conversation.getByRole('button',{name:'Start conversation'}).waitFor();
+    assert.equal(await conversation.getByRole('combobox').count(),0,'Voice language is detected automatically');
     assert.ok(await conversation.evaluate(el=>el.scrollWidth<=el.clientWidth));
     if(process.env.PANKTI_QA_SCREENSHOTS)
       await conversation.screenshot({path:process.env.PANKTI_QA_SCREENSHOTS+'/conversation-'+width+'.png'});

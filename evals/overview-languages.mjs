@@ -16,8 +16,8 @@ const day='2026-11-28';
 for(const locale of Object.keys(voiceLanguages)){
   const question=questions[locale.split('-')[0]];
   const audio=Buffer.from(await readOverviewAloud(question,locale),'base64');
-  const heard=await transcribe({buffer:audio,originalname:'question.wav',mimetype:'audio/wav'},[],{withLanguage:true,language:locale});
-  const result=await overviewAnswer({overviewFigures:async()=>({billedSales:10500})},interpret,'qa',heard.transcript,{start:day,end:day},day,{inputHint:locale,detectedLanguage:heard.language});
+  const heard=await transcribe({buffer:audio,originalname:'question.wav',mimetype:'audio/wav'},[],{withLanguage:true});
+  const result=await overviewAnswer({overviewFigures:async()=>({billedSales:10500})},interpret,'qa',heard.transcript,{start:day,end:day},day,{detectedLanguage:heard.language});
   assert.equal(result.language,locale);
   assert.ok(result.facts.some(f=>f.key==='billedSales'),JSON.stringify(result));
   assert.ok((await readOverviewAloud(result.text,locale)).length>1000);
