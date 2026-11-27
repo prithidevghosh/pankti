@@ -358,8 +358,8 @@ function Ledger({ onSignOut, onSessionExpired }) {
               <span>Paid sales</span><strong>{asRupees(analytics.revenue)}</strong>
             </div>}
           </div>
-          {view === 'overview' && <img className="masthead-print" src="/closing-the-counter.webp"
-            alt="Closing the Counter, an abstract print of stacked order slips in vermilion, green and carbon ink" />}
+          {view === 'overview' && <img className="masthead-print" src="/serving-hatch.webp"
+            alt="An indigo print of a shopkeeper surveying the counter beneath a raised shutter" />}
         </header>
         <div className="ledger-tools">
           <div className="ledger-controls">

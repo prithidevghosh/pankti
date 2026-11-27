@@ -653,3 +653,8 @@
   .account-links { display:flex; margin:0 0 0 auto; }
   .sidebar .account-links :is(a,button) { gap:5px; padding:5px; }
 }
+
+.order-desk .station-print { object-position: center 61%; }
+@media (max-width: 680px) {
+  .order-desk .station-print { aspect-ratio: 3 / 1; }
+}
