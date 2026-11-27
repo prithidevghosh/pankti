@@ -1,3 +1,4 @@
+import {detailKeys,menuAction,operationalDetails} from './overview-operations.mjs';
 import {locale,voiceLanguages} from '../../shared/overview-languages.mjs';
 import {scopeReply,speakFacts} from './overview-speech.mjs';
 import labels from '../locales/overview.json' with { type: 'json' };
@@ -8,19 +9,21 @@ import { httpError } from '../errors.mjs';
 const shopFields = ['menuCount','businessName','ownerName','phone','city','gst','payee','upi'];
 export const overviewMetrics = ['billedSales','collections','billCount','paidCount','paidValue','unpaidCount','partialCount','outstanding','topDish','vendorPurchases','vendorPaid','vendorDue','soldOut',...shopFields];
 const planSchema = z.object({
+  action:z.object({kind:z.enum(['enable','disable']),target:z.string().trim().min(1).max(200).nullable()}).nullish(),
+  vendorName:z.string().trim().max(160).nullish(),
   scope:z.enum(['shop','assistant','outside']).optional(),
   requestedReplyLanguage:z.string().nullable().optional(),
   courtesy:z.enum(['thanks','listening','identity','none']).optional(),
   period:z.enum(['today','yesterday','lastDays','calendar','selected','previous']), days:z.number().int(),
   start:z.iso.date().nullable(), end:z.iso.date().nullable(), language:z.string().regex(/^[a-z]{2,3}-IN$/),
-  metrics:z.array(z.object({key:z.enum(overviewMetrics), label:z.string().trim().min(1).max(120)})).max(15),
+  metrics:z.array(z.object({key:z.enum([...overviewMetrics,...detailKeys]), label:z.string().trim().min(1).max(120)})).max(15),
   empty:z.string().trim().max(100), clarification:z.string().trim().max(300).nullable(),
 });
 export const speechLanguages = new Set(Object.keys(voiceLanguages));
 const money = new Set(['billedSales','collections','paidValue','outstanding','vendorPurchases','vendorPaid','vendorDue']);
 
 export async function overviewAnswer(store, understand, restaurant, transcript, selected, today=indiaDay(), context={}) {
-  const plan = planSchema.parse(await understand('overview',transcript,{today,inputLanguage:context.detectedLanguage,previousLanguage:context.previousLanguage,previousFacts:context.previousFacts || []}));
+  const plan = planSchema.parse(await understand('overview',transcript,{today,inputLanguage:context.detectedLanguage,previousLanguage:context.previousLanguage,referencedMenuItems:context.previousMenuRefs?.length || 0,pendingAvailability:context.pendingAvailability,previousFacts:context.previousFacts || []}));
   const detected=locale(context.detectedLanguage);
   const previous=locale(context.previousLanguage);
   const planned=locale(plan.language);
@@ -31,6 +34,8 @@ export async function overviewAnswer(store, understand, restaurant, transcript, 
     (switched && detected) || previous || detected || planned || 'en-IN';
   const copy = labels[language];
   if (plan.scope==='outside') return {language,text:scopeReply(language),facts:[]};
+  if(plan.scope==='shop' && plan.action)
+    return menuAction(store,understand,restaurant,transcript,plan.action,context.previousMenuRefs || [],language);
   if (plan.scope==='assistant' || plan.clarification || !plan.metrics.length) return {language,text:scopeReply(language,plan.courtesy),facts:[]};
   const ago=n=>new Date(Date.parse(today+'T00:00:00Z')-n*86400000).toISOString().slice(0,10);
   let {start,end}=selected;
@@ -48,7 +53,9 @@ export async function overviewAnswer(store, understand, restaurant, transcript, 
   if(plan.period==='calendar') {start=plan.start;end=plan.end;}
   if (!start || !end || end < start || end > today || Date.parse(end)-Date.parse(start) >= 366*86400000)
     throw httpError(422,'Choose a past or current period of up to one year.');
-  const keys=new Set(plan.metrics.map(m=>m.key));
+  const requested=[...new Set(plan.metrics.map(m=>m.key))];
+  const details=await operationalDetails(store,restaurant,requested,start,end,today,language,plan.vendorName);
+  const keys=new Set(requested.filter(key=>!detailKeys.includes(key)));
   if(keys.has('unpaidCount')) keys.add('partialCount');
   const values={};
   if ([...keys].some(k=>!k.startsWith('vendor') && k!=='soldOut' && !shopFields.includes(k))) Object.assign(values,await store.overviewFigures(restaurant,start,end));
@@ -59,7 +66,11 @@ export async function overviewAnswer(store, understand, restaurant, transcript, 
     values.vendorPaid=events.reduce((n,e)=>n+e.paid,0);
     values.vendorDue=ledger.balances.reduce((n,b)=>n+Math.max(0,b.due),0);
   }
-  if(keys.has('soldOut')) values.soldOut=(await store.menuFor(restaurant)).filter(i=>i.soldOutDay===today).map(i=>[i.name,i.variant].filter(Boolean).join(' '));
+  if(keys.has('soldOut')){
+    const disabled=(await store.menuFor(restaurant)).filter(i=>i.soldOutDay===today);
+    values.soldOut=disabled.map(i=>[i.name,i.variant].filter(Boolean).join(' '));
+    details.menuRefs.push(...disabled.map(i=>i.id));
+  }
   if(keys.has('menuCount')) values.menuCount=(await store.menuFor(restaurant)).length;
   const shop=context.shop;
   if(shop){
@@ -80,7 +91,7 @@ export async function overviewAnswer(store, understand, restaurant, transcript, 
     const current=key==='soldOut'||key==='vendorDue'||shopFields.includes(key);
     return {key,label:copy[key],value,start:current?today:start,end:current?today:end};
   });
-  const report=speakFacts(facts,values,language,today);
+  const report=[speakFacts(facts,values,language,today),...details.spoken].filter(Boolean).join(' ');
   const text=plan.courtesy==='identity' ? scopeReply(language,'identity')+' '+report : report;
-  return {language,text,facts};
+  return {language,text,facts:[...facts,...details.facts],sections:details.sections,menuRefs:details.menuRefs};
 }

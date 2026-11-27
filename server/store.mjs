@@ -16,6 +16,9 @@ const view = (doc) => {
   return { id, ...fields };
 };
 
+const issueRange=(start,end)=>({$gte:new Date(start+'T00:00:00+05:30').toISOString(),
+  $lt:new Date(Date.parse(end+'T00:00:00+05:30')+86400000).toISOString()});
+
 export async function openStore(database) {
   const { db, client, transaction } = await connect(database);
   const restaurants = db.collection('restaurants');
@@ -263,9 +266,16 @@ export async function openStore(database) {
       await db.collection('phrases').deleteOne({ restaurant, _id: id });
       return this.phrasesFor(restaurant);
     },
+    ordersInPeriod(restaurant,start,end){
+      return bills.find({restaurant,created:issueRange(start,end)},
+        {projection:{number:1,lines:1,total:1,method:1,paid:1,movements:1}}).sort({number:-1}).toArray();
+    },
+    checkedInvoicesInPeriod(restaurant,start,end){
+      return invoices.find({restaurant,created:issueRange(start,end),'check.rows.status':'difference'},
+        {projection:{vendor:1,number:1,'check.rows':1}}).sort({created:-1}).toArray();
+    },
     async overviewFigures(restaurant,start,end) {
-      const range = { $gte:new Date(start+'T00:00:00+05:30').toISOString(),
-        $lt:new Date(Date.parse(end+'T00:00:00+05:30')+86400000).toISOString() };
+      const range=issueRange(start,end);
       return transaction(async session=>{
         const result={billedSales:0,collections:0,billCount:0,paidCount:0,paidValue:0,unpaidCount:0,partialCount:0,outstanding:0};
         const dishes=new Map();
