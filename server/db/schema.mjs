@@ -1,4 +1,4 @@
-// Version 1. Validators and indexes are installed before serving requests.
+// Install collection validators and indexes before serving requests.
 const string = { bsonType: 'string' };
 const optionalText = { bsonType: ['string', 'null'] };
 const integer = { bsonType: ['int', 'long', 'double'], multipleOf: 1 };
@@ -131,7 +131,18 @@ export async function ensureSchema(db) {
       await db.createCollection(name, { validator: { $jsonSchema: schema } });
     } catch (error) {
       if (error.code !== 48) throw error;
-      await db.command({ collMod: name, validator: { $jsonSchema: schema } });
+      try {
+        await db.command({ collMod: name, validator: { $jsonSchema: schema } });
+      } catch (error) {
+        // The v1 bills validator already permits the optional v2 fields.
+        // Keep it when Atlas denies changes to the collection validator.
+        if (
+          name !== 'bills' ||
+          error.code !== 8000 ||
+          error.codeName !== 'AtlasError' ||
+          !error.message.includes('not allowed to do action [collMod]')
+        ) throw error;
+      }
     }
     for (const [keys, options] of indexes[name] || []) await db.collection(name).createIndex(keys, options);
   }

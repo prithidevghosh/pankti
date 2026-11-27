@@ -3,6 +3,49 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { testDatabase } from './test-database.mjs';
 import { openStore } from './store.mjs';
+import { ensureSchema } from './db/schema.mjs';
+
+test('version 1 bills can upgrade when Atlas denies validator changes', async (t) => {
+  const { db } = await testDatabase(t);
+  const [{ options }] = await db.listCollections({ name: 'bills' }).toArray();
+  const { validator } = options;
+  const properties = validator.$jsonSchema.properties;
+  delete properties.received;
+  delete properties.paymentRevision;
+  delete properties.movements;
+  delete properties.lines.items.properties.note;
+  await db.command({ collMod: 'bills', validator });
+  await db.collection('bills').dropIndex('restaurant_1_movements.at_1');
+  await db.collection('phrases').drop();
+  await db.collection('schema_versions').deleteOne({ _id: 2 });
+
+  const bills = db.collection('bills');
+  const receipt = {
+    _id: 'legacy-bill', restaurant: 'counter', number: 1, request: randomUUID(),
+    created: '2026-11-27T10:00:00.000Z', total: 1500, paid: null, method: null,
+    lines: [{ item: 'tea', name: 'Tea', variant: '', price: 1500, quantity: 1 }],
+  };
+  await bills.insertOne(receipt);
+
+  await ensureSchema({
+    collection: db.collection.bind(db),
+    createCollection: db.createCollection.bind(db),
+    command: async (command) => {
+      assert.equal(command.collMod, 'bills');
+      throw Object.assign(new Error('user is not allowed to do action [collMod] on [database.bills]'), {
+        code: 8000,
+        codeName: 'AtlasError',
+      });
+    },
+  });
+
+  assert.deepEqual(await bills.findOne({ _id: receipt._id }), receipt);
+  assert.ok(await db.collection('schema_versions').findOne({ _id: 2 }));
+  assert.ok(await bills.indexExists('restaurant_1_movements.at_1'));
+  assert.ok(await db.collection('phrases').indexExists('restaurant_1_key_1'));
+  await bills.updateOne({ _id: receipt._id }, { $set: { received: 1000, 'lines.0.note': 'Less sugar' } });
+  await assert.rejects(bills.updateOne({ _id: receipt._id }, { $set: { 'lines.0.quantity': 0.1 } }), { code: 121 });
+});
 
 test('concurrent duplicate bills share one number and malformed documents are rejected', async (t) => {
   const { name, db } = await testDatabase(t);
