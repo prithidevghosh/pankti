@@ -12,17 +12,19 @@
     -apple-system,
     sans-serif;
   font-synthesis: none;
-  --accent: #555044;
-  --accent-pressed: #333232;
-  --nav-paper: #555044;
-  --ink: #333232;
-  --soft: #565850;
-  --paper: #f3ede2;
-  --clay-wash: #e8d7b9;
-  --stamp-stock: #ecc493;
-  --rule: #c5bbab;
+  --accent: var(--ink);
+  --accent-pressed: #242a3d;
+  --nav-paper: #b9c7dc;
+  --ink: #293d64;
+  --soft: #52565c;
+  --paper: #faf4e8;
+  --mount: #e6dfce;
+  --selvedge: #a68247;
+  --clay-wash: color-mix(in srgb, var(--mount) 48%, var(--paper));
+  --stamp-stock: var(--mount);
+  --rule: #c1bcb0;
   --ochre: #e3bf77;
-  --selection-edge: #a63920;
+  --selection-edge: #ac792c;
   --display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
 }
 *,
@@ -84,8 +86,7 @@ p {
   letter-spacing: -0.028em;
 }
 .login {
-  --accent: #525447;
-  --sheet: color-mix(in srgb, #e8d4ba 46%, #fffcf5);
+  --sheet: var(--paper);
   --line: #b7af9b;
   min-height: 100svh;
   display: grid;
@@ -666,4 +667,5 @@ th:last-child {
   .login .account-submit { min-height: 44px; margin-top: 10px; }
 }
 
-.login.is-signup {--sheet:color-mix(in srgb, #eec289 36%, #fffcf5);--accent:#3a4829}
+.login-visual {border-right:5px double #967c55}
+.account-header {border-bottom:3px double var(--selvedge)}

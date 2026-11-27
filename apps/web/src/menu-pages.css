@@ -3,8 +3,8 @@
   flex-direction: column;
   align-items: stretch;
   gap: 20px;
-  --menu-ink: #082377;
-  --menu-paper: #fffaf0;
+  --menu-ink: var(--ink);
+  --menu-paper: #fffcf5;
 }
 .menu-spread[hidden] {
   display: none;
@@ -13,7 +13,7 @@
   display: flex;
   align-items: stretch;
   color: var(--menu-ink);
-  background: #e7cfb0;
+  background: var(--mount);
 }
 .menu-import img {
   width: clamp(105px, 24%, 290px);

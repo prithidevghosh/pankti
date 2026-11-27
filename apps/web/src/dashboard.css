@@ -3,7 +3,8 @@
   color: var(--ink);
 }
 .layout .sidebar {
-  color: #fff9ef;
+  color: var(--ink);
+  border-right: 5px double #967c55;
   background: var(--nav-paper);
 }
 @media (min-width: 681px) {
@@ -17,7 +18,7 @@
   }
 }
 .sidebar nav a[aria-current='page'] {
-  background: #f7efdf;
+  background: #fff9ec;
   color: var(--ink);
 }
 .layout .ledger {
@@ -253,7 +254,7 @@
 
 /* Daily statement */
 .ledger[data-view='overview'] .ledger-header {
-  background: #ebc495;
+  background: var(--mount);
   color: var(--ink);
 }
 .ledger[data-view='overview'] .restaurant-name span {
@@ -310,7 +311,7 @@
 .order-ticket {
   background: #fffcf6;
   padding: 20px 22px 26px;
-  border-top: 4px solid #957847;
+  border-top: 4px solid var(--selection-edge);
   box-shadow: 0 3px 0 #cac6b3;
 }
 .order-ticket h3 {
@@ -350,7 +351,7 @@
 .balance-cover {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 38%;
-  background: #fcc78d;
+  background: var(--mount);
   color: var(--ink);
 }
 .balance-cover div {
@@ -450,8 +451,8 @@
 }
 .placard-name {
   padding: 14px 8px;
-  background: #6e1615;
-  color: #fff8eb;
+  background: var(--mount);
+  color: var(--ink);
   font-size: 1.2rem;
   overflow-wrap: anywhere;
 }
@@ -522,7 +523,8 @@
   min-height: 44px;
   padding: 8px 14px;
   border: 1px solid currentColor;
-  background: #fffcf6;
+  background: var(--accent);
+  color: #fffaf1;
   font-weight: 600;
   cursor: pointer;
 }
@@ -568,7 +570,7 @@
   overflow:hidden;animation:sheet-arrive 220ms ease-out both;}
 .journal-layout[data-open="false"] .vendor-editor {animation:sheet-leave 180ms ease-in both;}
 .correction-header {display:flex;align-items:start;justify-content:space-between;gap:12px;
-  padding:18px 20px;background:#fcc78d;color:var(--ink);border-bottom:3px solid #bb9065;}
+  padding:18px 20px;background:var(--mount);color:var(--ink);border-bottom:3px solid #bb9065;}
 .correction-header p,.correction-header span {font-size:.8rem;color:var(--soft);}
 .correction-header span {white-space:nowrap;}
 .correction-header h3 {overflow-wrap:anywhere;margin:5px 0 0;font:400 clamp(1.6rem,2.5vw,2.4rem)/1.2 'Pankti Wordmark',Georgia,serif;}
@@ -632,12 +634,13 @@
 
 .layout .sidebar :is(a, .signout):hover {background:var(--accent-pressed);color:#fff9ef}
 
-/* Pigments sampled from the print displayed in each workspace. */
-.ledger[data-view='overview'] {--accent:#984227}
-.ledger[data-view='orders'] {--accent:#55452f;--clay-wash:color-mix(in srgb,#f6cb8f 72%,#fffaf0)}
-.ledger[data-view='vendors'] {--accent:#6e1c28}
-.ledger[data-view='menu'] {--accent:#082377}
-.ledger[data-view='bank'] {--accent:#6e1615}
-.order-ticket {border-top-color:#e89a0a}
-.balance-cover {color:#352318}
-.placard-mount {background:color-mix(in srgb,var(--stamp-stock) 55%,#fffaf0)}
+/* Fine double rules carry the edge of the print onto the facing paper. */
+.menu-import img, .masthead-print, .balance-cover img {
+  border-inline-start: 5px double var(--selvedge);
+}
+.order-desk, .bank-desk, .menu-folio {
+  border-left: 3px double var(--selvedge);
+}
+.placard-mount, .vendor-book {
+  background: color-mix(in srgb, var(--mount) 38%, var(--paper));
+}
