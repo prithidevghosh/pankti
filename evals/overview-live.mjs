@@ -8,7 +8,7 @@ import {testDatabase} from '../server/test-database.mjs';
 import {randomUUID} from 'node:crypto';
 
 const wavs=await Promise.all(process.argv.slice(2).map(path=>readFile(path)));
-assert.equal(wavs.length,2,'Supply question.wav and follow-up.wav');
+assert.ok(wavs.length>=2,'Supply question.wav, follow-up.wav and optionally unrelated questions as WAV files');
 const cleanup=[];
 const {name}=await testDatabase({after:f=>cleanup.push(f)});
 const {app,close}=await createApp({database:name,localPhoneOnly:true});
@@ -45,7 +45,16 @@ try{
   for(const [index,wav] of wavs.entries()) {
     const reported=page.waitForResponse(r=>r.url().endsWith('/live/report'),{timeout:30000});
     await page.evaluate(bytes=>window.sayFixture(bytes),wav.toString('base64'));
-    const response=await reported;const report=await response.json();assert.ok(report.facts?.length,JSON.stringify(report));
+    const response=await reported;const report=await response.json();if(index>=2){
+      assert.deepEqual(report.facts,[]);
+      assert.doesNotMatch(report.text,/delhi|दिल्ली|four|चार/i);
+      await state.filter({hasText:/^Speaking$/}).waitFor({timeout:35000});
+      assert.equal(await page.locator('.conversation-reply').innerText(),report.text);
+      await state.filter({hasText:/^Listening$/}).waitFor({timeout:30000});
+      console.log('Spoken out-of-scope question redirected');
+      continue;
+    }
+    assert.ok(report.facts?.length,JSON.stringify(report));
     await state.filter({hasText:/^Speaking$/}).waitFor({timeout:35000});
     const fact=report.facts.find(f=>f.key==='topDish');
     assert.ok(fact,'The follow-up must retain the top dish topic');
