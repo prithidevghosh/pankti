@@ -12,17 +12,17 @@
     -apple-system,
     sans-serif;
   font-synthesis: none;
-  --accent: #475f72;
-  --accent-pressed: #344d60;
-  --nav-paper: #e7ecec;
-  --ink: #303b40;
-  --soft: #586368;
-  --paper: #faf9f5;
-  --clay-wash: #f3ecdF;
-  --indigo-wash: #e7ecf1;
-  --rule: #d2d6d2;
+  --accent: #425968;
+  --accent-pressed: #293e4a;
+  --nav-paper: #4d6572;
+  --ink: #292e30;
+  --soft: #565850;
+  --paper: #f3ede2;
+  --clay-wash: #e8d7b9;
+  --indigo-wash: #c7d2d2;
+  --rule: #c5bbab;
   --ochre: #e3bf77;
-  --selection-edge: #68859a;
+  --selection-edge: #a56e39;
   --display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
 }
 *,
@@ -543,7 +543,7 @@ th:last-child {
   padding: 22px;
 }
 .bill-dialog::backdrop {
-  background: #303b4080;
+  background: #292e3080;
 }
 .bill-heading,
 .receipt-total,

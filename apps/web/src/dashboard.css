@@ -3,7 +3,7 @@
   color: var(--ink);
 }
 .layout .sidebar {
-  color: var(--ink);
+  color: #fff9ef;
   background: var(--nav-paper);
 }
 @media (min-width: 681px) {
@@ -17,7 +17,7 @@
   }
 }
 .sidebar nav a[aria-current='page'] {
-  background: #fcfcfa;
+  background: #f7efdf;
   color: var(--ink);
 }
 .layout .ledger {
@@ -253,7 +253,7 @@
 
 /* Daily statement */
 .ledger[data-view='overview'] .ledger-header {
-  background: #e2ebef;
+  background: #dfc69e;
   color: var(--ink);
 }
 .ledger[data-view='overview'] .restaurant-name span {
@@ -340,7 +340,7 @@
 }
 .vendor-book {
   border: 0;
-  background: #f7f0ea;
+  background: #f2e6da;
   padding: 0 0 12px;
 }
 .vendor-book > p,
@@ -350,7 +350,7 @@
 .balance-cover {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 38%;
-  background: #eddfd8;
+  background: #dfc2af;
   color: var(--ink);
 }
 .balance-cover div {
@@ -568,7 +568,7 @@
   overflow:hidden;animation:sheet-arrive 220ms ease-out both;}
 .journal-layout[data-open="false"] .vendor-editor {animation:sheet-leave 180ms ease-in both;}
 .correction-header {display:flex;align-items:start;justify-content:space-between;gap:12px;
-  padding:18px 20px;background:#eddfd8;color:var(--ink);border-bottom:3px solid #bb9065;}
+  padding:18px 20px;background:#dfc2af;color:var(--ink);border-bottom:3px solid #bb9065;}
 .correction-header p,.correction-header span {font-size:.8rem;color:var(--soft);}
 .correction-header span {white-space:nowrap;}
 .correction-header h3 {overflow-wrap:anywhere;margin:5px 0 0;font:400 clamp(1.6rem,2.5vw,2.4rem)/1.2 'Pankti Wordmark',Georgia,serif;}
@@ -629,3 +629,5 @@
 @media (max-width:680px) {
   .sidebar nav a[aria-current='page'] {box-shadow:inset 0 3px var(--selection-edge)}
 }
+
+.layout .sidebar :is(a, .signout):hover {background:var(--accent-pressed);color:#fff9ef}
