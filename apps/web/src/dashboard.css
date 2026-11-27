@@ -663,3 +663,25 @@
   .account-links { display:flex; margin:0 0 0 auto; }
   .sidebar .account-links :is(a,button) { gap:5px; padding:5px; }
 }
+
+.account-area { margin-top: auto; }
+.account-toggle { display: none; }
+.ledger-controls { flex-wrap: wrap; }
+select.date-field { color: var(--ink); font: inherit; cursor: pointer; }
+@media (max-width: 680px) {
+  .account-area { position: relative; margin: 0 0 0 auto; z-index: 6; }
+  .account-toggle {
+    display: grid; place-items: center; width: 44px; height: 44px;
+    color: var(--ink); background: transparent; border: 0; border-radius: 5px;
+  }
+  .account-toggle[aria-expanded="true"] { background: var(--paper); }
+  .account-area .account-links { display: none; }
+  .account-area .account-links[data-open="true"] {
+    display: grid; position: absolute; top: 100%; right: 0; min-width: 150px;
+    padding: 5px; border: 1px solid var(--rule); background: var(--paper);
+    box-shadow: 0 6px 16px #202d421a;
+  }
+  .account-area .account-links :is(a,button) {
+    width: 100%; margin: 0; min-height: 44px; justify-content: flex-start; padding-inline: 12px;
+  }
+}

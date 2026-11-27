@@ -4,7 +4,7 @@ import { Wordmark } from './Wordmark.jsx';
 import { BillReceipt } from './BillReceipt.jsx';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { UserRound, Banknote, BookOpen, Truck, ArrowRight, ArrowUpRight, ChartNoAxesColumn, LogOut, ReceiptText, RefreshCw, Utensils } from 'lucide-react';
+import { Menu as MenuIcon, UserRound, Banknote, BookOpen, Truck, ArrowRight, ArrowUpRight, ChartNoAxesColumn, LogOut, ReceiptText, RefreshCw, Utensils } from 'lucide-react';
 import '@fontsource-variable/bricolage-grotesque';
 import './style.css';
 import { SignupVoice } from './SignupVoice.jsx';
@@ -14,6 +14,7 @@ import { Orders, Vendors, Menu, Bank } from './Operations.jsx';
 import './dashboard.css';
 
 const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', dateStyle: 'short' });
+const billDay = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' });
 const time = new Intl.DateTimeFormat('en-IN', {
   timeZone: 'Asia/Kolkata',
   hour: 'numeric',
@@ -292,7 +293,33 @@ function Ledger({ onSignOut, onSessionExpired }) {
     window.addEventListener('hashchange',navigate);
     return () => window.removeEventListener('hashchange',navigate);
   }, []);
-  const [date, setDate] = useState(today);
+  const [period, setPeriod] = useState('7');
+  const [customDate, setCustomDate] = useState(today);
+  const date = period === 'custom' ? customDate : today();
+  const days = period === 'custom' ? '1' : period;
+  const [accountOpen, setAccountOpen] = useState(false);
+  const account = useRef(null);
+  const accountButton = useRef(null);
+  useEffect(() => {
+    if (!accountOpen) return;
+    const dismiss = event => {
+      if (!account.current?.contains(event.target)) setAccountOpen(false);
+    };
+    const escape = event => {
+      if (event.key === 'Escape') {
+        setAccountOpen(false);
+        accountButton.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', dismiss);
+    document.addEventListener('focusin', dismiss);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', dismiss);
+      document.removeEventListener('focusin', dismiss);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [accountOpen]);
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState({ loading: true });
   const [openBill, setOpenBill] = useState(null);
@@ -304,17 +331,17 @@ function Ledger({ onSignOut, onSessionExpired }) {
     request('/workspace', { signal: controller.signal })
       .then(async ({ restaurant, menu, profile }) => {
         const analytics = restaurant
-          ? await request('/analytics?date=' + date, { signal: controller.signal })
+          ? await request('/analytics?date=' + date + '&days=' + days, { signal: controller.signal })
           : null;
-        if (!controller.signal.aborted) setState({ restaurant, menu, profile, analytics, date, revision });
+        if (!controller.signal.aborted) setState({ restaurant, menu, profile, analytics, date, days, revision });
       })
       .catch((error) => {
         if (controller.signal.aborted) return;
         if (error.status === 401) onSessionExpired();
-        else setState({ error: error.message, date, revision });
+        else setState({ error: error.message, date, days, revision });
       });
     return () => controller.abort();
-  }, [onSessionExpired, date, revision]);
+  }, [onSessionExpired, date, days, revision]);
 
   function showBill(id) {
     setOpenBill({id});
@@ -328,7 +355,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
   }
 
   const { restaurant, analytics, error } = state;
-  const loading = state.loading || date !== state.date || revision !== state.revision;
+  const loading = state.loading || date !== state.date || days !== state.days || revision !== state.revision;
   return (
     <div className="layout">
       <aside className="sidebar">
@@ -337,11 +364,17 @@ function Ledger({ onSignOut, onSessionExpired }) {
           {destinations.map(([id,label,Icon]) => <a href={'#'+id} key={id} aria-current={id === view ? 'page' : undefined}>
             <Icon size={19} aria-hidden="true" /><span>{label}</span></a>)}
         </nav>
-        <div className="account-links">
-          <a href="#profile" aria-current={view === 'profile' ? 'page' : undefined}><UserRound size={17} /> Profile</a>
+        <div className="account-area" ref={account}>
+          <button type="button" ref={accountButton} className="account-toggle" aria-label="Account menu"
+            aria-expanded={accountOpen} aria-controls="account-actions" onClick={() => setAccountOpen(!accountOpen)}>
+            <MenuIcon size={22} aria-hidden="true" />
+          </button>
+          <div id="account-actions" className="account-links" data-open={accountOpen}>
+          <a href="#profile" onClick={() => setAccountOpen(false)} aria-current={view === 'profile' ? 'page' : undefined}><UserRound size={17} /> Profile</a>
         <button className="signout" onClick={() => void onSignOut().catch((error) => setSignOutError(error.message))}>
           <LogOut size={17} /> Sign out
         </button>
+        </div>
         </div>
         {signOutError && <p role="alert">{signOutError}</p>}
       </aside>
@@ -363,17 +396,21 @@ function Ledger({ onSignOut, onSessionExpired }) {
         </header>
         <div className="ledger-tools">
           <div className="ledger-controls">
-            {(view === 'overview' || view === 'orders') && <label className="date-field">
-              <input
-                aria-label="Business date"
-                type="date"
-                value={date}
-                max={today()}
-                onChange={(event) => {
-                  if (event.target.value) setDate(event.target.value);
-                }}
-              />
-            </label>}
+            {(view === 'overview' || view === 'orders') && <>
+              <select className="date-field" aria-label="Reporting period" value={period}
+                onChange={event => setPeriod(event.target.value)}>
+                <option value="7">Last 7 days</option>
+                <option value="14">Last 14 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="custom">Custom date</option>
+              </select>
+              {period === 'custom' && <label className="date-field">
+                <input aria-label="Business date" type="date" value={customDate} max={today()}
+                  onChange={event => {
+                    if (event.target.value && event.target.validity.valid) setCustomDate(event.target.value);
+                  }} />
+              </label>}
+            </>}
             <button
               className="refresh"
               aria-label="Refresh ledger"
@@ -442,7 +479,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
             <div className="report-grid">
               <section>
                 <h2>Sales by hour</h2>
-                {analytics.hourly.some(value => value !== 0) ? <HourlyChart values={analytics.hourly} /> : <p className="subtle">Hourly sales appear when you record the first payment for this date.</p>}
+                {analytics.hourly.some(value => value !== 0) ? <HourlyChart values={analytics.hourly} /> : <p className="subtle">Hourly sales appear when you record the first payment in this period.</p>}
               </section>
               <section>
                 <h2>Top dishes</h2>
@@ -472,7 +509,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
                     <thead>
                       <tr>
                         <th scope="col">Bill</th>
-                        <th scope="col">Time</th>
+                        <th scope="col">{days === '1' ? 'Time' : 'Date & time'}</th>
                         <th scope="col">Payment</th>
                         <th scope="col">Total</th>
                       </tr>
@@ -485,7 +522,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
                               #{String(bill.number).padStart(4, '0')}
                             </button>
                           </td>
-                          <td>{time.format(new Date(bill.created))}</td>
+                          <td>{days !== '1' && billDay.format(new Date(bill.created)) + ' · '}{time.format(new Date(bill.created))}</td>
                           <td>
                             {bill.paid
                               ? bill.movements?.some(m => m.amount > 0 && m.method !== bill.method) ? 'Paid' : bill.method === 'upi' ? 'UPI · Paid' : 'Cash · Paid'
@@ -498,7 +535,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
                   </table>
                 </div>
               ) : (
-                <p className="subtle">Bills created on this date appear here.</p>
+                <p className="subtle">Bills created during this period appear here.</p>
               )}
             </section>}
           </>
