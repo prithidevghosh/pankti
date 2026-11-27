@@ -11,10 +11,13 @@ const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)'
 
 export function Wordmark() {
   const [reduced, setReduced] = useState(() => reducedMotion().matches);
-  const [manual, setManual] = useState(false);
-  const [frame, setFrame] = useState({ script: 0, count: 1 });
-  const { lang, name, units } = scripts[frame.script];
-  const complete = frame.count >= units.length;
+  const [script, setScript] = useState(0);
+  const [phase, setPhase] = useState('write');
+  const [pinned, setPinned] = useState(false);
+  const [advance, setAdvance] = useState(false);
+  const { lang, name, units } = scripts[script];
+  const step = lang === 'en' ? 215 : 510;
+  const beat = phase === 'erase' ? step * 0.6 : step;
 
   useEffect(() => {
     const query = reducedMotion();
@@ -23,19 +26,37 @@ export function Wordmark() {
     return () => query.removeEventListener('change', sync);
   }, []);
 
+  const durations = {
+    write: units.length * beat,
+    hold: advance ? 260 : pinned ? null : 2400,
+    erase: units.length * beat,
+    rest: 150,
+  };
+  const duration = durations[phase];
   useEffect(() => {
-    if (reduced || (manual && complete)) return;
+    if (reduced || duration === null) return;
     const timer = window.setTimeout(() => {
-      setFrame(complete
-        ? { script: (frame.script + 1) % scripts.length, count: 1 }
-        : { ...frame, count: frame.count + 1 });
-    }, complete ? 3500 : 175);
+      if (phase === 'write') setPhase('hold');
+      else if (phase === 'hold') setPhase('erase');
+      else if (phase === 'erase') setPhase('rest');
+      else {
+        setScript(index => (index + 1) % scripts.length);
+        setAdvance(false);
+        setPhase('write');
+      }
+    }, duration);
     return () => window.clearTimeout(timer);
-  }, [frame, complete, manual, reduced]);
+  }, [reduced, phase, duration]);
 
   function nextScript() {
-    setManual(true);
-    setFrame(current => ({ script: (current.script + 1) % scripts.length, count: 1 }));
+    setPinned(true);
+    if (reducedMotion().matches) {
+      setScript(index => (index + 1) % scripts.length);
+      setPhase('hold');
+      setAdvance(false);
+    } else {
+      setAdvance(true);
+    }
   }
 
   return (
@@ -47,7 +68,18 @@ export function Wordmark() {
           {script.units.join('')}
         </span>
       ))}
-      <span lang={lang} aria-hidden="true">{(reduced ? units : units.slice(0, frame.count)).join('')}</span>
+      <span key={lang} lang={lang} className="wordmark-ink" data-phase={reduced ? 'hold' : phase} aria-hidden="true">
+        {units.map((unit, i) => (
+          <span className="ink-unit" key={i} style={{
+            '--beat': beat + 'ms',
+            '--delay': (phase === 'erase' ? units.length - 1 - i : i) * beat + 'ms',
+          }}>
+            <span className="ink-guide">{unit}</span>
+            <span className="ink-stem">{unit}</span>
+            <span className="ink-turn">{unit}</span>
+          </span>
+        ))}
+      </span>
     </button>
   );
 }
