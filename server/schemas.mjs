@@ -1,4 +1,6 @@
 import { z } from 'zod';
+export const availabilityChanges = z.array(z.object({ item: z.uuid(), available: z.boolean() }))
+  .min(1).max(200).refine(rows => new Set(rows.map(row => row.item)).size === rows.length);
 export const shortText = z.string().trim().min(1).max(96);
 export const restaurantSchema = z.object({ name: shortText, city: shortText }).strict();
 export const entrySchema = z

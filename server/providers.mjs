@@ -36,11 +36,12 @@ const types = {
   },
   menu: {
     schema: shape({
+      availability: array(shape({ item: string, available: { type: 'boolean' } })),
       entries: array(shape({ name: string, variant: string, category: string, price: integer })),
       question: nullableText,
     }),
     prompt:
-      'Extract proposed menu entries from the latest speech. Merge any earlier draft supplied by the app. Apply spoken corrections. Price is integer paise (170 rupees is 17000). Preserve dish names, use empty variant when unspecified and a simple category when obvious. Ask a short question if dish, variant association or price is unclear. Never guess a price.',
+      'Separate explicit current stock instructions from menu additions. Match spoken dish names across languages to existing menu IDs. "aloo chana khatam ho gayi hai, aloo paratha khatam ho gayi" sets both available=false today. Back in stock means true. Apply corrections. If a dish name covers multiple portions, include all its variants unless a portion is specified. Never substitute a similar dish. For unknown or ambiguous targets or unclear timing ask a short question and return no availability changes. Ignore hypothetical, historical or future stock changes. For a status-only command entries MUST be [] and question=null for matched dishes. context.menu is a lookup table only: never copy its dishes to entries. Only previous is an editable draft. Never use zero as a placeholder price. Return availability=[] otherwise. Extract proposed menu entries from the latest speech. Merge any earlier draft supplied by the app. Apply spoken corrections. Price is integer paise (170 rupees is 17000). Preserve dish names, use empty variant when unspecified and a simple category when obvious. Ask a short question if dish, variant association or price is unclear. Never guess a price.',
   },
   scan: {
     schema: shape({
@@ -97,6 +98,7 @@ Expand restaurant phrases from context.phrases into their stored dish IDs and qu
 Keep preparation and serving instructions in the relevant line.note. Less onion is different from no onion. For standalone sides, packing or other instructions without a named dish, write a concise kitchen instruction in orderNote. Never ask which dish gets an accompaniment. First match each standalone side against the menu across languages: e.g. if menu lists "Extra Onion", "और एक्स्ट्रा प्याज़" orders one unit of that ID even without a number. Do not also write it in the note. Treat an explicitly ordered matching menu add-on as a priced line; otherwise keep the side as an unpriced orderNote. Do not invent a billed item or guess that something served alongside should be mixed into a dish. Return the complete updated orderNote on every turn, retaining it unless changed or removed; null if none. Example: "एक पनीर बटर मसाला दो बटर रोटी और एक्स्ट्रा प्याज़" gives 1 paneer butter masala, 2 butter rotis, orderNote "एक्स्ट्रा प्याज़ अलग से", question=null if extra onion is not a listed item. Retain earlier notes unless corrected. For different instructions on servings of one item, specify the counts in its note. Use null for no note.
 Interpret only purchase requests. Ignore staff directions, table numbers, inventory questions and unrelated mentions of dishes. Chatter alone returns the input basket unchanged, no question, billing false.
 Apply corrections, removals and explicit repeat orders to the input basket. A replacement quantity is absolute: if the basket has two butter rotis and the cashier says "नहीं तीन बटर रोटी", change that line to three, preserve all other items and kitchen notes, question=null. Add to the existing quantity only when the speaker requests additional servings. A verbatim echo, restart or repeated readback without a request for more does not add another serving. A clarificationReply supplies the earlier request and question; the latest transcript answers it.
+Do not add a menu item marked soldOut. Tell the cashier which dish is unavailable today; never substitute another without an explicit request.
 For each requested dish:
 1. Identify the dish, then its serving size. If several sizes are listed and none was requested, return the input basket and ask which size.
 2. If the requested size is listed, use its ID. Two half biryanis with a listed half biryani is quantity 2 of that ID.
@@ -181,7 +183,7 @@ async function modelResult(kind, input) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw httpError(503, 'Voice interpretation is unavailable. Set OPENAI_API_KEY on the server.');
   const spec = types[kind];
-  const model = ['vendor', 'order', 'vendorEdit', 'phrase'].includes(kind)
+  const model = ['vendor', 'order', 'vendorEdit', 'phrase', 'menu'].includes(kind)
     ? process.env.COUNTER_MODEL || 'gpt-4.1'
     : process.env.OPENAI_MODEL || 'gpt-4.1-mini';
   const response = await fetch('https://api.openai.com/v1/responses', {

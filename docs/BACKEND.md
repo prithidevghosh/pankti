@@ -57,3 +57,5 @@ The offline importer opens the source read-only, preserves account and session i
 The workspace returns the authenticated owner's profile alongside the restaurant. MongoDB schema v3 adds `voice_transcripts` with the owner ID, restaurant ID when available, task, transcript, and capture timestamp. The API writes text after transcription and before interpretation, including clarification replies. Audio is processed in memory. Signup transcripts expire after 24 hours unless the registering client claims them in the signup transaction.
 
 Restaurant settings use `gstBps` (basis points, default 0). When issuing a bill the server sums the rounded line amounts, rounds GST once to the nearest paise, and saves `subtotal`, `gstBps`, `gstAmount`, and the tax-inclusive `total` together. Older bills without tax fields retain their original totals.
+
+Menu items may have a `soldOutDay` (YYYY-MM-DD in Asia/Kolkata). Only a match with the current business date disables ordering. Restocking clears the field. Manual and voice changes use the same restaurant-scoped transaction, and bill creation rechecks availability.

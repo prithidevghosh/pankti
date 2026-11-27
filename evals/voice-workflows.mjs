@@ -25,6 +25,20 @@ const paneer = { id: '00000000-0000-4000-8000-000000000003', name: 'Paneer Butte
 const onion = { id: '00000000-0000-4000-8000-000000000004', name: 'Extra Onion', variant: '' };
 const counterOrder = 'एक पनीर बटर मसाला दो बटर रोटी और एक्स्ट्रा प्याज़';
 const cases = [
+  ['sold-out', 'menu', 'आलू चना खत्म हो गई है, आलू पराठा खत्म हो गया है।', {
+    menu: menu.map((item, i) => ({ ...item, name: ['Aloo Chana', 'Aloo Paratha', 'Dal Palak'][i] })),
+  }, r => {
+    assert.equal(r.question, null);
+    assert.equal(r.entries.length, 0);
+    assert.deepEqual(r.availability.map(c => [c.item, c.available]).sort(), [[menu[0].id, false], [menu[1].id, false]]);
+  }],
+  ['restock', 'menu', 'दाल पालक फिर से उपलब्ध है', {
+    previous: [], menu: [{ ...menu[0], name: 'Dal Palak', soldOut: true }],
+  }, r => {
+    assert.equal(r.question, null);
+    assert.equal(r.entries.length, 0);
+    assert.deepEqual(r.availability, [{item: menu[0].id, available: true}]);
+  }],
   ['order-side', 'order', counterOrder, { ...context, menu: [...menu, paneer] }, r => {
     assert.equal(r.question, null);
     assert.equal(r.lines.length, 2);

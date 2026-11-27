@@ -1,4 +1,4 @@
-import { basketSchema } from './schemas.mjs';
+import { availabilityChanges, basketSchema } from './schemas.mjs';
 import { registerBillsRoutes } from './routes/bills.mjs';
 import { registerVendorsRoutes } from './routes/vendors.mjs';
 import { interpretRecording } from './services/voice.mjs';
@@ -120,6 +120,10 @@ export async function createApp({
     requireRestaurant(req);
     if (!req.file?.size) throw httpError(400, 'Choose a menu photo.');
     res.json({ entries: await scan(req.file.buffer) });
+  });
+  app.put('/api/menu/availability', async (req, res) => {
+    const restaurant = requireRestaurant(req);
+    res.json({ menu: await store.setAvailability(restaurant.id, availabilityChanges.parse(req.body)) });
   });
   app.put('/api/menu/:id', async (req, res) => {
     const restaurant = requireRestaurant(req);

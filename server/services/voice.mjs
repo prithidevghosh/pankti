@@ -1,3 +1,5 @@
+import { indiaDay } from '../../shared/menu-availability.mjs';
+import { availabilityChanges } from '../schemas.mjs';
 import { paymentDraft } from '../payment.mjs';
 import { z } from 'zod';
 import { entrySchema, basketSchema, vendorCorrection, vendorEntries } from '../schemas.mjs';
@@ -12,6 +14,12 @@ export async function interpretRecording({ store, speech, understand, owner }, t
   }
   let keyterms = [];
   if (task !== 'onboarding') {
+    if (['menu', 'order', 'phrase'].includes(task)) {
+      const day = indiaDay();
+      context.menu = (await store.menuFor(restaurant.id)).map(({ id, name, variant, soldOutDay }) =>
+        ({ id, name, variant, soldOut: soldOutDay === day }));
+      keyterms = [...new Set(context.menu.map(item => item.name))];
+    }
     if (task === 'menu') {
       context.previous = z
         .array(entrySchema)
@@ -28,11 +36,6 @@ export async function interpretRecording({ store, speech, understand, owner }, t
       context.revision = ledger.revision;
       keyterms = context.vendors.map((row) => row.vendor);
     } else {
-      context.menu = (await store.menuFor(restaurant.id)).map(({ id, name, variant }) => ({
-        id,
-        name,
-        variant,
-      }));
       context.basket = basketSchema.parse(supplied.basket ?? []);
       if (task === 'order') {
         context.phrases = await store.phrasesFor(restaurant.id);
@@ -56,6 +59,10 @@ export async function interpretRecording({ store, speech, understand, owner }, t
   const transcript = await speech(file, keyterms);
   await store.recordTranscript(owner, restaurant?.id || null, task, transcript);
   const result = await understand(task, transcript, context);
+  if (task === 'menu' && !result.question && result.availability?.length) {
+    const changes = availabilityChanges.parse(result.availability);
+    result.menu = await store.setAvailability(restaurant.id, changes);
+  }
   if (task === 'vendor') {
     result.entries = vendorEntries.parse(result.entries);
     if (result.editId != null) {

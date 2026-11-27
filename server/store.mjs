@@ -1,3 +1,4 @@
+import { indiaDay } from '../shared/menu-availability.mjs';
 import { billTotals } from '../shared/bill-totals.mjs';
 import { receivedOn } from './payment.mjs';
 import { reviewMenuImport } from '../shared/menu-import.mjs';
@@ -80,6 +81,17 @@ export async function openStore(database) {
       });
       return { ...result, menu: await menuFor(restaurant) };
     },
+    async setAvailability(restaurant, changes) {
+      const day = indiaDay();
+      await transaction(async session => {
+        for (const { item, available } of changes) {
+          const update = available ? { $unset: { soldOutDay: '' } } : { $set: { soldOutDay: day } };
+          const result = await menu.updateOne({ restaurant, _id: item }, update, { session });
+          if (!result.matchedCount) throw httpError(422, 'A dish could not be matched to your menu.');
+        }
+      });
+      return menuFor(restaurant);
+    },
     async editMenu(restaurant, id, entry) {
       try {
         return (
@@ -141,6 +153,8 @@ export async function openStore(database) {
         const items = await menu
           .find({ restaurant, _id: { $in: basket.map((line) => line.item) } }, { session })
           .toArray();
+        const soldOut = items.find(item => item.soldOutDay === indiaDay());
+        if (soldOut) throw httpError(409, soldOut.name + ' is sold out today. Remove it before billing.');
         const byId = new Map(items.map((item) => [item._id, item]));
         if (basket.some((line) => !byId.has(line.item))) return null;
         const lines = basket.map(({ item, quantity, note }) => {

@@ -177,3 +177,22 @@ test('issued bills keep their GST snapshot through rate changes and retries', as
   await db.collection('restaurants').updateOne({ _id: shop.id }, { $set: { gstBps: 0 } });
   assert.deepEqual(await issue(request, 725), bill);
 });
+
+test('daily menu availability is scoped, atomic and expires for billing the next day', async t => {
+  const { name, db } = await testDatabase(t);
+  const store = await openStore(name);
+  t.after(() => store.close());
+  const shop = await store.createRestaurant('daily-owner', 'Counter', 'Delhi');
+  const [dish] = await store.saveMenu(shop.id, [{ name: 'Dal Palak', variant: '', category: 'Main', price: 9000 }]);
+  const issue = () => store.createBill(shop.id, randomUUID(), [{ item: dish.id, quantity: 1 }]);
+  const change = { item: dish.id, available: false };
+  await assert.rejects(store.setAvailability('other-shop', [change]), {status:422});
+  await assert.rejects(store.setAvailability(shop.id, [change, {item:randomUUID(),available:false}]), {status:422});
+  await issue();
+  await store.setAvailability(shop.id, [change]);
+  await assert.rejects(issue(), {status:409});
+  await store.setAvailability(shop.id, [{...change, available:true}]);
+  await issue();
+  await db.collection('menu').updateOne({_id:dish.id}, {$set:{soldOutDay:'2000-01-01'}});
+  await issue();
+});
