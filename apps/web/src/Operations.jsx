@@ -50,7 +50,7 @@ export function Orders({ menu, onBill }) {
   return (
     <section className="work-sheet order-desk">
       <div className="record-side">
-
+        <img className="station-print" src="/order-rail.webp" alt="" loading="lazy" />
         <h2>Take an order</h2>
         <p className="subtle">
           {menu.length
@@ -277,7 +277,7 @@ export function Vendors({ revision }) {
             <p>Outstanding dues</p>
             <strong>{asRupees(ledger.balances.reduce((sum, v) => sum + Math.max(0, v.due), 0))}</strong>
           </div>
-
+          <img src="/market-balance.webp" alt="" loading="lazy" />
         </div>
         {!ledger.balances.length && (
           <p className="subtle">Your first confirmed entry opens a vendor account.</p>
@@ -368,11 +368,10 @@ export function Menu({ menu, onMenu }) {
   return (
     <>
       <section className="menu-import">
-
+        <img src="/folded-menu.webp" alt="" />
         <div>
           <h2>Add dishes</h2>
           <p>Photograph a menu page or speak the dishes and prices.</p>
-          <div className="menu-entry-actions">
           <label className="file-field">
             <ImagePlus size={18} aria-hidden="true" /> Choose menu photos
             <input
@@ -413,7 +412,6 @@ export function Menu({ menu, onMenu }) {
               op.setMessage(result.question || '');
             }}
           />
-          </div>
         </div>
       </section>
       <SpecialPhrases menu={menu} />
@@ -551,7 +549,7 @@ export function Bank({ restaurant, onSave }) {
   return (
     <section className="work-sheet bank-desk">
       <div>
-
+        <img className="station-print" src="/settlement-stamp.webp" alt="" loading="lazy" />
         <h2>Store payment QR</h2>
         <p className="subtle">
           Upload the QR card from your counter. Check the recipient before adding it to bills.

@@ -255,13 +255,6 @@ const destinations = [
   ['overview','Overview', ChartNoAxesColumn], ['orders','Orders', ReceiptText],
   ['vendors','Vendors', Truck], ['menu','Menu', BookOpen], ['bank','Bank details', Banknote],
 ];
-const sectionPrints = {
-  overview: 'closing-the-counter.webp',
-  orders: 'order-rail.webp',
-  vendors: 'market-balance.webp',
-  menu: 'folded-menu.webp',
-  bank: 'settlement-stamp.webp',
-};
 function currentView() {
   const hash = window.location.hash.slice(1);
   if (hash === 'bills') return 'orders';
@@ -326,7 +319,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
         {signOutError && <p role="alert">{signOutError}</p>}
       </aside>
       <main className="ledger" data-view={view}>
-        <div className="section-heading"><header className="section-title">
+        <div className="page-heading"><header className="ledger-header">
           <div>
             {restaurant && (
               <p className="restaurant-name">
@@ -334,7 +327,12 @@ function Ledger({ onSignOut, onSessionExpired }) {
               </p>
             )}
             <h1>{destinations.find(([id]) => id === view)[1]}</h1>
+            {view === 'overview' && !loading && analytics && <div className="daily-sales">
+              <span>Paid sales</span><strong>{asRupees(analytics.revenue)}</strong>
+            </div>}
           </div>
+          {view === 'overview' && <img className="masthead-print" src="/closing-the-counter.webp"
+            alt="Closing the Counter, an abstract print of stacked order slips in vermilion, green and carbon ink" />}
         </header>
         <div className="ledger-tools">
           <div className="ledger-controls">
@@ -358,7 +356,6 @@ function Ledger({ onSignOut, onSessionExpired }) {
             </button>
           </div>
         </div>
-          <div className="section-print"><img src={'/' + sectionPrints[view]} alt="" /></div>
         </div>
         {loading && (
           <p className="notice" role="status">
@@ -391,7 +388,6 @@ function Ledger({ onSignOut, onSessionExpired }) {
         {!loading && analytics && (
           <>
             {view === 'overview' && <><div className="metrics">
-              <div className="revenue"><span>Paid sales</span><strong>{asRupees(analytics.revenue)}</strong></div>
               <div>
                 <span>Bills created</span>
                 <strong>{analytics.orders}</strong>
