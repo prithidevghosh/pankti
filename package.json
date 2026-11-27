@@ -19,7 +19,9 @@
     "auth:import-firebase": "node --env-file-if-exists=.env server/import-firebase-accounts.mjs",
     "eval:counter": "node --env-file-if-exists=.env evals/counter.mjs",
     "eval:vendor-edits": "node --env-file-if-exists=.env evals/vendor-corrections.mjs",
-    "db:import-sqlite": "node --env-file-if-exists=.env server/import-sqlite.mjs"
+    "db:import-sqlite": "node --env-file-if-exists=.env server/import-sqlite.mjs",
+    "eval:voice": "node --env-file-if-exists=.env evals/voice-workflows.mjs",
+    "qa:voice-browser": "node evals/browser-workflows.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
@@ -32,5 +34,8 @@
   },
   "overrides": {
     "expo-asset": "~12.0.14"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.56.1"
   }
 }
