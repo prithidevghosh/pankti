@@ -9,22 +9,6 @@
 .menu-spread[hidden] {
   display: none;
 }
-.menu-import {
-  display: flex;
-  align-items: stretch;
-  color: var(--menu-ink);
-  background: var(--mount);
-}
-.menu-import img {
-  width: clamp(175px, 34%, 390px);
-  height: auto;
-  align-self: center;
-  min-height: 0;
-}
-.menu-import > div {
-  padding: clamp(17px, 2.4vw, 32px);
-  align-self: center;
-}
 .menu-import h2,
 .menu-folio h2,
 .menu-chapter h3,
@@ -253,9 +237,6 @@
   }
 }
 @media (max-width: 600px) {
-  .menu-import > div {
-    padding: 16px;
-  }
   .folio-heading {
     align-items: start;
     flex-wrap: wrap;
@@ -325,25 +306,6 @@
 }
 @media(max-width:900px) {
   .ledger .menu-spread {gap:26px}
-  .menu-import {
-    display:grid;
-    grid-template-columns:minmax(0,1fr) minmax(100px,46%);
-    align-items:center;
-    gap:18px 14px;
-    padding:20px;
-  }
-  .menu-import > div {display:contents}
-  .menu-import > img {
-    grid-column:2;grid-row:1;
-    width:100%;height:auto;
-  }
-  .menu-import-intro {grid-area:1/1}
-  .menu-import-actions {
-    grid-column:1/-1;
-    margin:0;
-    padding-top:14px;
-    border-top:1px solid #bca489;
-  }
   .menu-import-actions .file-field {font-size:.88rem;padding:8px 10px}
   .menu-import-actions .voice-control {gap:8px;padding-right:0}
   .menu-folio {padding:20px}

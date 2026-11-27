@@ -317,13 +317,14 @@
   gap: clamp(16px, 3vw, 48px);
 }
 .order-desk {
-  background: var(--clay-wash);
-  padding: clamp(16px, 3vw, 42px);
+  grid-template-columns: 1fr;
+  background: transparent;
+  padding: 0;
   border: 0;
   margin: 0 0 24px;
 }
 .record-side {
-  padding: 6px 0;
+  padding: 0;
 }
 .order-ticket {
   background: #fffcf6;
@@ -351,7 +352,7 @@
 }
 /* Supplier book */
 .vendor-spread {
-  align-items: stretch;
+  grid-template-columns: 1fr;
 }
 .vendor-spread > :last-child:nth-child(3) {
   grid-column: 1/-1;
@@ -379,25 +380,28 @@
 .balance-cover strong {
   font-size: clamp(1.85rem, 3vw, 3.25rem);
 }
-.entry-intro {
+.ledger .action-print {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 46%);
+  grid-template-columns: minmax(0, 1fr) 45%;
   align-items: center;
-  gap: clamp(12px, 2vw, 24px);
-  margin-bottom: 16px;
+  background: var(--mount);
+  color: var(--ink);
 }
-.entry-intro img {
+.ledger .action-print > img {
+  grid-area: 1 / 2;
   display: block;
   width: 100%;
-  max-width: 275px;
   height: auto;
-  justify-self: end;
 }
-.entry-intro .subtle { margin-bottom: 0; }
-.vendor-spread .vendor-write {
-  padding: clamp(18px, 2.4vw, 32px);
-  background: var(--clay-wash);
-  border: 0;
+.ledger .action-print > div {
+  grid-area: 1 / 1;
+  padding: clamp(18px, 2.4vw, 36px);
+  min-width: 0;
+}
+.vendor-spread .vendor-write { padding: 0; border: 0; }
+@media (max-width: 680px) {
+  .ledger .action-print { grid-template-columns: 1fr; }
+  .ledger .action-print > div, .ledger .action-print > img { grid-area: auto; }
 }
 /* Scan cover and facing price list */
 .menu-spread {
@@ -639,8 +643,6 @@
   .ledger .restaurant-name {margin-bottom:8px}
   .work-sheet .subtle {line-height:1.5}
   .order-desk {padding:0;background:transparent;gap:20px}
-  .order-desk .record-side {padding:18px 0;background:var(--clay-wash)}
-  .record-side > * {margin-inline:18px}
   .bank-desk .station-print {height:auto;display:block;width:100%;margin-bottom:18px}
   .vendor-spread,.bank-desk {gap:24px}
   .bank-desk {border-top:0;padding-top:0}

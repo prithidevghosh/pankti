@@ -50,7 +50,8 @@ export function Orders({ menu, onBill }) {
   return (
     <section className="work-sheet order-desk">
       <div className="record-side">
-        <header className="entry-intro">
+        <div className="action-print">
+          <img src="/order-taker.webp" alt="" />
           <div>
             <h2>Take an order</h2>
             <p className="subtle">
@@ -58,27 +59,26 @@ export function Orders({ menu, onBill }) {
                 ? 'Speak the order. Review the items before issuing the bill.'
                 : 'Add your dishes and prices in Menu to start billing.'}
             </p>
+            <Voice
+              task="order"
+              label="Speak order"
+              disabled={op.busy}
+              context={{ basket, clarificationReply: question ? { previous: heard, question } : undefined }}
+              onBusy={setSpeechBusy}
+              onError={op.setMessage}
+              onResult={({ transcript, result }) => {
+                if (result.payment) {
+                  setQuestion('');
+                  onBill(result.payment.bill, result.payment);
+                  return;
+                }
+                setHeard(transcript);
+                setQuestion(result.question || '');
+                update(result.lines);
+              }}
+            />
           </div>
-          <img src="/order-taker.webp" alt="" />
-        </header>
-        <Voice
-          task="order"
-          label="Speak order"
-          disabled={op.busy}
-          context={{ basket, clarificationReply: question ? { previous: heard, question } : undefined }}
-          onBusy={setSpeechBusy}
-          onError={op.setMessage}
-          onResult={({ transcript, result }) => {
-            if (result.payment) {
-              setQuestion('');
-              onBill(result.payment.bill, result.payment);
-              return;
-            }
-            setHeard(transcript);
-            setQuestion(result.question || '');
-            update(result.lines);
-          }}
-        />
+        </div>
         {heard && <blockquote>{heard}</blockquote>}
         {question && <p role="status">{question}</p>}
         <Feedback message={op.message} />
@@ -202,41 +202,41 @@ export function Vendors({ revision }) {
   return (
     <>
       <section className="work-sheet vendor-write">
-        <header className="entry-intro">
+        <div className="action-print">
+          <img src="/crate-delivery.webp" alt="" />
           <div>
             <h2>Record a vendor entry</h2>
             <p className="subtle">Say who supplied the goods, what you bought and how much you paid.</p>
+            <Voice
+              task="vendor"
+              context={{ clarificationReply: question ? { previous: heard, question } : undefined }}
+              label="Speak vendor entry"
+              disabled={op.busy || !!editing}
+              onBusy={setSpeechBusy}
+              onError={op.setMessage}
+              onResult={({ result, transcript }) => {
+                key.current = crypto.randomUUID();
+                setHeard(transcript);
+                if (result.edit) {
+                  setDraft([]);
+                  setQuestion('');
+                  if (result.edit.revision !== ledger.revision) {
+                    op.setMessage('Refresh the ledger before making this correction.');
+                    return;
+                  }
+                  opener.current = document.activeElement;
+                  setVoiceEdit(result.edit);
+                  setEditing(result.edit.id);
+                  op.setMessage('Review the selected entry correction.');
+                  return;
+                }
+                setQuestion(result.question || '');
+                setDraft(result.question ? [] : result.entries);
+                op.setMessage(result.question || (result.entries.length ? '' : 'No transaction to record.'));
+              }}
+            />
           </div>
-          <img src="/crate-delivery.webp" alt="" />
-        </header>
-        <Voice
-          task="vendor"
-          context={{ clarificationReply: question ? { previous: heard, question } : undefined }}
-          label="Speak vendor entry"
-          disabled={op.busy || !!editing}
-          onBusy={setSpeechBusy}
-          onError={op.setMessage}
-          onResult={({ result, transcript }) => {
-            key.current = crypto.randomUUID();
-            setHeard(transcript);
-            if (result.edit) {
-              setDraft([]);
-              setQuestion('');
-              if (result.edit.revision !== ledger.revision) {
-                op.setMessage('Refresh the ledger before making this correction.');
-                return;
-              }
-              opener.current = document.activeElement;
-              setVoiceEdit(result.edit);
-              setEditing(result.edit.id);
-              op.setMessage('Review the selected entry correction.');
-              return;
-            }
-            setQuestion(result.question || '');
-            setDraft(result.question ? [] : result.entries);
-            op.setMessage(result.question || (result.entries.length ? '' : 'No transaction to record.'));
-          }}
-        />
+        </div>
         {heard && <blockquote>{heard}</blockquote>}
         {draft.length > 0 && (
           <>
@@ -375,7 +375,7 @@ export function Menu({ menu, onMenu }) {
   const skipped = draft.length - remaining.length;
   return (
     <>
-      <section className="menu-import">
+      <section className="menu-import action-print">
         <img src="/menu-lettering.webp" alt="" />
         <div>
           <div className="menu-import-intro">
