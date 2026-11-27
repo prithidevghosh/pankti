@@ -89,36 +89,17 @@ p {
   letter-spacing: -0.028em;
 }
 .sidebar .wordmark { align-self: flex-start; }
-.wordmark > span { grid-area: 1/1; white-space: nowrap; }
-.wordmark .wordmark-measure { visibility: hidden; }
-.wordmark [lang]:not([lang=en]) {
-  font-family: 'Noto Serif Devanagari', 'Noto Serif Bengali', 'Noto Serif Gujarati', serif;
-  font-size: .84em;
-  letter-spacing: normal;
+.wordmark-ink { display:block; width:2.48em; height:1.16em; overflow:visible; }
+.wordmark-ink[data-phase=rest] { visibility:hidden; }
+.wordmark-ink:is([data-phase=write],[data-phase=erase]) path {
+  stroke-dasharray:1 2;
+  animation: pen-travel var(--travel) cubic-bezier(.35,.16,.58,.9) var(--lift) both;
 }
-/* The first pass pulls a narrow downstroke; the second travels around the bowl. */
-.wordmark-ink { display: inline-flex; }
-.ink-unit { position: relative; }
-.ink-guide { visibility: hidden; }
-.ink-stem, .ink-turn { position: absolute; inset: 0; }
-.ink-stem { clip-path: polygon(-12% -15%, 39% -15%, 24% 115%, -12% 115%); }
-.ink-turn { clip-path: polygon(38% -15%, 112% -15%, 112% 115%, 23% 115%); }
-.wordmark-ink[data-phase=hold] .ink-guide { visibility: visible; }
-.wordmark-ink:is([data-phase=hold], [data-phase=rest]) :is(.ink-stem,.ink-turn) { visibility: hidden; }
-.wordmark-ink:is([data-phase=write], [data-phase=erase]) .ink-stem {
-  animation: ink-down var(--beat) linear var(--delay) both;
-}
-.wordmark-ink:is([data-phase=write], [data-phase=erase]) .ink-turn {
-  animation: ink-across var(--beat) ease-in-out var(--delay) both;
-}
-.wordmark-ink[data-phase=erase] :is(.ink-stem,.ink-turn) { animation-direction: reverse; }
-@keyframes ink-down {
-  0% { clip-path: polygon(-12% -15%,39% -15%,39% -15%,-12% -15%); }
-  65%,100% { clip-path: polygon(-12% -15%,39% -15%,24% 115%,-12% 115%); }
-}
-@keyframes ink-across {
-  0%,20% { clip-path: polygon(38% -15%,38% -15%,23% 115%,23% 115%); }
-  100% { clip-path: polygon(38% -15%,112% -15%,112% 115%,23% 115%); }
+.wordmark-ink[data-phase=erase] path { animation-direction:reverse; }
+@keyframes pen-travel {
+  0% { stroke-dashoffset:1.02; opacity:0; }
+  2% { opacity:1; }
+  100% { stroke-dashoffset:0; opacity:1; }
 }
 .wordmark:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .login {

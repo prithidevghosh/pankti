@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
-// Reveal whole writing units so the vowel signs and conjuncts stay attached.
-const scripts = [
-  { lang: 'en', name: 'English', units: [...'Pankti'] },
-  { lang: 'hi', name: 'Hindi', units: ['पं', 'क्ति'] },
-  { lang: 'bn', name: 'Bengali', units: ['পং', 'ক্তি'] },
-  { lang: 'gu', name: 'Gujarati', units: ['પં', 'ક્તિ'] },
-];
+import { scripts } from './wordmarkStrokes.js';
+
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)');
 
 export function Wordmark() {
@@ -15,9 +10,8 @@ export function Wordmark() {
   const [phase, setPhase] = useState('write');
   const [pinned, setPinned] = useState(false);
   const [advance, setAdvance] = useState(false);
-  const { lang, name, units } = scripts[script];
-  const step = lang === 'en' ? 215 : 510;
-  const beat = phase === 'erase' ? step * 0.6 : step;
+  const { lang, name, box, weight, strokes, duration: writingTime } = scripts[script];
+  const speed = phase === 'erase' ? 0.56 : 1;
 
   useEffect(() => {
     const query = reducedMotion();
@@ -27,9 +21,9 @@ export function Wordmark() {
   }, []);
 
   const durations = {
-    write: units.length * beat,
+    write: writingTime * speed,
     hold: advance ? 260 : pinned ? null : 2400,
-    erase: units.length * beat,
+    erase: writingTime * speed,
     rest: 150,
   };
   const duration = durations[phase];
@@ -63,23 +57,16 @@ export function Wordmark() {
     <button type="button" className="wordmark" onClick={nextScript}
       aria-label={`Pankti in ${name}. Show next script`}
       title="Change script and keep it here">
-      {scripts.map(script => (
-        <span key={script.lang} className="wordmark-measure" lang={script.lang} aria-hidden="true">
-          {script.units.join('')}
-        </span>
-      ))}
-      <span key={lang} lang={lang} className="wordmark-ink" data-phase={reduced ? 'hold' : phase} aria-hidden="true">
-        {units.map((unit, i) => (
-          <span className="ink-unit" key={i} style={{
-            '--beat': beat + 'ms',
-            '--delay': (phase === 'erase' ? units.length - 1 - i : i) * beat + 'ms',
-          }}>
-            <span className="ink-guide">{unit}</span>
-            <span className="ink-stem">{unit}</span>
-            <span className="ink-turn">{unit}</span>
-          </span>
+      <svg key={lang} viewBox={box} preserveAspectRatio="xMinYMid meet" aria-hidden="true"
+        className="wordmark-ink" lang={lang} data-phase={reduced ? 'hold' : phase}
+        fill="none" stroke="currentColor" strokeWidth={weight} strokeLinecap="round" strokeLinejoin="round">
+        {strokes.map(({ d, start, duration: travel }, index) => (
+          <path key={index} d={d} pathLength="1" style={{
+            '--travel': travel * speed + 'ms',
+            '--lift': (phase === 'erase' ? writingTime - start - travel : start) * speed + 'ms',
+          }} />
         ))}
-      </span>
+      </svg>
     </button>
   );
 }
