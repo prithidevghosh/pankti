@@ -2,7 +2,7 @@
 
 Pankti is the product name. The visual reference is the printed counter ledger and the stainless steel of an Indian lunch service. Use an original, cuisine-neutral monotype on sign-in and as a small mobile crop. Keep the sales ledger quiet and ruler-aligned.
 
-The website uses **Indigo selvedge (study F)** across both account screens and all five workspaces. Cornflower blue (#B9C7DC) anchors navigation. Indigo ink (#293D64) carries text and primary actions on ivory paper (#FAF4E8). Warm grey mounts (#E6DFCE) connect the paper to the artwork. Thin brass double rules (#A68247) mark selected print and folio edges. Keep the prints in their original colours and preserve their desktop and phone crops.
+The website uses **Indigo selvedge (study F)** across both account screens and all five workspaces. Cornflower blue (#B9C7DC) anchors navigation. Indigo ink (#293D64) carries text and primary actions on ivory paper (#FAF4E8). Warm grey mounts (#E6DFCE) connect the paper to the artwork. Set prints flush against their mounts. Use whitespace between sections and a single neutral hairline where a paper edge needs definition. Keep the prints in their original colours and preserve their desktop and phone crops.
 
 Set the Pankti wordmark in Instrument Serif. Use Bricolage Grotesque for headings and system sans for functional text and numbers. Open with “Say the order. Get the bill.” and rotate the word order across Indian scripts on the website. Left-align descriptions and right-align monetary columns. Keep the main mic control centered on mobile, with order and check total stacked underneath.
 

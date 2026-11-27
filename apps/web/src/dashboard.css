@@ -109,7 +109,7 @@
 .work-sheet blockquote {
   margin: 10px 0;
   padding: 6px 12px;
-  border-left: 2px solid #b99637;
+  border-left: 2px solid var(--rule);
 }
 .work-lines {
   list-style: none;
@@ -328,7 +328,7 @@
 .order-ticket {
   background: #fffcf6;
   padding: 20px 22px 26px;
-  border-top: 4px solid var(--selection-edge);
+  border-top: 1px solid var(--rule);
   box-shadow: 0 3px 0 #cac6b3;
 }
 .order-ticket h3 {
@@ -643,13 +643,6 @@
   .ledger .metrics > div {align-content:start;grid-template-rows:minmax(2.5em,auto) auto}
 }
 
-/* Fine double rules carry the edge of the print onto the facing paper. */
-.menu-import img, .masthead-print, .balance-cover img {
-  border-inline-start: 5px double var(--selvedge);
-}
-.order-desk, .bank-desk, .menu-folio {
-  border-left: 3px double var(--selvedge);
-}
 .placard-mount, .vendor-book {
   background: color-mix(in srgb, var(--mount) 38%, var(--paper));
 }
