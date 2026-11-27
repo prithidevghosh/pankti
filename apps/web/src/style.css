@@ -85,6 +85,17 @@ p {
   line-height: 1;
   letter-spacing: -0.028em;
 }
+/* A slow calligraphic lean keeps the name legible throughout the cycle. */
+@media (prefers-reduced-motion: no-preference) {
+  .wordmark {
+    transform-origin: left 85%;
+    animation: wordmark-lean 7s ease-in-out infinite;
+  }
+  @keyframes wordmark-lean {
+    0%, 100% { transform: skewX(0deg) scaleX(1); }
+    50% { transform: skewX(-7deg) scaleX(1.035); }
+  }
+}
 .login {
   --sheet: var(--paper);
   --line: #b7af9b;
@@ -319,10 +330,6 @@ p {
   color: inherit;
   border: 1px solid transparent;
   font-size: 0.91rem;
-}
-.sidebar a:hover,
-.signout:hover {
-  background: #d6dfe3;
 }
 .signout {
   width: 100%;

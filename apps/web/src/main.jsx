@@ -1,5 +1,5 @@
 import { BillReceipt } from './BillReceipt.jsx';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Banknote, BookOpen, Truck, ArrowRight, ArrowUpRight, ChartNoAxesColumn, LogOut, ReceiptText, RefreshCw, Utensils } from 'lucide-react';
 import '@fontsource-variable/bricolage-grotesque';
@@ -263,6 +263,19 @@ function currentView() {
 
 function Ledger({ onSignOut, onSessionExpired }) {
   const [view,setView] = useState(currentView);
+  const ledger = useRef(null);
+  const previousView = useRef(view);
+
+  useLayoutEffect(() => {
+    if (previousView.current === view) return;
+    previousView.current = view;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const entrance = ledger.current.animate(
+      [{ opacity: 0.55, transform: 'translateY(5px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 240, easing: 'cubic-bezier(.2,.7,.25,1)' },
+    );
+    return () => entrance.cancel();
+  }, [view]);
   useEffect(() => {
     const navigate = () => {setView(currentView()); window.scrollTo(0,0);};
     window.addEventListener('hashchange',navigate);
@@ -318,7 +331,7 @@ function Ledger({ onSignOut, onSessionExpired }) {
         </button>
         {signOutError && <p role="alert">{signOutError}</p>}
       </aside>
-      <main className="ledger" data-view={view}>
+      <main ref={ledger} className="ledger" data-view={view}>
         <div className="page-heading"><header className="ledger-header">
           <div>
             {restaurant && (
