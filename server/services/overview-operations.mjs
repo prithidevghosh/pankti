@@ -4,7 +4,7 @@ export const detailKeys=['orders','cashOrders','upiOrders','vendorBalances','ven
 const dishName=item=>[item.name,item.variant].filter(Boolean).join(' ');
 const normalize=value=>value.normalize('NFKC').trim().toLocaleLowerCase();
 
-export async function menuAction(store,understand,restaurant,transcript,action,previousIds,language){
+export async function menuAction(store,understand,restaurant,transcript,action,previousIds,language,commit=fn=>fn()){
   const menu=await store.menuFor(restaurant);
   const words=copy[language];
   let candidates;
@@ -21,14 +21,16 @@ export async function menuAction(store,understand,restaurant,transcript,action,p
   if(candidates.length!==1) return {language,text:[words.choose,...candidates.slice(0,4).map(dishName)].join(' '),facts:[],pendingAvailability:action.kind,menuRefs:candidates.map(i=>i.id)};
   const [item]=candidates;
   const available=action.kind==='enable';
-  await store.setAvailability(restaurant,[{item:item.id,available}]);
   const name=dishName(item);
   const text=language==='hi-IN'
     ? (available?name+' अब मेनू में उपलब्ध है।':name+' को आज के लिए अनुपलब्ध कर दिया है।')
     : language==='en-IN'
       ? (available?name+' is available to order again.':name+' is marked sold out for today.')
       : words[available?'enabled':'disabled']+' · '+name+'.';
-  return {language,text,facts:[],menuRefs:[item.id],menuChanged:true};
+  return commit(async()=>{
+    await store.setAvailability(restaurant,[{item:item.id,available}]);
+    return {language,text,facts:[],menuRefs:[item.id],menuChanged:true};
+  });
 }
 
 export async function operationalDetails(store,restaurant,keys,start,end,today,language,vendorName){

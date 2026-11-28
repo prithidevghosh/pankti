@@ -1,3 +1,5 @@
+import {toolNames} from './shop-tool-catalog.mjs';
+import {performShopAction} from './shop-actions.mjs';
 import {detailKeys,menuAction,operationalDetails} from './overview-operations.mjs';
 import {locale,voiceLanguages} from '../../shared/overview-languages.mjs';
 import {scopeReply,speakFacts} from './overview-speech.mjs';
@@ -9,7 +11,7 @@ import { httpError } from '../errors.mjs';
 const shopFields = ['menuCount','businessName','ownerName','phone','city','gst','payee','upi'];
 export const overviewMetrics = ['billedSales','collections','billCount','paidCount','paidValue','unpaidCount','partialCount','outstanding','topDish','vendorPurchases','vendorPaid','vendorDue','soldOut',...shopFields];
 const planSchema = z.object({
-  action:z.object({kind:z.enum(['enable','disable']),target:z.string().trim().min(1).max(200).nullable()}).nullish(),
+  action:z.object({kind:z.enum(toolNames),target:z.string().trim().min(1).max(200).nullable()}).nullish(),
   vendorName:z.string().trim().max(160).nullish(),
   scope:z.enum(['shop','assistant','outside']).optional(),
   requestedReplyLanguage:z.string().nullable().optional(),
@@ -23,7 +25,7 @@ export const speechLanguages = new Set(Object.keys(voiceLanguages));
 const money = new Set(['billedSales','collections','paidValue','outstanding','vendorPurchases','vendorPaid','vendorDue']);
 
 export async function overviewAnswer(store, understand, restaurant, transcript, selected, today=indiaDay(), context={}) {
-  const plan = planSchema.parse(await understand('overview',transcript,{today,inputLanguage:context.detectedLanguage,previousLanguage:context.previousLanguage,referencedMenuItems:context.previousMenuRefs?.length || 0,pendingAvailability:context.pendingAvailability,previousFacts:context.previousFacts || []}));
+  const plan = planSchema.parse(await understand('overview',transcript,{today,inputLanguage:context.detectedLanguage,previousLanguage:context.previousLanguage,referencedMenuItems:context.previousMenuRefs?.length || 0,pendingAvailability:context.pendingAvailability,pendingTool:context.priorWork?.kind,priorQuestion:context.priorWork?.question,previousFacts:context.previousFacts || []}));
   const detected=locale(context.detectedLanguage);
   const previous=locale(context.previousLanguage);
   const planned=locale(plan.language);
@@ -34,8 +36,12 @@ export async function overviewAnswer(store, understand, restaurant, transcript, 
     (switched && detected) || previous || detected || planned || 'en-IN';
   const copy = labels[language];
   if (plan.scope==='outside') return {language,text:scopeReply(language),facts:[]};
-  if(plan.scope==='shop' && plan.action)
-    return menuAction(store,understand,restaurant,transcript,plan.action,context.previousMenuRefs || [],language);
+  if(plan.scope==='shop' && plan.action){
+    if(['enable','disable'].includes(plan.action.kind))
+      return menuAction(store,understand,restaurant,transcript,plan.action,context.previousMenuRefs || [],language,context.commit);
+    if(!context.commit) throw httpError(422,'Start a conversation to record this change.');
+    return performShopAction(store,understand,restaurant,transcript,plan.action,language,context);
+  }
   if (plan.scope==='assistant' || plan.clarification || !plan.metrics.length) return {language,text:scopeReply(language,plan.courtesy),facts:[]};
   const ago=n=>new Date(Date.parse(today+'T00:00:00Z')-n*86400000).toISOString().slice(0,10);
   let {start,end}=selected;
