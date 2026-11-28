@@ -33,7 +33,7 @@ export async function menuAction(store,understand,restaurant,transcript,action,p
   });
 }
 
-export async function operationalDetails(store,restaurant,keys,start,end,today,language,vendorName){
+export async function operationalDetails(store,restaurant,keys,start,end,today,language,vendorName,understand){
   const words=copy[language];
   const currency=new Intl.NumberFormat(language,{style:'currency',currency:'INR',maximumFractionDigits:2,minimumFractionDigits:0});
   const money=paise=>currency.format(paise/100);
@@ -41,6 +41,7 @@ export async function operationalDetails(store,restaurant,keys,start,end,today,l
   const sections=[];
   const facts=[];
   const menuRefs=[];
+  const vendorRefs=[];
   const vendorMatches=name=>!vendorName || (name && normalize(name)===normalize(vendorName));
   function add(key,rows,current=false,sentence){
     const from=current?today:start, to=current?today:end;
@@ -55,7 +56,12 @@ export async function operationalDetails(store,restaurant,keys,start,end,today,l
   }
   if(keys.includes('vendorBalances')){
     const {balances}=await store.vendors(restaurant);
+    if(vendorName && understand && !balances.some(b=>vendorMatches(b.vendor))){
+      const match=await understand('vendorLookup',vendorName,{names:balances.map(b=>b.vendor)});
+      if(balances.some(b=>b.vendor===match.name)) vendorName=match.name;
+    }
     const due=balances.filter(b=>b.due>0 && vendorMatches(b.vendor)).sort((a,b)=>b.due-a.due);
+    vendorRefs.push(...(vendorName?balances.filter(b=>vendorMatches(b.vendor)):due).map(b=>b.vendor));
     let sentence;
     if(language==='hi-IN' || language==='en-IN'){
       const list=new Intl.ListFormat(language,{type:'conjunction'});
@@ -101,5 +107,5 @@ export async function operationalDetails(store,restaurant,keys,start,end,today,l
     }
     add('vendorMismatches',rows);
   }
-  return {facts,sections,menuRefs,spoken};
+  return {facts,sections,menuRefs,vendorRefs,spoken};
 }

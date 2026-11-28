@@ -25,7 +25,7 @@ export const speechLanguages = new Set(Object.keys(voiceLanguages));
 const money = new Set(['billedSales','collections','paidValue','outstanding','vendorPurchases','vendorPaid','vendorDue']);
 
 export async function overviewAnswer(store, understand, restaurant, transcript, selected, today=indiaDay(), context={}) {
-  const plan = planSchema.parse(await understand('overview',transcript,{today,inputLanguage:context.detectedLanguage,previousLanguage:context.previousLanguage,referencedMenuItems:context.previousMenuRefs?.length || 0,pendingAvailability:context.pendingAvailability,pendingTool:context.priorWork?.kind,priorQuestion:context.priorWork?.question,previousFacts:context.previousFacts || []}));
+  const plan = planSchema.parse(await understand('overview',transcript,{today,previousVendorRefs:context.previousVendorRefs,inputLanguage:context.detectedLanguage,previousLanguage:context.previousLanguage,referencedMenuItems:context.previousMenuRefs?.length || 0,pendingAvailability:context.pendingAvailability,pendingTool:context.priorWork?.kind,priorQuestion:context.priorWork?.question,previousFacts:context.previousFacts || []}));
   const detected=locale(context.detectedLanguage);
   const previous=locale(context.previousLanguage);
   const planned=locale(plan.language);
@@ -60,7 +60,7 @@ export async function overviewAnswer(store, understand, restaurant, transcript, 
   if (!start || !end || end < start || end > today || Date.parse(end)-Date.parse(start) >= 366*86400000)
     throw httpError(422,'Choose a past or current period of up to one year.');
   const requested=[...new Set(plan.metrics.map(m=>m.key))];
-  const details=await operationalDetails(store,restaurant,requested,start,end,today,language,plan.vendorName);
+  const details=await operationalDetails(store,restaurant,requested,start,end,today,language,plan.vendorName,understand);
   const keys=new Set(requested.filter(key=>!detailKeys.includes(key)));
   if(keys.has('unpaidCount')) keys.add('partialCount');
   const values={};
@@ -99,5 +99,5 @@ export async function overviewAnswer(store, understand, restaurant, transcript, 
   });
   const report=[speakFacts(facts,values,language,today),...details.spoken].filter(Boolean).join(' ');
   const text=plan.courtesy==='identity' ? scopeReply(language,'identity')+' '+report : report;
-  return {language,text,facts:[...facts,...details.facts],sections:details.sections,menuRefs:details.menuRefs};
+  return {language,text,facts:[...facts,...details.facts],sections:details.sections,vendorRefs:details.vendorRefs,menuRefs:details.menuRefs};
 }

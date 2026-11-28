@@ -15,12 +15,12 @@ export async function performShopAction(store,understand,shopId,transcript,actio
   const {kind}=action, copy=words[language];
   const prior=context.priorWork?.kind===kind?context.priorWork:{};
   const reply=(text,extra={})=>({language,text,facts:[],...extra});
-  const ask=(text,details={})=>reply(text||copy.missing,{work:{kind,
+  const ask=(text,details={})=>reply(text||copy.missing,{...(kind==='vendor' && {vendorRefs:context.previousVendorRefs||[]}),work:{kind,
     transcript:[prior.transcript,transcript].filter(Boolean).join("\n").slice(-3000),question:text||copy.missing,...details}});
   const money=n=>new Intl.NumberFormat(language,{style:'currency',currency:'INR',maximumFractionDigits:2,minimumFractionDigits:0}).format(n/100);
   const parse=(task,fields)=>understand(task,transcript,{language,...fields,
     ...(prior.transcript && {clarificationReply:{previous:prior.transcript,question:prior.question}})});
-  const commit=fn=>context.commit(async()=>reply(await fn(),{changed:true}));
+  const commit=(fn,extra={})=>context.commit(async()=>reply(await fn(),{changed:true,...extra}));
   const billLabel=b=>copy.bill+' #'+String(b.number).padStart(4,'0');
   const balance=b=>copy.received+' '+money(receivedOn(b))+'. '+copy.due+' '+money(b.total-receivedOn(b))+'.';
 
@@ -52,8 +52,13 @@ export async function performShopAction(store,understand,shopId,transcript,actio
   if(kind==='vendor'){
     const ledger=await store.vendors(shopId);
     const recentEntries=ledger.events.filter(e=>!e.linkedPurchase);
-    const result=await parse('vendor',{vendors:ledger.balances,recentEntries:recentEntries.slice(0,100)});
-    if(result.question) return ask(result.question);
+    const previousVendorRefs=(context.previousVendorRefs||[]).filter(name=>ledger.balances.some(b=>same(b.vendor,name)));
+    const result=await parse('vendor',{previousVendorRefs,vendors:ledger.balances,recentEntries:recentEntries.slice(0,100)});
+    if(result.recipientSource==='reference' && (previousVendorRefs.length!==1 ||
+       result.entries?.some(e=>!same(e.vendor,previousVendorRefs[0])) ||
+       (result.editId!=null && !recentEntries.some(e=>e.id===result.editId && same(e.vendor,previousVendorRefs[0])))))
+      return ask([copy.which,...previousVendorRefs.slice(0,4)].join(' '));
+    if(result.question || result.recipientSource==='missing') return ask(result.question||copy.which);
     let update,names,description,payment;
     if(result.editId!=null){
       const entry=recentEntries.find(e=>e.id===result.editId);
@@ -83,7 +88,7 @@ export async function performShopAction(store,understand,shopId,transcript,actio
       const dues=updated.balances.filter(b=>names.some(n=>same(n,b.vendor))).map(b=>
         b.vendor+' · '+(b.due<0?copy.credit:copy.due)+' '+money(Math.abs(b.due)));
       return description+'. '+dues.join('. ')+'.';
-    });
+    },{vendorRefs:names});
   }
 
   if(kind==='profileEdit'){
