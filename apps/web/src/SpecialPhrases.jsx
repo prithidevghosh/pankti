@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Voice } from './Voice.jsx';
 import { request } from './api.js';
-export function SpecialPhrases({ menu }) {
+export function SpecialPhrases({ menu, revision }) {
   const [phrases, setPhrases] = useState([]),
     [draft, setDraft] = useState(null),
     [message, setMessage] = useState('');
@@ -16,7 +16,7 @@ export function SpecialPhrases({ menu }) {
         if (!controller.signal.aborted) setMessage(e.message);
       });
     return () => controller.abort();
-  }, []);
+  }, [revision]);
   const describe = (lines) =>
     lines
       .map((line) => {

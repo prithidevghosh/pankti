@@ -74,6 +74,7 @@ export class LiveOverviewCall {
         const controller=new AbortController();this.pending=controller;
         this.phase('Checking your shop');
         const body=new FormData();
+        body.append('turnId',crypto.randomUUID());
         body.append('audio',wave(event.pcm,event.rate),'question.wav');
         for(const [key,value] of Object.entries(this.period())) if(value) body.append(key,value);
         if(this.previousId) body.append('previousId',this.previousId);
@@ -82,7 +83,8 @@ export class LiveOverviewCall {
         this.previousId=report.id;
         this.caption(report.text,!report.voiceId,report.sections || []);
         try{localStorage.setItem('pankti.voice.language',report.language);}catch{}
-        if(report.menuChanged) this.changed();
+        if(report.menuChanged || report.changed) this.changed();
+        if(report.openTab) window.location.hash=report.openTab;
         if(!report.voiceId){this.phase('Listening');return;}
         this.phase('Preparing voice');
         const {audio}=await request('/overview/'+report.voiceId+'/speech',{body:{},signal:controller.signal});

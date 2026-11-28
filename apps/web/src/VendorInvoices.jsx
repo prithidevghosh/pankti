@@ -16,7 +16,7 @@ function Finding({ row }) {
   if (row.shortage == null || row.orderDifference == null) messages.push('Check missing quantities or units');
   return <span>{messages.join(' · ')}{row.differencePaise ? <small>{asRupees(Math.abs(row.differencePaise))} at the printed unit rate</small> : null}</span>;
 }
-export function VendorInvoices() {
+export function VendorInvoices({revision}) {
   const [invoices,setInvoices] = useState([]);
   const [id,setId] = useState('');
   const [busy,setBusy] = useState(false);
@@ -27,12 +27,16 @@ export function VendorInvoices() {
     const controller = new AbortController();
     request('/vendor-invoices',{signal:controller.signal}).then(({invoices})=>{
       if (!controller.signal.aborted) {
-        setInvoices(current=>[...current,...invoices.filter(b=>!current.some(c=>c._id===b._id))]);
+        setInvoices(current=>{
+          const incoming=new Map(invoices.map(b=>[b._id,b]));
+          return [...current.map(b=>{const newer=incoming.get(b._id);return newer && newer.revision>=b.revision?newer:b;}),
+            ...invoices.filter(b=>!current.some(c=>c._id===b._id))];
+        });
         setId(current=>current || invoices[0]?._id || '');
       }
     }).catch(error=>{if (!controller.signal.aborted) setMessage(error.message);});
     return ()=>controller.abort();
-  },[]);
+  },[revision]);
   function show(saved) {
     setInvoices(previous=>[saved,...previous.filter(b=>b._id!==saved._id)]);
     setId(saved._id);

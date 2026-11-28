@@ -304,7 +304,7 @@ export function Vendors({ revision }) {
         )}
         <Feedback message={op.message} />
       </section>
-      <VendorInvoices />
+      <VendorInvoices revision={revision} />
       <section className="work-sheet vendor-book">
         <div className="balance-cover">
           <div>
@@ -387,7 +387,7 @@ export function Vendors({ revision }) {
   );
 }
 
-export function Menu({ menu, onMenu }) {
+export function Menu({ menu, onMenu, revision }) {
   const [dictating, setDictating] = useState(false);
   const [menuQuestion, setMenuQuestion] = useState(null);
   const [draft, setDraft] = useState([]);
@@ -551,7 +551,7 @@ export function Menu({ menu, onMenu }) {
           />
         </section>
       )}
-      <SpecialPhrases menu={menu} />
+      <SpecialPhrases menu={menu} revision={revision} />
       {(menu.length > 0 || !draft.length) && (
         <section className="menu-folio">
           <header className="folio-heading">
