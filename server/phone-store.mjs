@@ -4,7 +4,7 @@ import { increment } from './db/mongo.mjs';
 export const sessionAge = 30 * 86400000;
 const hash = (token) => createHash('sha256').update(token).digest('hex');
 
-export function openPhoneStore(db, transaction) {
+export function openPhoneStore(db, transaction, options=()=>({})) {
   const accounts = db.collection('phone_accounts'),
     profiles = db.collection('local_signup_profiles');
   const sessions = db.collection('phone_sessions'),
@@ -55,7 +55,8 @@ export function openPhoneStore(db, transaction) {
   }
   return {
     async accountDetails(uid) {
-      const [account, profile] = await Promise.all([accounts.findOne({ uid }), profiles.findOne({ _id: uid })]);
+      const account=await accounts.findOne({uid},options());
+      const profile=await profiles.findOne({_id:uid},options());
       return { name: account?.name || profile?.name || null, phone: account?._id || null };
     },
     updateProfile(uid, { name, businessName, city, gstBps }) {

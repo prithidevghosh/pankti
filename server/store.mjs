@@ -2,6 +2,7 @@ import { indiaDay } from '../shared/menu-availability.mjs';
 import { billTotals } from '../shared/bill-totals.mjs';
 import { receivedOn } from './payment.mjs';
 import { reviewMenuImport } from '../shared/menu-import.mjs';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import { connect, increment } from './db/mongo.mjs';
 import { vendorLedger } from './vendor-edits.mjs';
@@ -20,7 +21,10 @@ const issueRange=(start,end)=>({$gte:new Date(start+'T00:00:00+05:30').toISOStri
   $lt:new Date(Date.parse(end+'T00:00:00+05:30')+86400000).toISOString()});
 
 export async function openStore(database) {
-  const { db, client, transaction } = await connect(database);
+  const { db, client, transaction:startTransaction } = await connect(database);
+  const actionSession=new AsyncLocalStorage();
+  const options=()=>({session:actionSession.getStore()});
+  const transaction=fn=>actionSession.getStore()?fn(actionSession.getStore()):startTransaction(fn);
   const restaurants = db.collection('restaurants');
   const menu = db.collection('menu');
   const bills = db.collection('bills');
@@ -28,9 +32,9 @@ export async function openStore(database) {
   const invoice = (restaurant, id) => invoices.findOne({ restaurant, _id:id }, {projection:{source:0,restaurant:0}});
   const events = db.collection('vendor_events');
   const edits = db.collection('vendor_edits');
-  const restaurantFor = async (owner) => view(await restaurants.findOne({ owner }));
+  const restaurantFor = async (owner) => view(await restaurants.findOne({ owner },options()));
   const menuFor = async (restaurant) =>
-    (await menu.find({ restaurant }).sort({ category: 1, name: 1, variant: 1 }).toArray()).map(view);
+    (await menu.find({ restaurant },options()).sort({ category: 1, name: 1, variant: 1 }).toArray()).map(view);
   const ledger = async (restaurant, session, correction) =>
     vendorLedger(
       await events.find({ restaurant }, { session }).sort({ id: 1 }).toArray(),
@@ -38,13 +42,25 @@ export async function openStore(database) {
       correction,
     );
   return {
-    ...openPhoneStore(db, transaction),
+    ...openPhoneStore(db, transaction, options),
     close: () => client.close(),
-    recordOverview(owner,restaurant,transcript,answer) {
-      return db.collection('overview_questions').insertOne({_id:randomUUID(),owner,restaurant,transcript,answer,createdAt:new Date()});
+    async finishTurn({id,restaurant,owner,inputHash,transcript}, apply){
+      return startTransaction(async session=>{
+        await increment(db,session,'conversation:'+restaurant);
+        const history=db.collection('overview_questions');
+        const prior=await history.findOne({_id:id},{session});
+        if(prior){
+          if(prior.restaurant!==restaurant || prior.owner!==owner || prior.inputHash!==inputHash)
+            throw httpError(409,'This turn identifier was already used.');
+          return prior.answer;
+        }
+        const answer=await actionSession.run(session,apply);
+        await history.insertOne({_id:id,restaurant,owner,inputHash,transcript,answer,createdAt:new Date()},{session});
+        return answer;
+      });
     },
     overviewReply(restaurant,id) {
-      return db.collection('overview_questions').findOne({_id:id,restaurant},{projection:{answer:1}});
+      return db.collection('overview_questions').findOne({_id:id,restaurant},{projection:{answer:1,inputHash:1,transcript:1}});
     },
     async recordTranscript(owner, restaurant, task, transcript) {
       const _id = randomUUID();
@@ -106,7 +122,7 @@ export async function openStore(database) {
     async editMenu(restaurant, id, entry) {
       try {
         return (
-          await menu.updateOne({ restaurant, _id: id }, { $set: { ...entry, label_key: labelKey(entry) } })
+          await menu.updateOne({ restaurant, _id: id }, { $set: { ...entry, label_key: labelKey(entry) } },options())
         ).matchedCount;
       } catch (error) {
         if (error.code === 11000) throw httpError(409, 'A menu item already has this name and portion.');
@@ -125,7 +141,7 @@ export async function openStore(database) {
     },
     async saveInvoiceCheck(restaurant,id,revision,check) {
       const saved = await invoices.findOneAndUpdate({restaurant,_id:id,revision},
-        {$set:{check},$inc:{revision:1}}, {returnDocument:'after',projection:{source:0,restaurant:0}});
+        {$set:{check},$inc:{revision:1}}, {...options(),returnDocument:'after',projection:{source:0,restaurant:0}});
       if (!saved) throw httpError(409,'This check has changed. Reload before recording.');
       return saved;
     },
@@ -168,7 +184,7 @@ export async function openStore(database) {
       });
     },
     async billFor(restaurant, id) {
-      return view(await bills.findOne({ restaurant, _id: id }));
+      return view(await bills.findOne({ restaurant, _id: id },options()));
     },
     async pendingBill(restaurant) {
       return view(await bills.findOne({ restaurant, paid: null }, { sort: { number: -1 } }));
@@ -242,20 +258,20 @@ export async function openStore(database) {
       return this.recordPayment(restaurant, id, method);
     },
     phrasesFor: (restaurant) =>
-      db.collection('phrases').find({ restaurant }).sort({ name: 1 }).map(view).toArray(),
+      db.collection('phrases').find({ restaurant },options()).sort({ name: 1 }).map(view).toArray(),
     async savePhrase(restaurant, id, name, lines) {
       const ids = lines.map((row) => row.item);
-      if ((await menu.countDocuments({ restaurant, _id: { $in: ids } })) !== ids.length)
+      if ((await menu.countDocuments({ restaurant, _id: { $in: ids } },options())) !== ids.length)
         throw httpError(422, 'Choose dishes from your saved menu.');
       const values = { name, key: normalize(name.trim()), lines };
       try {
         if (id) {
           if (
-            !(await db.collection('phrases').updateOne({ restaurant, _id: id }, { $set: values }))
+            !(await db.collection('phrases').updateOne({ restaurant, _id: id }, { $set: values },options()))
               .matchedCount
           )
             throw httpError(404, 'Phrase no longer exists.');
-        } else await db.collection('phrases').insertOne({ _id: randomUUID(), restaurant, ...values });
+        } else await db.collection('phrases').insertOne({ _id: randomUUID(), restaurant, ...values },options());
       } catch (e) {
         if (e.code === 11000) throw httpError(409, 'This phrase already exists. Edit it instead.');
         throw e;
@@ -263,7 +279,7 @@ export async function openStore(database) {
       return this.phrasesFor(restaurant);
     },
     async forgetPhrase(restaurant, id) {
-      await db.collection('phrases').deleteOne({ restaurant, _id: id });
+      await db.collection('phrases').deleteOne({ restaurant, _id: id },options());
       return this.phrasesFor(restaurant);
     },
     ordersInPeriod(restaurant,start,end){
