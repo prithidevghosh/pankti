@@ -40,9 +40,16 @@ try{
   let bill;
   for(let i=0;i<3;i++)({bill}=await api('/bills',{request:randomUUID(),basket:[{item:menu[0].id,quantity:2}]}));
   await api('/vendors',{request:randomUUID(),entries:[{kind:'purchase',vendor:'Sonu',amount:50000,note:'Potatoes'}]});
+  await api('/bills/'+bill.id+'/payment',{received:5000,revision:0,method:'upi'});
+  const balance=await ask('बिल ज़ीरो ज़ीरो ज़ीरो तीन का कितना बाकी है?',true);
+  assert.deepEqual(balance.billRefs,[3]);assert.match(balance.text,/250/);assert.ok(!balance.changed);
+  const installment=await ask('इसमें दो सौ कैश मिले।',true);
+  assert.ok(installment.changed);assert.deepEqual(installment.billRefs,[3]);assert.match(installment.text,/₹50(?![0-9])/);
+  const partial=(await api('/bills/'+bill.id)).bill;
+  assert.equal(partial.received,25000);assert.equal(partial.movements.length,2);
   assert.ok((await ask('बिल नंबर तीन का पूरा पैसा कैश में मिल गया है।',true)).changed);
   let saved=(await api('/bills/'+bill.id)).bill;
-  assert.equal(saved.received,30000);assert.equal(saved.movements.length,1);assert.equal(saved.method,'cash');
+  assert.equal(saved.received,30000);assert.equal(saved.movements.length,3);assert.equal(saved.method,'cash');
   await api('/vendors',{request:randomUUID(),entries:[{kind:'balance',vendor:'Ravi',amount:45000,note:''}]});
   const sonu=await ask('सोनू का कितना बाकी है?',true);
   assert.deepEqual(sonu.vendorRefs,['Sonu']);assert.match(sonu.text,/500/);

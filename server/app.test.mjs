@@ -281,6 +281,7 @@ test('conversation payments commit once with their receipt and use the saved led
   const call=await start(t,{understand:async (task,transcript)=>{
     if(task==='overview') return {
       period:'today',days:1,start:null,end:null,language:'en-IN',metrics:[],empty:'none',clarification:null,scope:'shop',
+      explicitBillNumber:transcript==='supplier'?null:1,
       action:{kind:transcript==='supplier'?'vendor':'billPayment',target:null},
     };
     if(task==='vendor') return {entries:[{kind:'payment',vendor:'Sonu',amount:20000,note:''}]};
@@ -305,4 +306,30 @@ test('conversation payments commit once with their receipt and use the saved led
   const replies=await Promise.all([report(supplier),report(supplier)]);
   assert.match(replies[0].text,/₹300/);assert.equal(replies[0].text,replies[1].text);
   assert.equal((await call('/vendors')).events.length,2);
+});
+
+test('bill focus is scoped to the previous shop answer and an explicit number takes precedence',async t=>{
+  const call=await start(t,{understand:async(task,text,context)=>{
+    if(task==='order') return {payment:{number:context.resolvedBillNumber,method:'cash',additional:1000}};
+    const plan={period:'today',days:1,start:null,end:null,language:'en-IN',metrics:[],empty:'none',clarification:null,scope:'shop'};
+    if(text==='list') return {...plan,metrics:[{key:'orders',label:'Bills'}]};
+    if(text==='balance') return {...plan,explicitBillNumber:2,action:{kind:'billBalance',target:null}};
+    return {...plan,explicitBillNumber:text==='switch'?1:null,action:{kind:'billPayment',target:null}};
+  }});
+  await call('/workspace',{method:'POST',body:restaurant});
+  const {menu}=await call('/menu',{method:'POST',body:[samosa]});
+  const bills=[];
+  for(let i=0;i<2;i++) bills.push((await call('/bills',{method:'POST',status:201,
+    body:{request:randomUUID(),basket:[{item:menu[0].id,quantity:2}]}})).bill);
+  const report=(question,previousId)=>call('/overview/live/report',{method:'POST',body:{
+    date:new Date().toISOString().slice(0,10),days:'1',question,previousId,turnId:randomUUID()}});
+  const list=await report('list');
+  assert.deepEqual(list.billRefs.toSorted(),[1,2]);
+  assert.ok(!(await report('instalment',list.id)).changed);
+  const focus=await report('balance');
+  assert.deepEqual(focus.billRefs,[2]);
+  assert.deepEqual((await report('instalment',focus.id)).billRefs,[2]);
+  assert.deepEqual((await report('switch',focus.id)).billRefs,[1]);
+  assert.ok(!(await report('instalment')).changed);
+  for(const bill of bills) assert.equal((await call('/bills/'+bill.id)).bill.received,1000);
 });
