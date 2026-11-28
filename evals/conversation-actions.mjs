@@ -62,6 +62,7 @@ try{
   assert.deepEqual(both.vendorRefs.sort(),['Ravi','Sonu']);
   const ambiguous=await ask('उसको दो सौ दे दिए।');
   assert.ok(!ambiguous.changed);assert.equal((await api('/vendors')).events.length,3);
+  assert.equal(ambiguous.work?.kind,'vendor');
   const clarified=await ask('रवि को।');
   assert.ok(clarified.changed);assert.equal((await api('/vendors')).balances.find(b=>b.vendor==='Ravi').due,25000);
   const method=await ask('Bill 0002 has been paid in full.');assert.ok(!method.changed);
