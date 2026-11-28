@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import words from '../locales/shop-actions.json' with {type:'json'};
+import invoiceWords from '../locales/overview-operations.json' with {type:'json'};
 import {basketSchema,entrySchema,shortText,vendorCorrection,vendorEntries} from '../schemas.mjs';
 import {paymentDraft,receivedOn} from '../payment.mjs';
 import {compareDelivery} from './delivery-check.mjs';
@@ -109,8 +110,11 @@ export async function performShopAction(store,understand,shopId,transcript,actio
     const check=compareDelivery(invoice,claim.claims);
     return commit(async()=>{
       await store.saveInvoiceCheck(shopId,invoice._id,invoice.revision,{...check,transcript});
-      return copy.saved+' · '+[invoice.vendor,invoice.number].filter(Boolean).join(' ')+'. '+check.rows
-        .filter(r=>r.status==='difference').map(r=>r.name+' · '+r.quantity+' '+(r.unit||'')+' / '+(r.received?.quantity??'—')+' '+(r.received?.unit||'')).join('. ');
+      const labels=invoiceWords[language];
+      const differences=check.rows.filter(row=>row.status==='difference').map(row=>
+        row.name+' · '+labels.invoice+' '+row.quantity+' '+(row.unit||'')+
+        ' · '+labels.received+' '+(row.received?.quantity??'—')+' '+(row.received?.unit||''));
+      return [copy.saved+' · '+[invoice.vendor,invoice.number].filter(Boolean).join(' '),...differences].join('. ')+'.';
     });
   }
 
