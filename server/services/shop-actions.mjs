@@ -15,8 +15,11 @@ export async function performShopAction(store,understand,shopId,transcript,actio
   const {kind}=action, copy=words[language];
   const prior=context.priorWork?.kind===kind?context.priorWork:{};
   const reply=(text,extra={})=>({language,text,facts:[],...extra});
-  const ask=(text,details={})=>reply(text||copy.missing,{...(kind==='vendor' && {vendorRefs:context.previousVendorRefs||[]}),work:{kind,
-    transcript:[prior.transcript,transcript].filter(Boolean).join("\n").slice(-3000),question:text||copy.missing,...details}});
+  const ask=(text,{billRefs,...details}={})=>reply(text||copy.missing,{
+    ...(billRefs && {billRefs}),
+    ...(kind==='vendor' && {vendorRefs:context.previousVendorRefs||[]}),
+    work:{kind,transcript:[prior.transcript,transcript].filter(Boolean).join("\n").slice(-3000),question:text||copy.missing,...details},
+  });
   const money=n=>new Intl.NumberFormat(language,{style:'currency',currency:'INR',maximumFractionDigits:2,minimumFractionDigits:0}).format(n/100);
   const parse=(task,fields)=>understand(task,transcript,{language,...fields,
     ...(prior.transcript && {clarificationReply:{previous:prior.transcript,question:prior.question}})});
@@ -27,14 +30,27 @@ export async function performShopAction(store,understand,shopId,transcript,actio
   if(['bankPhoto','invoicePhoto','menuPhoto'].includes(kind))
     return reply(copy.upload,{openTab:{bankPhoto:'bank',invoicePhoto:'vendors',menuPhoto:'menu'}[kind]});
 
-  if(kind==='billPayment'){
-    const result=await parse('order',{menu:[],basket:[],phrases:[],orderNote:null});
-    if(result.question || !result.payment) return ask(result.question||copy.whichBill);
+  if(kind==='billBalance' || kind==='billPayment'){
+    const refs=context.previousBillRefs||[];
+    const number=context.explicitBillNumber??(refs.length===1?refs[0]:null);
+    if(number==null) return ask(copy.whichBill,{billRefs:refs});
+    if(kind==='billBalance'){
+      const bill=await store.billByNumber(shopId,number);
+      if(!bill) throw httpError(404,'That bill number was not found in your shop.');
+      const due=money(bill.total-receivedOn(bill));
+      const received=money(receivedOn(bill));
+      const text=language==='hi-IN'?billLabel(bill)+' पर '+due+' बाकी हैं। अब तक '+received+' मिले हैं।':
+        language==='en-IN'?billLabel(bill)+' has '+due+' left to collect. You’ve received '+received+'.':billLabel(bill)+'. '+balance(bill);
+      return reply(text,{billRefs:[bill.number]});
+    }
+    const result=await parse('order',{menu:[],basket:[],phrases:[],orderNote:null,resolvedBillNumber:number});
+    if(result.question || !result.payment) return ask(result.question||copy.whichBill,{billRefs:[number]});
     const intent=result.payment;
-    const bill=await store.billByNumber(shopId,z.number().int().positive().parse(intent.number));
+    if(intent.number!==number) return ask(copy.whichBill,{billRefs:[]});
+    const bill=await store.billByNumber(shopId,number);
     if(!bill) throw httpError(404,'That bill number was not found in your shop.');
     const change=paymentDraft(bill,intent);
-    if(!change.method) return ask(copy.method);
+    if(!change.method) return ask(copy.method,{billRefs:[bill.number]});
     const method=z.enum(['cash','upi']).parse(change.method);
     return commit(async()=>{
       const current=await store.billFor(shopId,bill.id);
@@ -46,7 +62,7 @@ export async function performShopAction(store,understand,shopId,transcript,actio
       if(language==='hi-IN') return billLabel(saved)+' पर '+(method==='cash'?'नकद':'यूपीआई से')+' भुगतान दर्ज हो गया। कुल '+received+' मिले हैं। '+(saved.total===receivedOn(saved)?'अब कुछ बाकी नहीं है।':'अभी '+due+' बाकी हैं।');
       if(language==='en-IN') return 'I’ve recorded the '+(method==='cash'?'cash':'UPI')+' payment on '+billLabel(saved)+'. You’ve received '+received+' in total, with '+due+' left to collect.';
       return billLabel(saved)+' · '+method.toUpperCase()+'. '+balance(saved);
-    });
+    },{billRefs:[bill.number]});
   }
 
   if(kind==='vendor'){
@@ -165,10 +181,10 @@ export async function performShopAction(store,understand,shopId,transcript,actio
       const summary=lines.map(l=>l.quantity+' × '+label(menu.find(i=>i.id===l.item))).join(', ');
       return ask(copy.draft+' · '+summary+'. '+copy.confirmBill,{lines,orderNote:note});
     }
-    return commit(async()=>{
+    return context.commit(async()=>{
       const bill=await store.createBill(shopId,context.turnId,lines,prices,context.shop.gstBps||0,note);
       if(!bill) throw httpError(409,'An item changed before billing.');
-      return billLabel(bill)+' · '+copy.due+' '+money(bill.total)+'.';
+      return reply(billLabel(bill)+' · '+copy.due+' '+money(bill.total)+'.',{changed:true,billRefs:[bill.number]});
     });
   }
   if(kind==='phraseSave' || kind==='phraseDelete'){

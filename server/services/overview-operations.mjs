@@ -42,6 +42,7 @@ export async function operationalDetails(store,restaurant,keys,start,end,today,l
   const facts=[];
   const menuRefs=[];
   const vendorRefs=[];
+  const billRefs=new Set();
   const vendorMatches=name=>!vendorName || (name && normalize(name)===normalize(vendorName));
   function add(key,rows,current=false,sentence){
     const from=current?today:start, to=current?today:end;
@@ -89,6 +90,7 @@ export async function operationalDetails(store,restaurant,keys,start,end,today,l
         const paidByMethod=(bill.movements ?? (bill.paid?[{method:bill.method,amount:bill.total}]:[]))
           .reduce((sum,p)=>sum+(p.method===method?p.amount:0),0);
         if(key!=='orders' && paidByMethod<=0) continue;
+        billRefs.add(bill.number);
         const items=bill.lines.map(line=>line.quantity+' × '+dishName(line)).join(', ');
         rows.push('#'+String(bill.number).padStart(4,'0')+' · '+items+' · '+money(key==='orders'?bill.total:paidByMethod));
       }
@@ -107,5 +109,5 @@ export async function operationalDetails(store,restaurant,keys,start,end,today,l
     }
     add('vendorMismatches',rows);
   }
-  return {facts,sections,menuRefs,vendorRefs,spoken};
+  return {facts,sections,menuRefs,vendorRefs,billRefs:[...billRefs],spoken};
 }

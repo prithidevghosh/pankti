@@ -40,7 +40,7 @@ export function registerOverview(app,{store,requireRestaurant,upload,speech,unde
       return result;
     };
     const answer=await overviewAnswer(store,understand,shop.id,question,{start,end:date},undefined,{
-      shop,uid:req.uid,turnId:id,commit,previousVendorRefs:previous?.answer?.vendorRefs,priorWork:previous?.answer?.work,pendingAvailability:previous?.answer?.pendingAvailability,previousMenuRefs:previous?.answer?.menuRefs,detectedLanguage:heard?.language,previousLanguage:previous?.answer?.language,previousFacts:(previous?.answer?.facts || []).map(({key,start,end})=>({key,start,end})),
+      shop,uid:req.uid,turnId:id,commit,previousBillRefs:previous?.answer?.billRefs,previousVendorRefs:previous?.answer?.vendorRefs,priorWork:previous?.answer?.work,pendingAvailability:previous?.answer?.pendingAvailability,previousMenuRefs:previous?.answer?.menuRefs,detectedLanguage:heard?.language,previousLanguage:previous?.answer?.language,previousFacts:(previous?.answer?.facts || []).map(({key,start,end})=>({key,start,end})),
     });
     respond(committed?answer:await commit(()=>answer),question);
   });

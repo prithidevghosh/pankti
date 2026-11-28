@@ -12,6 +12,7 @@ const shopFields = ['menuCount','businessName','ownerName','phone','city','gst',
 export const overviewMetrics = ['billedSales','collections','billCount','paidCount','paidValue','unpaidCount','partialCount','outstanding','topDish','vendorPurchases','vendorPaid','vendorDue','soldOut',...shopFields];
 const planSchema = z.object({
   action:z.object({kind:z.enum(toolNames),target:z.string().trim().min(1).max(200).nullable()}).nullish(),
+  explicitBillNumber:z.number().int().positive().nullish(),
   vendorName:z.string().trim().max(160).nullish(),
   scope:z.enum(['shop','assistant','outside']).optional(),
   requestedReplyLanguage:z.string().nullable().optional(),
@@ -25,7 +26,7 @@ export const speechLanguages = new Set(Object.keys(voiceLanguages));
 const money = new Set(['billedSales','collections','paidValue','outstanding','vendorPurchases','vendorPaid','vendorDue']);
 
 export async function overviewAnswer(store, understand, restaurant, transcript, selected, today=indiaDay(), context={}) {
-  const plan = planSchema.parse(await understand('overview',transcript,{today,previousVendorRefs:context.previousVendorRefs,inputLanguage:context.detectedLanguage,previousLanguage:context.previousLanguage,referencedMenuItems:context.previousMenuRefs?.length || 0,pendingAvailability:context.pendingAvailability,pendingTool:context.priorWork?.kind,priorQuestion:context.priorWork?.question,previousFacts:context.previousFacts || []}));
+  const plan = planSchema.parse(await understand('overview',transcript,{today,previousBillRefs:context.previousBillRefs,previousVendorRefs:context.previousVendorRefs,inputLanguage:context.detectedLanguage,previousLanguage:context.previousLanguage,referencedMenuItems:context.previousMenuRefs?.length || 0,pendingAvailability:context.pendingAvailability,pendingTool:context.priorWork?.kind,priorQuestion:context.priorWork?.question,previousFacts:context.previousFacts || []}));
   const detected=locale(context.detectedLanguage);
   const previous=locale(context.previousLanguage);
   const planned=locale(plan.language);
@@ -40,7 +41,7 @@ export async function overviewAnswer(store, understand, restaurant, transcript, 
     if(['enable','disable'].includes(plan.action.kind))
       return menuAction(store,understand,restaurant,transcript,plan.action,context.previousMenuRefs || [],language,context.commit);
     if(!context.commit) throw httpError(422,'Start a conversation to record this change.');
-    return performShopAction(store,understand,restaurant,transcript,plan.action,language,context);
+    return performShopAction(store,understand,restaurant,transcript,plan.action,language,{...context,explicitBillNumber:plan.explicitBillNumber});
   }
   if (plan.scope==='assistant' || plan.clarification || !plan.metrics.length) return {language,text:scopeReply(language,plan.courtesy),facts:[]};
   const ago=n=>new Date(Date.parse(today+'T00:00:00Z')-n*86400000).toISOString().slice(0,10);
@@ -99,5 +100,5 @@ export async function overviewAnswer(store, understand, restaurant, transcript, 
   });
   const report=[speakFacts(facts,values,language,today),...details.spoken].filter(Boolean).join(' ');
   const text=plan.courtesy==='identity' ? scopeReply(language,'identity')+' '+report : report;
-  return {language,text,facts:[...facts,...details.facts],sections:details.sections,vendorRefs:details.vendorRefs,menuRefs:details.menuRefs};
+  return {language,text,facts:[...facts,...details.facts],sections:details.sections,billRefs:details.billRefs,vendorRefs:details.vendorRefs,menuRefs:details.menuRefs};
 }
