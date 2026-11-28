@@ -275,3 +275,34 @@ test('a text-only voice language keeps its reply and follow-up context', async t
   assert.equal(previous[0].key,'billedSales');
   await call('/overview/'+first.id+'/speech',{method:'POST',status:422});
 });
+
+test('conversation payments commit once with their receipt and use the saved ledger balance', async t=>{
+  let interpreted=0;
+  const call=await start(t,{understand:async (task,transcript)=>{
+    if(task==='overview') return {
+      period:'today',days:1,start:null,end:null,language:'en-IN',metrics:[],empty:'none',clarification:null,scope:'shop',
+      action:{kind:transcript==='supplier'?'vendor':'billPayment',target:null},
+    };
+    if(task==='vendor') return {entries:[{kind:'payment',vendor:'Sonu',amount:20000,note:''}]};
+    interpreted++;
+    return {question:null,payment:{number:1,additional:1000,due:null,received:null,method:'cash'}};
+  }});
+  await call('/workspace',{method:'POST',body:restaurant});
+  const {menu}=await call('/menu',{method:'POST',body:[samosa]});
+  const {bill}=await call('/bills',{method:'POST',status:201,body:{request:randomUUID(),basket:[{item:menu[0].id,quantity:3}]}});
+  const body={question:'instalment',turnId:randomUUID(),date:new Date().toISOString().slice(0,10),days:'7'};
+  const report=body=>call('/overview/live/report',{method:'POST',body});
+  const [a,b]=await Promise.all([report(body),report(body)]);
+  assert.equal(a.text,b.text);assert.equal(a.id,b.id);
+  assert.match(a.text,/₹47/);
+  const paid=(await call('/bills/'+bill.id)).bill;
+  assert.equal(paid.received,1000);assert.equal(paid.movements.length,1);
+  const calls=interpreted;
+  assert.equal((await report(body)).id,a.id);assert.equal(interpreted,calls);
+  await call('/overview/live/report',{method:'POST',body:{...body,question:'different'},status:409});
+  await call('/vendors',{method:'POST',body:{request:randomUUID(),entries:[{kind:'balance',vendor:'Sonu',amount:50000,note:''}]}});
+  const supplier={...body,turnId:randomUUID(),question:'supplier'};
+  const replies=await Promise.all([report(supplier),report(supplier)]);
+  assert.match(replies[0].text,/₹300/);assert.equal(replies[0].text,replies[1].text);
+  assert.equal((await call('/vendors')).events.length,2);
+});
